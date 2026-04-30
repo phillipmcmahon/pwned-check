@@ -11,6 +11,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Configure live HIBP provider behavior | [Provider policy](provider-policy.md): live API use, timeout, request volume, and test-provider boundary |
 | Understand install, upgrade, and rollback shape | [Operations](operations.md): package layout, Ubuntu PAM walkthrough, rollback, and helper mapping |
 | Test Linux password-change integration | [Linux PAM PoC](linux-pam-poc.md): PAM helper contract and manual password-change test plan |
+| Plan native Linux PAM integration | [Native PAM module](native-pam-module.md): optional native module contract, Rust/FFI posture, packaging, and tests |
 | Understand secret-handling and privilege boundaries | [Security model](security-model.md): provider boundary, process exposure, env, argv, and non-goals |
 | Review log events and safe diagnostics | [Logging policy](logging-policy.md): event catalog, example lines, and safe fields |
 | Prepare for secure rollout | [Deployment security checklist](deployment-security-checklist.md): rollout and recovery controls |

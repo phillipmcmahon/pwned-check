@@ -119,24 +119,35 @@ Current implementation notes:
 
 Project entry: [#10](https://github.com/phillipmcmahon/pwned-check/issues/10)
 
-Goal: deliver a native Linux PAM module once the current `pam_exec` helper integration has proven the checker contract, security controls, and operator workflow.
+Goal: deliver an optional native Linux PAM module that preserves the existing checker contract while improving PAM-native integration, distro packaging readiness, staged rollout, and operator recovery.
 
 User stories:
-- As a Linux administrator, I want a native PAM module so password-change enforcement integrates cleanly with PAM without relying on `pam_exec` process glue.
-- As a security reviewer, I want the PAM module to preserve the no-plaintext-logging and no-password-argv guarantees of the helper path.
-- As an operator, I want the native module to support explicit timeout and fail-open/fail-closed behavior consistent with the checker contract.
-- As a maintainer, I want parity tests proving the native module maps checker outcomes the same way as `pwned-check-pam-helper`.
-- As a release manager, I want native module packaging and installation guidance that clearly separates experimental rollout from production rollout.
+- As a Linux administrator, I want a native PAM module so password-change enforcement integrates cleanly with PAM management tools without relying on `pam_exec.so expose_authtok`.
+- As an operator, I want dry-run mode so I can validate would-be rejections before enabling enforcement.
+- As a security reviewer, I want the module to keep provider HTTP logic out of privileged PAM-using processes.
+- As a maintainer, I want parity tests proving the native module maps checker outcomes consistently with the documented checker and helper contract.
+- As a packager, I want Debian/Ubuntu and Fedora/RHEL install patterns documented before release packaging starts.
+- As an administrator, I want rollback and recovery guidance before enabling the module on a host.
 
 Deliverables:
-- Native PAM module feasibility and design note.
-- Decision on implementation language and ABI strategy.
-- PAM module configuration format and examples.
+- Native PAM module design document.
+- Rust `cdylib` module skeleton with narrow PAM FFI boundary.
+- Fork/exec integration with `pwned-check --stdin`.
+- Module argument contract for checker path, timeout, fail-open/fail-closed, dry-run, and debug behavior.
+- Fork/exec IPC contract covering pipes, clean environment, file-descriptor hygiene, hard timeout, and safe stderr capture.
+- PAM stack placement and composition guidance, including `requisite` default placement and `PAM_AUTHTOK` non-mutation rules.
 - Outcome mapping parity with `pwned-check-pam-helper`.
-- Timeout and fail-open/fail-closed behavior parity.
-- Minimal distro validation matrix for the module.
-- Install, rollback, and emergency recovery documentation.
+- Module logging event catalog aligned with the logging policy.
+- `libpam_wrapper` or equivalent PAM module test harness.
+- Container integration tests that load the native module directly.
+- Debian/Ubuntu `pam-auth-update` packaging plan.
+- Fedora/RHEL `authselect` and SELinux assessment.
+- Signing, provenance, and reproducible-build plan for native module packages.
+- Install, dry-run rollout, rollback, and emergency recovery documentation.
 - Security review checklist for native PAM deployment.
+
+Current implementation notes:
+- [Native PAM module](native-pam-module.md) records the agreed design baseline. The native module is optional and does not replace the current helper path.
 
 ## Epic 7: macOS and Windows Feasibility
 

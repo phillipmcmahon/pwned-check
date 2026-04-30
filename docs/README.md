@@ -12,6 +12,9 @@ Use this page as the front door for project and operator documentation. The docs
 | Understand install, upgrade, and rollback shape | [Operations](operations.md) |
 | Test Linux password-change integration | [Linux PAM PoC](linux-pam-poc.md) |
 | Understand secret-handling and privilege boundaries | [Security model](security-model.md) |
+| Review log events and safe diagnostics | [Logging policy](logging-policy.md) |
+| Prepare for secure rollout | [Deployment security checklist](deployment-security-checklist.md) |
+| Diagnose rollout issues | [Operational troubleshooting](troubleshooting.md) |
 | Understand the CLI contract and long-term design | [Development and architecture](development-architecture.md) |
 
 ## Maintainer Path

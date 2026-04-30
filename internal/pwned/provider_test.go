@@ -19,6 +19,16 @@ func TestParseRangeResponseMatchesSuffix(t *testing.T) {
 	}
 }
 
+func TestParseRangeResponseIgnoresMalformedRows(t *testing.T) {
+	count, err := ParseRangeResponse(strings.NewReader("not-a-row\nABC:not-a-number\nFFF:3\n"), "abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("count = %d, want 0", count)
+	}
+}
+
 func TestRangeProviderCallsLocalRangeEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/range/ABCDE" {

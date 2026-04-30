@@ -1,0 +1,43 @@
+# Deployment Security Checklist
+
+Use this checklist before enabling `pwned-check` in a Linux password-change path.
+
+## Pre-Deployment
+
+- Confirm the deployment will use the live HIBP Pwned Passwords range API.
+- Choose and document fail-open or fail-closed behavior.
+- Set a provider timeout with `PWNED_CHECK_TIMEOUT`.
+- Set a PAM helper timeout with `pwned-check-pam-helper --timeout`.
+- Verify the release package checksum before installation.
+- Confirm `pwned-check --version` and `pwned-check-pam-helper --version`.
+- Review [Provider policy](provider-policy.md), [Security model](security-model.md), and [Logging policy](logging-policy.md).
+
+## Secret Handling
+
+- Pass candidate passwords over stdin only.
+- Do not put passwords in command-line arguments.
+- Do not persist password candidates in shell history, files, telemetry, or examples.
+- Confirm logs do not include plaintext passwords, full hashes, or hash suffixes.
+
+## PAM Rollout
+
+- Test first in a disposable VM or non-production host.
+- Keep an existing root shell open while changing PAM files.
+- Back up the target PAM file before editing.
+- Place the pwned-check PAM line before the local password update module.
+- Test a known pwned password and a strong random password.
+- Test provider outage behavior for the selected fail-open/fail-closed posture.
+
+## Rollback
+
+- Keep the original PAM file backup until rollout is complete.
+- Know the command to restore the previous PAM file.
+- Know how to switch from fail-closed to fail-open during a provider outage.
+- Verify `passwd` reaches the normal password-change flow after rollback.
+
+## Ongoing Checks
+
+- Count safe validation and failure events during rollout.
+- Investigate repeated provider failures, helper timeouts, or checker config failures.
+- Re-verify package checksums and metadata during upgrades.
+- Re-run the Docker PAM package smoke tests after packaging or PAM behavior changes.

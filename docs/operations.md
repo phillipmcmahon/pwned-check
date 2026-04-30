@@ -138,3 +138,5 @@ Environment variables:
 - `PWNED_CHECK_HIBP_ENDPOINT`: override HIBP endpoint for controlled tests
 
 For production PAM integration, prefer explicit configuration in the integration layer rather than depending on an ambient shell environment.
+
+Before rollout, complete the [Deployment security checklist](deployment-security-checklist.md). For operational failure diagnosis, use [Operational troubleshooting](troubleshooting.md).

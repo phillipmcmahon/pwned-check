@@ -38,6 +38,8 @@ The password is trusted only inside the OS password-change process, integration 
 - Keep tests that assert plaintext is not emitted.
 - Keep logs structured as safe event records, for example `event=validation prefix=<sha1-prefix> pwned=<bool> count=<n>`.
 
+See [Logging policy](logging-policy.md) for the current event catalog and safe rollout counters.
+
 ## Provider Privacy
 
 The checker computes a SHA-1 hash of the candidate password and splits it:

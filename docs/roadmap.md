@@ -108,6 +108,13 @@ Deliverables:
 - Deployment security checklist.
 - Operational troubleshooting guide.
 
+Current implementation notes:
+- [Security model](security-model.md) documents current trust boundaries and failure modes.
+- [Logging policy](logging-policy.md) documents safe event fields and rollout counters.
+- [Deployment security checklist](deployment-security-checklist.md) captures rollout and rollback controls.
+- [Operational troubleshooting](troubleshooting.md) maps exit codes and PAM helper events to operator actions.
+- Parser fuzz coverage exists in `internal/pwned/provider_fuzz_test.go`.
+
 ## Epic 6: Native Linux PAM Module Delivery
 
 Project entry: [#10](https://github.com/phillipmcmahon/pwned-check/issues/10)

@@ -166,6 +166,9 @@ static int smoke_conv(int num_msg, const struct pam_message **msg, struct pam_re
       break;
     case PAM_TEXT_INFO:
     case PAM_ERROR_MSG:
+      if (msg[i]->msg != NULL) {
+        fprintf(stderr, "pam_message[%d]=%s\n", msg[i]->msg_style, msg[i]->msg);
+      }
       responses[i].resp = NULL;
       break;
     default:
@@ -268,6 +271,8 @@ run_smoke() {
         cat > /usr/local/bin/native-pam-smoke-checker <<'CHECKER_EOF'
 #!/bin/sh
 set -eu
+printf '%s' \"\$*\" >/tmp/native-pam-smoke-checker-argv
+printf '%s' \"\${PWNED_CHECK_FAIL_CLOSED:-}\" >/tmp/native-pam-smoke-checker-fail-closed
 token=\"\$(/bin/cat)\"
 printf '%s' \"\$token\" >/tmp/native-pam-smoke-checker-token
 mode=\"\$(/bin/cat /tmp/native-pam-smoke-checker-mode)\"
@@ -313,9 +318,12 @@ CHECKER_EOF
           token=\"\$3\"
           args=\"\$4\"
           want=\"\$5\"
+          want_message=\"\$6\"
+          want_checker=\"\$7\"
+          want_fail_closed=\"\$8\"
 
           printf '%s' \"\$mode\" >/tmp/native-pam-smoke-checker-mode
-          rm -f /tmp/native-pam-smoke-checker-token
+          rm -f /tmp/native-pam-smoke-checker-token /tmp/native-pam-smoke-checker-argv /tmp/native-pam-smoke-checker-fail-closed
           write_service \"\$args\"
 
           set +e
@@ -334,15 +342,51 @@ CHECKER_EOF
             exit 1
           fi
 
-          if echo \"\$args\" | grep -q 'fail_clsoed'; then
+          if [ \"\$want_message\" != '-' ]; then
+            if ! grep -F \"\$want_message\" /tmp/native-pam-smoke.out >/dev/null; then
+              cat /tmp/native-pam-smoke.out >&2
+              echo \"Native PAM case failed: \$name missing message: \$want_message\" >&2
+              exit 1
+            fi
+          else
+            if grep -F 'This password appears in a known breach corpus. Choose a different password.' /tmp/native-pam-smoke.out >/dev/null ||
+               grep -F 'Password breach check failed. Try again later or contact your administrator.' /tmp/native-pam-smoke.out >/dev/null; then
+              cat /tmp/native-pam-smoke.out >&2
+              echo \"Native PAM case failed: \$name emitted unexpected conversation message\" >&2
+              exit 1
+            fi
+          fi
+
+          if [ \"\$want_checker\" = no ]; then
             if [ -f /tmp/native-pam-smoke-checker-token ]; then
               echo \"Native PAM case failed: \$name unexpectedly invoked checker\" >&2
               exit 1
             fi
-          elif [ -f /tmp/native-pam-smoke-checker-token ] && [ \"\$mode\" != sleep ]; then
-            received=\"\$(cat /tmp/native-pam-smoke-checker-token)\"
-            if [ \"\$received\" != \"\$token\" ] && [ \"\$mode\" != config ]; then
-              echo \"Native PAM case failed: \$name checker token mismatch\" >&2
+          else
+            if [ ! -f /tmp/native-pam-smoke-checker-argv ]; then
+              echo \"Native PAM case failed: \$name did not invoke checker\" >&2
+              exit 1
+            fi
+            checker_argv=\"\$(cat /tmp/native-pam-smoke-checker-argv)\"
+            if [ \"\$checker_argv\" != '--stdin' ]; then
+              echo \"Native PAM case failed: \$name checker argv=\$checker_argv\" >&2
+              exit 1
+            fi
+            checker_fail_closed=\"\$(cat /tmp/native-pam-smoke-checker-fail-closed)\"
+            if [ \"\$checker_fail_closed\" != \"\$want_fail_closed\" ]; then
+              echo \"Native PAM case failed: \$name fail_closed=\$checker_fail_closed want \$want_fail_closed\" >&2
+              exit 1
+            fi
+            if [ \"\$mode\" != sleep ]; then
+              received=\"\$(cat /tmp/native-pam-smoke-checker-token)\"
+              if [ \"\$received\" != \"\$token\" ]; then
+                echo \"Native PAM case failed: \$name checker token mismatch\" >&2
+                exit 1
+              fi
+            fi
+            if grep -F \"\$token\" /tmp/native-pam-smoke.out >/dev/null; then
+              cat /tmp/native-pam-smoke.out >&2
+              echo \"Native PAM case failed: \$name leaked token to PAM output\" >&2
               exit 1
             fi
           fi
@@ -353,14 +397,17 @@ CHECKER_EOF
         test -f \"\$module_dir/pam_pwned_check.so\"
         ldd \"\$module_dir/pam_pwned_check.so\"
 
-        run_case 'clean allowed' clean candidate 'fail_open' allow
-        run_case 'pwned rejected' pwned password 'fail_open' reject
-        run_case 'provider unavailable fail-open allowed' provider candidate 'fail_open' allow
-        run_case 'provider unavailable fail-closed rejected' provider candidate 'fail_closed' reject
-        run_case 'checker config rejected' config candidate 'fail_open' reject
-        run_case 'checker timeout rejected' sleep candidate 'fail_open' reject
-        run_case 'dry-run pwned allowed' pwned password 'fail_open dry_run' allow
-        run_case 'invalid module arg rejected' clean candidate 'fail_clsoed' reject
+        pwned_message='This password appears in a known breach corpus. Choose a different password.'
+        failure_message='Password breach check failed. Try again later or contact your administrator.'
+
+        run_case 'clean allowed' clean CleanCandidate123 'fail_open' allow '-' yes false
+        run_case 'pwned rejected' pwned PwnedCandidate123 'fail_open' reject \"\$pwned_message\" yes false
+        run_case 'provider unavailable fail-open allowed' provider ProviderOpen123 'fail_open' allow '-' yes false
+        run_case 'provider unavailable fail-closed rejected' provider ProviderClosed123 'fail_closed' reject \"\$failure_message\" yes true
+        run_case 'checker config rejected' config ConfigCandidate123 'fail_open' reject \"\$failure_message\" yes false
+        run_case 'checker timeout rejected' sleep TimeoutCandidate123 'fail_open' reject \"\$failure_message\" yes false
+        run_case 'dry-run pwned allowed' pwned DryRunCandidate123 'fail_open dry_run' allow '-' yes false
+        run_case 'invalid module arg rejected' clean InvalidArgCandidate123 'fail_clsoed' reject \"\$failure_message\" no ''
     "
 
     echo "Native PAM Ubuntu smoke passed in persistent container: $CONTAINER"

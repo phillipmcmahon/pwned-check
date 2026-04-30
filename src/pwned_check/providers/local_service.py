@@ -1,10 +1,10 @@
-"```python
-Local / offline provider stub. Will speak to an on-prem mirror of the range API.
-"""
+"""Local / offline provider stub. Will speak to an on-prem mirror of the range API."""
 from __future__ import annotations
-import urllib.request
+
 import urllib.error
-from .base import PwnedProvider, NetworkError
+import urllib.request
+
+from .base import NetworkError, PwnedProvider
 
 
 class LocalServiceProvider(PwnedProvider):

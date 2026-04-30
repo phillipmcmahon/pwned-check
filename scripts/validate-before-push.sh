@@ -41,8 +41,8 @@ go vet ./...
 echo "go run honnef.co/go/tools/cmd/staticcheck ./..."
 go run honnef.co/go/tools/cmd/staticcheck ./...
 
-echo "go build -o dist/pwned-check ./cmd/pwned-check"
-go build -o dist/pwned-check ./cmd/pwned-check
+echo "make build"
+make build
 
 echo "go run ./scripts/smoke_binary.go dist/pwned-check"
 go run ./scripts/smoke_binary.go dist/pwned-check

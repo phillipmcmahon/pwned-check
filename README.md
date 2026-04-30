@@ -35,7 +35,7 @@ Exit codes:
 
 Logging:
 - The password is never logged.
-- Logs contain the 5-character hash prefix, pwned outcome, and count.
+- Logs contain an event name, the 5-character hash prefix, pwned outcome, and count.
 
 Version:
 ```

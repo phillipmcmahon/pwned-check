@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const Version = "0.2.0"
+var Version = "0.2.0"
 
 const (
 	ExitClean        = 0
@@ -80,14 +80,14 @@ func (c CLI) Run(args []string) int {
 	result, err := Validate(password, provider)
 	if err != nil {
 		if cfg.FailClosed {
-			logger.Printf("network failure fail_closed=true: %v", err)
+			logger.Printf("event=provider_failure fail_closed=true error=%q", err)
 			return ExitNetworkError
 		}
-		logger.Printf("network failure fail_open: %v", err)
+		logger.Printf("event=provider_failure fail_closed=false error=%q", err)
 		return ExitClean
 	}
 
-	logger.Printf("prefix=%s pwned=%t count=%d", result.Prefix, result.Pwned, result.Count)
+	logger.Printf("event=validation prefix=%s pwned=%t count=%d", result.Prefix, result.Pwned, result.Count)
 	if result.Pwned {
 		return ExitPwned
 	}

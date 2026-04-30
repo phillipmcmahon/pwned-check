@@ -2,6 +2,7 @@ package pwned
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +26,7 @@ func LoadConfig() (Config, error) {
 	}
 
 	if value := os.Getenv("PWNED_CHECK_PROVIDER"); value != "" {
-		cfg.Provider = strings.ToLower(value)
+		cfg.Provider = strings.ToLower(strings.TrimSpace(value))
 	}
 	if value := os.Getenv("PWNED_CHECK_FAIL_CLOSED"); value != "" {
 		cfg.FailClosed = isTruthy(value)
@@ -38,10 +39,10 @@ func LoadConfig() (Config, error) {
 		cfg.Timeout = time.Duration(seconds * float64(time.Second))
 	}
 	if value := os.Getenv("PWNED_CHECK_LOCAL_URL"); value != "" {
-		cfg.LocalURL = value
+		cfg.LocalURL = strings.TrimSpace(value)
 	}
 	if value := os.Getenv("PWNED_CHECK_HIBP_ENDPOINT"); value != "" {
-		cfg.HIBPEndpoint = value
+		cfg.HIBPEndpoint = strings.TrimSpace(value)
 	}
 
 	switch cfg.Provider {
@@ -52,8 +53,29 @@ func LoadConfig() (Config, error) {
 	if cfg.Provider == "local" && cfg.LocalURL == "" {
 		return Config{}, fmt.Errorf("missing PWNED_CHECK_LOCAL_URL for provider=local")
 	}
+	if cfg.Provider == "local" {
+		if err := validateHTTPURL("PWNED_CHECK_LOCAL_URL", cfg.LocalURL); err != nil {
+			return Config{}, err
+		}
+	}
+	if err := validateHTTPURL("PWNED_CHECK_HIBP_ENDPOINT", cfg.HIBPEndpoint); err != nil {
+		return Config{}, err
+	}
 
 	return cfg, nil
+}
+
+func validateHTTPURL(name, value string) error {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("invalid %s", name)
+	}
+	switch parsed.Scheme {
+	case "http", "https":
+		return nil
+	default:
+		return fmt.Errorf("invalid %s scheme %q", name, parsed.Scheme)
+	}
 }
 
 func isTruthy(value string) bool {

@@ -1,6 +1,7 @@
 package pwned
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -58,5 +59,22 @@ func TestHIBPProviderSetsPrivacyHeaders(t *testing.T) {
 	}
 	if count != 2 {
 		t.Fatalf("count = %d, want 2", count)
+	}
+}
+
+func TestRangeProviderTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		_, _ = w.Write([]byte("11111111111111111111111111111111111:9\n"))
+	}))
+	defer server.Close()
+
+	provider := NewLocalProvider(server.URL, 10*time.Millisecond)
+	_, err := provider.Lookup("ABCDE", "11111111111111111111111111111111111")
+	if err == nil {
+		t.Fatal("Lookup succeeded, want timeout error")
+	}
+	if !errors.Is(err, http.ErrHandlerTimeout) && !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("err = %v, want timeout", err)
 	}
 }

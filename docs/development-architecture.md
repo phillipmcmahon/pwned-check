@@ -88,6 +88,7 @@ This contract is intentionally small. Changes to it should be treated as archite
 - Keep live API dependency out of automated tests.
 - Run `go test ./...`, `go vet ./...`, build, and binary smoke tests before release.
 - Update docs when contract, configuration, or operational behavior changes.
+- Keep result and provider-failure logs in a stable `event=<name> key=value` shape.
 
 ### Release Controls
 

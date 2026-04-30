@@ -136,11 +136,10 @@ WORKFLOW_OPTION_ID="$(printf '%s' "$FIELDS_JSON" | jq -r --arg name "$WORKFLOW_N
 
 ISSUE_URL="https://github.com/$OWNER/$REPO/issues/$ISSUE"
 ITEM_ID="$(gh api graphql \
-    -f query='query($owner:String!, $repo:String!, $number:Int!, $project:ID!) { repository(owner:$owner, name:$repo) { issue(number:$number) { projectItems(first:20) { nodes { id project { id } } } } } }' \
+    -f query='query($owner:String!, $repo:String!, $number:Int!) { repository(owner:$owner, name:$repo) { issue(number:$number) { projectItems(first:20) { nodes { id project { id } } } } } }' \
     -f owner="$OWNER" \
     -f repo="$REPO" \
     -F number="$ISSUE" \
-    -f project="$PROJECT_ID" \
     | jq -r --arg project "$PROJECT_ID" '.data.repository.issue.projectItems.nodes[] | select(.project.id == $project) | .id' \
     | head -n 1)"
 

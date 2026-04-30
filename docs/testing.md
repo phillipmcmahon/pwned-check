@@ -43,6 +43,7 @@ Release-sensitive checks:
 
 - CLI exit-code behavior
 - no plaintext password in output
+- stable safe log event shape
 - local provider contract
 - provider timeout/failure behavior
 - binary smoke test

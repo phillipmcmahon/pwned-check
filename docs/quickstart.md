@@ -17,7 +17,7 @@ dist/pwned-check --version
 Expected shape:
 
 ```text
-pwned-check 0.2.0
+pwned-check <version>
 ```
 
 ## Check a Known Pwned Password
@@ -29,7 +29,7 @@ echo $?
 
 Expected result:
 
-- stderr includes `prefix=5BAA6 pwned=true`
+- stderr includes `event=validation prefix=5BAA6 pwned=true`
 - exit code is `1`
 
 ## Check a Random Password

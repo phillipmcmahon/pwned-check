@@ -13,7 +13,7 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
       - run: go run honnef.co/go/tools/cmd/staticcheck ./...
-      - run: go build -o dist/pwned-check ./cmd/pwned-check
+      - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o dist/pwned-check ./cmd/pwned-check
       - run: go run ./scripts/smoke_binary.go dist/pwned-check
       - uses: actions/upload-artifact@v7
         with:
@@ -44,7 +44,7 @@ jobs:
           go-version: "1.26"
           check-latest: true
       - run: mkdir -p dist
-      - run: go build -o "dist/${{ matrix.output }}" ./cmd/pwned-check
+      - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o "dist/${{ matrix.output }}" ./cmd/pwned-check
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}

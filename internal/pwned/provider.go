@@ -17,6 +17,7 @@ type RangeProvider struct {
 	BaseURL string
 	Client  *http.Client
 	Header  http.Header
+	Timeout time.Duration
 }
 
 func NewHIBPProvider(endpoint string, timeout time.Duration) RangeProvider {
@@ -27,6 +28,7 @@ func NewHIBPProvider(endpoint string, timeout time.Duration) RangeProvider {
 		BaseURL: strings.TrimRight(endpoint, "/") + "/",
 		Client:  &http.Client{Timeout: timeout},
 		Header:  headers,
+		Timeout: timeout,
 	}
 }
 
@@ -35,11 +37,19 @@ func NewLocalProvider(baseURL string, timeout time.Duration) RangeProvider {
 		BaseURL: strings.TrimRight(baseURL, "/") + "/range/",
 		Client:  &http.Client{Timeout: timeout},
 		Header:  http.Header{},
+		Timeout: timeout,
 	}
 }
 
 func (p RangeProvider) Lookup(prefix, suffix string) (int, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, p.BaseURL+prefix, nil)
+	ctx := context.Background()
+	cancel := func() {}
+	if p.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, p.Timeout)
+	}
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.BaseURL+prefix, nil)
 	if err != nil {
 		return 0, err
 	}

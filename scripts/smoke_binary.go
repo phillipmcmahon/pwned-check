@@ -36,7 +36,7 @@ func main() {
 	output, err := cmd.CombinedOutput()
 	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 		text := string(output)
-		if !strings.Contains(text, "prefix=5BAA6 pwned=true count=123") {
+		if !strings.Contains(text, "event=validation prefix=5BAA6 pwned=true count=123") {
 			fail("expected mocked pwned result, got:\n%s", text)
 		}
 		if strings.Contains(text, "password") {

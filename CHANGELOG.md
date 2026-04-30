@@ -18,3 +18,4 @@ The format is intentionally lightweight while the project is pre-production.
 - Live HIBP provider policy documentation and mocked HIBP endpoint tests for fail-open/fail-closed behavior.
 - Operational security docs for logging, rollout checks, troubleshooting, and parser fuzz coverage.
 - CI and smoke coverage for bounded parser fuzzing, mocked HIBP provider checks, and fail-open/fail-closed outage paths.
+- CI Linux artifact duplication removed by keeping Linux release packages as the canonical Linux build output.

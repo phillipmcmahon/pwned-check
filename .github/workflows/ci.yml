@@ -99,7 +99,7 @@ jobs:
             dist/pwned-check-pam-helper
 
   cross-build:
-    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+    name: Non-Linux Build (${{ matrix.goos }}/${{ matrix.goarch }})
     needs: [lint, test, smoke]
     runs-on: ubuntu-24.04
     permissions:
@@ -107,14 +107,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - goos: linux
-            goarch: amd64
-            output: pwned-check-linux-amd64
-            helper: pwned-check-pam-helper-linux-amd64
-          - goos: linux
-            goarch: arm64
-            output: pwned-check-linux-arm64
-            helper: pwned-check-pam-helper-linux-arm64
           - goos: darwin
             goarch: arm64
             output: pwned-check-darwin-arm64

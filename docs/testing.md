@@ -60,7 +60,8 @@ The GitHub workflow is split into:
 - `lint`: gofmt check, `go vet`, and Staticcheck
 - `test`: race-enabled Go tests and bounded parser fuzz smoke
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
-- `cross-build`: artifact builds gated on lint, test, and smoke
+- `cross-build`: non-Linux feasibility builds gated on lint, test, and smoke
+- `package-linux`: Linux release package builds for `amd64` and `arm64`
 
 Release-sensitive checks:
 

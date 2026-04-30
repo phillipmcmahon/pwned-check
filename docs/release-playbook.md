@@ -54,7 +54,7 @@ Capture:
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result
 - Docker smoke matrix result
-- CI `lint`, `test`, `smoke`, and `cross-build` jobs
+- CI `lint`, `test`, `smoke`, `cross-build`, and `package-linux` jobs
 - any manual Linux/PAM validation once available
 
 ### 4. Build Artifacts

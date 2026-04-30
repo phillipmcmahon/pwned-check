@@ -32,8 +32,14 @@ if [ -n "$unformatted" ]; then
     exit 1
 fi
 
+echo "make native-pam-fmt"
+make native-pam-fmt
+
 echo "go test -v -race ./..."
 go test -v -race ./...
+
+echo "make native-pam-test"
+make native-pam-test
 
 echo "make fuzz-smoke"
 make fuzz-smoke

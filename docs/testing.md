@@ -18,7 +18,9 @@ Equivalent commands:
 
 ```bash
 gofmt -l .
+cargo fmt --check
 go test ./...
+make native-pam-test
 make fuzz-smoke
 make coverage
 go vet ./...
@@ -75,6 +77,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `internal/pwned/provider_fuzz_test.go` | Parser fuzz coverage for HIBP-compatible range responses |
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
+| `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, service stubs, and checker outcome mapping |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
@@ -88,6 +91,7 @@ The GitHub workflow is split into:
 - `lint`: gofmt check and `go vet`
 - `staticcheck`: standalone Staticcheck job, intended to be configured as a required branch-protection check
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
+- `native-pam`: Rust format check, native PAM unit tests, Linux `pam_pwned_check.so` build, and dynamic dependency allowlist check
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
@@ -98,6 +102,8 @@ Release-sensitive checks:
 - CLI exit-code behavior
 - no plaintext password in output
 - stable safe log event shape
+- exact safe conversation strings for the native PAM module
+- native PAM module dynamic dependency allowlist
 - mocked HIBP-compatible provider contract
 - provider timeout/failure behavior
 - fail-open/fail-closed provider outage behavior

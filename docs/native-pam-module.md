@@ -2,7 +2,7 @@
 
 This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same any-hit rejection check as the current `pam_exec`-based integration.
 
-The module is not implemented yet. This is the agreed design baseline for Epic 6.
+Implementation has started with a minimal Rust `cdylib` skeleton under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, checker-outcome mapping, and Linux shared-library dependency inspection. Checker execution and real `PAM_AUTHTOK` handling are still future implementation slices.
 
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 

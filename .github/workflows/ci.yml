@@ -75,9 +75,31 @@ jobs:
       - name: Run coverage threshold
         run: make coverage
 
+  native-pam:
+    name: Native PAM
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run native PAM unit tests
+        run: |
+          make native-pam-fmt
+          make native-pam-test
+
+      - name: Build native PAM module
+        run: make native-pam-build
+
+      - name: Check native PAM shared-library dependencies
+        run: make native-pam-deps
+
   smoke:
     name: Smoke
-    needs: [lint, staticcheck, test]
+    needs: [lint, staticcheck, test, native-pam]
     runs-on: ubuntu-24.04
     permissions:
       contents: read

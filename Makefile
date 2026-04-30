@@ -1,7 +1,8 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps smoke docker-smoke docker-pam-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
+NATIVE_PAM_BIN := dist/pam_pwned_check.so
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$(VERSION)
 FUZZ_PACKAGE := ./internal/pwned
@@ -9,6 +10,7 @@ FUZZ_TARGET := FuzzParseRangeResponse
 
 fmt:
 	gofmt -w .
+	cargo fmt
 
 test:
 	go test ./...
@@ -34,6 +36,29 @@ staticcheck:
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/pwned-check
 	go build -o $(PAM_HELPER_BIN) ./cmd/pwned-check-pam-helper
+
+native-pam-fmt:
+	cargo fmt --check
+
+native-pam-build:
+	cargo build --release -p pam-pwned-check
+	mkdir -p dist
+	if [ -f target/release/libpam_pwned_check.so ]; then \
+		cp target/release/libpam_pwned_check.so $(NATIVE_PAM_BIN); \
+	else \
+		cp target/release/libpam_pwned_check.dylib dist/libpam_pwned_check.dylib; \
+		echo "built host dynamic library at dist/libpam_pwned_check.dylib; Linux builds produce $(NATIVE_PAM_BIN)"; \
+	fi
+
+native-pam-test:
+	cargo test -p pam-pwned-check
+
+native-pam-deps: native-pam-build
+	if [ -f $(NATIVE_PAM_BIN) ]; then \
+		./scripts/native-pam-deps-check.sh $(NATIVE_PAM_BIN); \
+	else \
+		echo "native PAM dependency allowlist skipped: $(NATIVE_PAM_BIN) not produced for this host"; \
+	fi
 
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)

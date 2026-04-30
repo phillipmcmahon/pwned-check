@@ -26,3 +26,4 @@ The format is intentionally lightweight while the project is pre-production.
 - Documentation updates for Ubuntu PAM deployment, rollback, helper exit mapping, HIBP request volume, threat model details, versioning, and log examples.
 - Staticcheck split into a standalone CI job ready for required branch protection, with release provenance attestation over published checksums.
 - PAM helper `--max-bytes` option and Prometheus-style counter examples for operational log pipelines.
+- Native PAM module Rust skeleton with safe-string fixtures, argument parsing tests, checker outcome mapping tests, exported PAM service stubs, and Linux shared-library dependency allowlist CI.

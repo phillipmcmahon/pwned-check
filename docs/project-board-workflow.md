@@ -11,6 +11,12 @@ Default status flow:
 - `In Progress`: actively being implemented, researched, or validated.
 - `Done`: implemented, documented, tested, and merged where code changes are involved.
 
+Workflow flow:
+- `Ready`: defined, accepted, and available to start.
+- `In Progress`: actively being changed.
+- `Review`: implementation is complete and being reviewed or validated.
+- `Done`: complete, merged where applicable, and closed unless it is an intentionally open tracking epic.
+
 ## Entry Types
 
 Use labels to classify entries:
@@ -18,6 +24,8 @@ Use labels to classify entries:
 - `type: story`: a user-visible or operator-visible increment of value.
 - `type: task`: implementation work that does not stand alone as user value.
 - `type: spike`: bounded research with a written conclusion.
+- `status:in-progress`: issue is actively being changed.
+- `status:review`: issue is ready for review or validation.
 - `area: cli`: checker CLI behavior.
 - `area: linux`: Linux/PAM integration.
 - `area: provider`: HIBP/local provider behavior.
@@ -102,3 +110,5 @@ Recommended working pattern:
 - Limit `In Progress` to the work currently being changed or validated.
 - Prefer small pull requests tied to one story.
 - Record architecture or security decisions in `docs/` when they change long-term direction.
+- Prefer `scripts/project-transition.sh` for moving issue status and board fields together.
+- Run `scripts/project-board-audit.sh` before declaring milestone or release tracking complete.

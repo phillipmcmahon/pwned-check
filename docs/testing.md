@@ -1,0 +1,66 @@
+# Testing Guide
+
+The test suite should mirror the current architecture:
+
+```text
+CLI -> config -> hash split -> provider -> exit code
+```
+
+## Local Validation
+
+Run the default validation gate:
+
+```bash
+make validate
+```
+
+Equivalent commands:
+
+```bash
+gofmt -l .
+go test ./...
+go vet ./...
+go run honnef.co/go/tools/cmd/staticcheck ./...
+go build -o dist/pwned-check ./cmd/pwned-check
+go run ./scripts/smoke_binary.go dist/pwned-check
+```
+
+## Test Layout
+
+| Area | Focus |
+|---|---|
+| `internal/pwned/core_test.go` | Hash splitting and provider-agnostic validation |
+| `internal/pwned/config_test.go` | Environment configuration defaults and overrides |
+| `internal/pwned/provider_test.go` | HIBP/local range response parsing and headers |
+| `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
+| `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
+
+## CI Rules
+
+CI should not depend on the live HIBP API. Automated tests use mocked HIBP-compatible range responses.
+
+Release-sensitive checks:
+
+- CLI exit-code behavior
+- no plaintext password in output
+- local provider contract
+- provider timeout/failure behavior
+- binary smoke test
+
+## Linux Integration Testing
+
+When PAM work starts, add a Linux integration test path that proves:
+
+- known pwned password is rejected
+- clean password is accepted
+- provider failure follows fail-open/fail-closed configuration
+- child process timeout blocks hangs
+- rollback instructions restore password-change behavior
+
+## Static Analysis
+
+Staticcheck is pinned through Go module metadata and runs in both local validation and CI:
+
+```bash
+go run honnef.co/go/tools/cmd/staticcheck ./...
+```

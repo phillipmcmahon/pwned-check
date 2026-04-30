@@ -1,6 +1,4 @@
-"```python
-CLI integration tests (stubbed provider).
-"""
+"""CLI integration tests (stubbed provider)."""
 import io
 import sys
 import pwned_check.cli as cli
@@ -8,15 +6,18 @@ from pwned_check.providers.base import PwnedProvider, NetworkError
 
 
 class CleanProvider(PwnedProvider):
-    def lookup(self, p, s): return 0
+    def lookup(self, p, s):
+        return 0
 
 
-class PwnedProvider_(PwnedProvider):
-    def lookup(self, p, s): return 7
+class PwnedProviderStub(PwnedProvider):
+    def lookup(self, p, s):
+        return 7
 
 
 class BrokenProvider(PwnedProvider):
-    def lookup(self, p, s): raise NetworkError("boom")
+    def lookup(self, p, s):
+        raise NetworkError("boom")
 
 
 def _run(monkeypatch, provider, stdin="hunter2", env=None):
@@ -33,7 +34,7 @@ def test_clean_exit_0(monkeypatch):
 
 
 def test_pwned_exit_1(monkeypatch):
-    assert _run(monkeypatch, PwnedProvider_()) == 1
+    assert _run(monkeypatch, PwnedProviderStub()) == 1
 
 
 def test_network_fail_open(monkeypatch):

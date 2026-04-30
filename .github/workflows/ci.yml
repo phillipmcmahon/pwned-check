@@ -97,6 +97,9 @@ jobs:
       - name: Check native PAM shared-library dependencies
         run: make native-pam-deps
 
+      - name: Check native PAM exported symbols
+        run: make native-pam-symbols
+
   smoke:
     name: Smoke
     needs: [lint, staticcheck, test, native-pam]

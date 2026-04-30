@@ -307,6 +307,23 @@ mod tests {
     }
 
     #[test]
+    fn parse_rejects_empty_checker() {
+        assert_eq!(
+            parse_module_config(&["checker="]),
+            Err(ConfigError::EmptyChecker)
+        );
+    }
+
+    #[test]
+    fn pam_constants_match_linux_pam_headers() {
+        assert_eq!(PAM_SUCCESS, 0);
+        assert_eq!(PAM_AUTHTOK_ERR, 20);
+        assert_eq!(PAM_IGNORE, 25);
+        assert_eq!(PAM_UPDATE_AUTHTOK, 0x2000);
+        assert_eq!(PAM_PRELIM_CHECK, 0x4000);
+    }
+
+    #[test]
     fn outcome_mapping_rejects_checker_failures() {
         let cases = [
             (CheckerOutcome::Pwned, RejectReason::Pwned),
@@ -326,6 +343,28 @@ mod tests {
                 ModuleDecision::Reject { reason }
             );
         }
+    }
+
+    #[test]
+    fn clean_outcome_allows() {
+        assert_eq!(
+            map_checker_outcome(CheckerOutcome::Clean, false),
+            ModuleDecision::Allow
+        );
+        assert_eq!(
+            pam_return_for_decision(map_checker_outcome(CheckerOutcome::Clean, false)),
+            PAM_SUCCESS
+        );
+    }
+
+    #[test]
+    fn rejected_outcomes_map_to_authtok_error() {
+        assert_eq!(
+            pam_return_for_decision(ModuleDecision::Reject {
+                reason: RejectReason::Pwned
+            }),
+            PAM_AUTHTOK_ERR
+        );
     }
 
     #[test]
@@ -356,6 +395,22 @@ mod tests {
     fn exported_service_stubs_are_inert_except_prelim_chauthtok() {
         assert_eq!(
             pam_sm_authenticate(core::ptr::null_mut(), 0, 0, core::ptr::null()),
+            PAM_IGNORE
+        );
+        assert_eq!(
+            pam_sm_setcred(core::ptr::null_mut(), 0, 0, core::ptr::null()),
+            PAM_IGNORE
+        );
+        assert_eq!(
+            pam_sm_acct_mgmt(core::ptr::null_mut(), 0, 0, core::ptr::null()),
+            PAM_IGNORE
+        );
+        assert_eq!(
+            pam_sm_open_session(core::ptr::null_mut(), 0, 0, core::ptr::null()),
+            PAM_IGNORE
+        );
+        assert_eq!(
+            pam_sm_close_session(core::ptr::null_mut(), 0, 0, core::ptr::null()),
             PAM_IGNORE
         );
         assert_eq!(

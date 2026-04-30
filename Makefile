@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols smoke docker-smoke docker-pam-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -58,6 +58,13 @@ native-pam-deps: native-pam-build
 		./scripts/native-pam-deps-check.sh $(NATIVE_PAM_BIN); \
 	else \
 		echo "native PAM dependency allowlist skipped: $(NATIVE_PAM_BIN) not produced for this host"; \
+	fi
+
+native-pam-symbols: native-pam-build
+	if [ -f $(NATIVE_PAM_BIN) ]; then \
+		./scripts/native-pam-symbols-check.sh $(NATIVE_PAM_BIN); \
+	else \
+		echo "native PAM symbol check skipped: $(NATIVE_PAM_BIN) not produced for this host"; \
 	fi
 
 smoke: build

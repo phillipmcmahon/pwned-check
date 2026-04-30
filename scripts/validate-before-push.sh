@@ -41,6 +41,15 @@ go test -v -race ./...
 echo "make native-pam-test"
 make native-pam-test
 
+echo "make native-pam-build"
+make native-pam-build
+
+echo "make native-pam-symbols"
+make native-pam-symbols
+
+echo "make native-pam-deps"
+make native-pam-deps
+
 echo "make fuzz-smoke"
 make fuzz-smoke
 

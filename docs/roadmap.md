@@ -108,7 +108,30 @@ Deliverables:
 - Deployment security checklist.
 - Operational troubleshooting guide.
 
-## Epic 6: macOS and Windows Feasibility
+## Epic 6: Native Linux PAM Module Delivery
+
+Project entry: [#10](https://github.com/phillipmcmahon/pwned-check/issues/10)
+
+Goal: deliver a native Linux PAM module once the current `pam_exec` helper integration has proven the checker contract, security controls, and operator workflow.
+
+User stories:
+- As a Linux administrator, I want a native PAM module so password-change enforcement integrates cleanly with PAM without relying on `pam_exec` process glue.
+- As a security reviewer, I want the PAM module to preserve the no-plaintext-logging and no-password-argv guarantees of the helper path.
+- As an operator, I want the native module to support explicit timeout and fail-open/fail-closed behavior consistent with the checker contract.
+- As a maintainer, I want parity tests proving the native module maps checker outcomes the same way as `pwned-check-pam-helper`.
+- As a release manager, I want native module packaging and installation guidance that clearly separates experimental rollout from production rollout.
+
+Deliverables:
+- Native PAM module feasibility and design note.
+- Decision on implementation language and ABI strategy.
+- PAM module configuration format and examples.
+- Outcome mapping parity with `pwned-check-pam-helper`.
+- Timeout and fail-open/fail-closed behavior parity.
+- Minimal distro validation matrix for the module.
+- Install, rollback, and emergency recovery documentation.
+- Security review checklist for native PAM deployment.
+
+## Epic 7: macOS and Windows Feasibility
 
 Project entry: [#9](https://github.com/phillipmcmahon/pwned-check/issues/9)
 

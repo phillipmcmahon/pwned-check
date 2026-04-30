@@ -20,6 +20,7 @@ Equivalent commands:
 gofmt -l .
 go test ./...
 make fuzz-smoke
+make coverage
 go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
@@ -36,6 +37,21 @@ scripts/install-git-hooks.sh
 ```
 
 The hook runs the same validation gate before `git push`.
+
+## Coverage Gate
+
+Product logic packages must meet at least 85% test coverage per package:
+
+```bash
+make coverage
+```
+
+The coverage gate currently includes:
+
+- `./internal/pwned`
+- `./internal/pamhelper`
+
+Command entrypoints under `cmd/` and smoke/package harnesses under `scripts/` are intentionally excluded from the coverage threshold. They are thin executable adapters or integration test drivers and are covered through unit tests of their internal packages plus binary, Docker, and PAM package smoke tests.
 
 ## Fuzz Schedule
 
@@ -70,7 +86,7 @@ CI should not depend on the live HIBP API. Automated tests use mocked HIBP-compa
 The GitHub workflow is split into:
 
 - `lint`: gofmt check, `go vet`, and Staticcheck
-- `test`: race-enabled Go tests and bounded parser fuzz smoke
+- `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
@@ -85,6 +101,7 @@ Release-sensitive checks:
 - provider timeout/failure behavior
 - fail-open/fail-closed provider outage behavior
 - bounded parser fuzz coverage, including a 60s release gate
+- 85% minimum coverage for included product logic packages
 - binary smoke test
 - Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 - Docker PAM package smoke across Debian, Ubuntu, Alpine, Arch Linux, and Fedora

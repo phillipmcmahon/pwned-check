@@ -51,6 +51,7 @@ Capture:
 
 - `go test ./...`
 - `make fuzz-release`
+- `make coverage`
 - `go vet ./...`
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result

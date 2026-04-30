@@ -38,6 +38,9 @@ go test -v -race ./...
 echo "make fuzz-smoke"
 make fuzz-smoke
 
+echo "make coverage"
+make coverage
+
 echo "go vet ./..."
 go vet ./...
 

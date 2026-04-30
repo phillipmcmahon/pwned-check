@@ -1,4 +1,4 @@
-.PHONY: fmt test fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -12,6 +12,9 @@ fmt:
 
 test:
 	go test ./...
+
+coverage:
+	./scripts/coverage-threshold.sh
 
 fuzz-smoke:
 	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=5s

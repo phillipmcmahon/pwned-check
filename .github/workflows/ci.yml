@@ -58,6 +58,9 @@ jobs:
       - name: Run parser fuzz smoke
         run: make fuzz-smoke
 
+      - name: Run coverage threshold
+        run: make coverage
+
   smoke:
     name: Smoke
     needs: [lint, test]

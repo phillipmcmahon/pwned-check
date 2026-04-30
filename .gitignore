@@ -8,3 +8,9 @@ build/
 *.egg-info/
 .venv/
 .env
+
+# macOS filesystem metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*

@@ -13,6 +13,7 @@ Use a versioned binary with a stable symlink:
 
 /usr/local/bin/
   pwned-check -> /usr/local/lib/pwned-check/current
+  pwned-check-pam-helper -> /usr/local/lib/pwned-check/current-pam-helper
 ```
 
 Why this layout works well:
@@ -29,9 +30,13 @@ After downloading and verifying a release artifact:
 ```bash
 sudo mkdir -p /usr/local/lib/pwned-check
 sudo install -m 0755 pwned-check_linux_amd64 /usr/local/lib/pwned-check/pwned-check_<version>_linux_amd64
+sudo install -m 0755 pwned-check-pam-helper_linux_amd64 /usr/local/lib/pwned-check/pwned-check-pam-helper_<version>_linux_amd64
 sudo ln -sfn /usr/local/lib/pwned-check/pwned-check_<version>_linux_amd64 /usr/local/lib/pwned-check/current
+sudo ln -sfn /usr/local/lib/pwned-check/pwned-check-pam-helper_<version>_linux_amd64 /usr/local/lib/pwned-check/current-pam-helper
 sudo ln -sfn /usr/local/lib/pwned-check/current /usr/local/bin/pwned-check
+sudo ln -sfn /usr/local/lib/pwned-check/current-pam-helper /usr/local/bin/pwned-check-pam-helper
 /usr/local/bin/pwned-check --version
+/usr/local/bin/pwned-check-pam-helper --version
 ```
 
 Replace `<version>` and architecture with the release artifact being installed.
@@ -44,6 +49,7 @@ Replace `<version>` and architecture with the release artifact being installed.
 4. Update `current`.
 5. Confirm `/usr/local/bin/pwned-check --version`.
 6. Run the mocked binary smoke test where practical.
+7. Confirm the PAM helper invokes the intended checker path.
 
 ## Rollback
 
@@ -57,7 +63,9 @@ Activate a previous version:
 
 ```bash
 sudo ln -sfn /usr/local/lib/pwned-check/<previous-binary> /usr/local/lib/pwned-check/current
+sudo ln -sfn /usr/local/lib/pwned-check/<previous-helper-binary> /usr/local/lib/pwned-check/current-pam-helper
 /usr/local/bin/pwned-check --version
+/usr/local/bin/pwned-check-pam-helper --version
 ```
 
 ## PAM Rollback Principle

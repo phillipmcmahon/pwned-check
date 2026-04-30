@@ -33,6 +33,7 @@ go run ./scripts/smoke_binary.go dist/pwned-check
 | `internal/pwned/config_test.go` | Environment configuration defaults and overrides |
 | `internal/pwned/provider_test.go` | HIBP/local range response parsing and headers |
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
+| `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 
 ## CI Rules

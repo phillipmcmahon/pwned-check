@@ -69,6 +69,8 @@ Provider and integration timeouts are mandatory. Password-change workflows must 
 
 The PAM integration should enforce its own timeout around the checker process even though the checker also has provider timeouts.
 
+The first Linux PoC uses `pwned-check-pam-helper` for this timeout boundary. The helper reads the PAM-supplied token from stdin and invokes `pwned-check --stdin`; it does not pass the password through argv.
+
 ## Local Mirror Preference
 
 Production deployments should prefer an internal HIBP-compatible range mirror where possible. This reduces internet dependency and keeps password-change enforcement under local operational control.

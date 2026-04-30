@@ -14,11 +14,14 @@ jobs:
       - run: go vet ./...
       - run: go run honnef.co/go/tools/cmd/staticcheck ./...
       - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o dist/pwned-check ./cmd/pwned-check
+      - run: go build -o dist/pwned-check-pam-helper ./cmd/pwned-check-pam-helper
       - run: go run ./scripts/smoke_binary.go dist/pwned-check
       - uses: actions/upload-artifact@v7
         with:
           name: pwned-check-linux-amd64
-          path: dist/pwned-check
+          path: |
+            dist/pwned-check
+            dist/pwned-check-pam-helper
 
   cross-build:
     runs-on: ubuntu-24.04
@@ -28,15 +31,19 @@ jobs:
           - goos: linux
             goarch: amd64
             output: pwned-check-linux-amd64
+            helper: pwned-check-pam-helper-linux-amd64
           - goos: linux
             goarch: arm64
             output: pwned-check-linux-arm64
+            helper: pwned-check-pam-helper-linux-arm64
           - goos: darwin
             goarch: arm64
             output: pwned-check-darwin-arm64
+            helper: pwned-check-pam-helper-darwin-arm64
           - goos: windows
             goarch: amd64
             output: pwned-check-windows-amd64.exe
+            helper: pwned-check-pam-helper-windows-amd64.exe
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -45,6 +52,7 @@ jobs:
           check-latest: true
       - run: mkdir -p dist
       - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o "dist/${{ matrix.output }}" ./cmd/pwned-check
+      - run: go build -o "dist/${{ matrix.helper }}" ./cmd/pwned-check-pam-helper
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -52,4 +60,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.output }}
-          path: dist/${{ matrix.output }}
+          path: |
+            dist/${{ matrix.output }}
+            dist/${{ matrix.helper }}

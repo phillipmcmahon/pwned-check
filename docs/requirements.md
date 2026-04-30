@@ -10,7 +10,8 @@ Initial production assumptions:
 
 - Linux host with PAM-based password-change flow.
 - Native `pwned-check` binary available on the host.
-- PAM integration invokes the checker through stdin, not command-line arguments.
+- Native `pwned-check-pam-helper` binary available on the host for the first PAM PoC.
+- PAM integration invokes the helper through stdin, not command-line arguments.
 - Provider access is either:
   - the public HIBP range API, or
   - an internal HIBP-compatible range mirror.

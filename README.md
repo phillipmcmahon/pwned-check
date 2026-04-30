@@ -2,7 +2,7 @@
 
 Small Go CLI that checks a supplied password against the [Have I Been Pwned](https://haveibeenpwned.com/Passwords) Pwned Passwords range API using k-anonymity. Only the first 5 chars of the SHA-1 hash are sent to the provider.
 
-The near-term target is Linux password-change integration. A PAM module or helper can pipe a candidate password to `pwned-check --stdin` and reject the change when the command exits with `1`.
+The near-term target is Linux password-change integration. The first PoC uses `pam_exec.so expose_authtok` to pipe a candidate password to `pwned-check-pam-helper`, which invokes `pwned-check --stdin` with a hard timeout.
 
 macOS and Windows integration are intentionally deferred until the Linux flow is proven, because their signing and platform-security requirements should be handled deliberately rather than worked around.
 

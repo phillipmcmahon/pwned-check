@@ -44,7 +44,7 @@ go run honnef.co/go/tools/cmd/staticcheck ./...
 echo "make build"
 make build
 
-echo "go run ./scripts/smoke_binary.go dist/pwned-check"
-go run ./scripts/smoke_binary.go dist/pwned-check
+echo "make smoke"
+make smoke
 
 echo "local validation passed"

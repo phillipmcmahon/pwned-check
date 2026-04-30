@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 from .config import load as load_config
@@ -32,6 +33,7 @@ def _build_provider(cfg):
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="pwned-check")
+    p.add_argument("--version", action="version", version=f"%(prog)s {version('pwned-check')}")
     p.add_argument("--stdin", action="store_true", help="read password from stdin")
     p.add_argument("--config", type=Path, default=None)
     p.add_argument("--verbose", action="store_true")

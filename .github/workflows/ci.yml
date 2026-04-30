@@ -12,6 +12,12 @@ jobs:
         with:
           python-version: "3.14"
           check-latest: true
-      - run: pip install -e .[dev]
+      - run: pip install -e ".[dev,build]"
       - run: ruff check .
       - run: pytest -q
+      - run: python scripts/build_binary.py
+      - run: python scripts/smoke_binary.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pwned-check-${{ runner.os }}
+          path: dist/pwned-check*

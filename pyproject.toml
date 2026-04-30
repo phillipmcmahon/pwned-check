@@ -7,12 +7,13 @@ name = "pwned-check"
 version = "0.1.0"
 description = "Cross-platform CLI to check passwords against the HIBP Pwned Passwords range API."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [{ name = "Phillip McMahon" }]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+build = ["pyinstaller>=6.19"]
 
 [project.scripts]
 pwned-check = "pwned_check.cli:main"
@@ -29,4 +30,4 @@ pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py314"

@@ -43,3 +43,11 @@ def test_network_fail_open(monkeypatch):
 
 def test_network_fail_closed(monkeypatch):
     assert _run(monkeypatch, BrokenProvider(), env={"PWNED_CHECK_FAIL_CLOSED": "true"}) == 3
+
+
+def test_version_flag(capsys):
+    try:
+        cli.main(["--version"])
+    except SystemExit as e:
+        assert e.code == 0
+    assert capsys.readouterr().out.startswith("pwned-check ")

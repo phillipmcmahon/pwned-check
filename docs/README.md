@@ -8,6 +8,7 @@ Use this page as the front door for project and operator documentation. The docs
 |---|---|
 | Try the checker locally | [Quickstart](quickstart.md) |
 | Confirm platform and deployment assumptions | [Requirements](requirements.md) |
+| Configure live HIBP provider behavior | [Provider policy](provider-policy.md) |
 | Understand install, upgrade, and rollback shape | [Operations](operations.md) |
 | Test Linux password-change integration | [Linux PAM PoC](linux-pam-poc.md) |
 | Understand secret-handling and privilege boundaries | [Security model](security-model.md) |

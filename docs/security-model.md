@@ -23,7 +23,7 @@ Secondary assets:
 Password-change process
   -> platform integration layer
   -> pwned-check binary
-  -> HIBP or local range provider
+  -> live HIBP range API
 ```
 
 The password is trusted only inside the OS password-change process, integration layer, and checker process memory. It must not cross the provider boundary.

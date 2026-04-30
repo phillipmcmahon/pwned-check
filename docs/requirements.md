@@ -29,6 +29,8 @@ Operational implications:
 
 Offline cache or mirror providers are not part of the current production scope, but the checker design should keep provider concerns isolated so those modes can be considered later without changing the PAM integration contract.
 
+See [Provider policy](provider-policy.md) for current live HIBP configuration, failure posture, and test-provider boundaries.
+
 ## Non-Production Platforms
 
 macOS and Windows are intentionally deferred.

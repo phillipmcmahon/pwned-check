@@ -15,3 +15,4 @@ The format is intentionally lightweight while the project is pre-production.
 - Docker smoke matrix for Debian, Ubuntu, Alpine, Arch Linux, and Fedora minimal images.
 - Linux release package workflow with tarballs, install script, build metadata, and SHA256 checksums.
 - Docker PAM package smoke tests that install the Linux package, write `/etc/pam.d` config, and validate allow/reject combinations through `pam_exec.so expose_authtok`.
+- Live HIBP provider policy documentation and mocked HIBP endpoint tests for fail-open/fail-closed behavior.

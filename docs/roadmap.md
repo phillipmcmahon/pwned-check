@@ -63,6 +63,10 @@ Deliverables:
 - Provider privacy documentation.
 - Future provider extension notes for offline cache or mirror support.
 
+Current implementation notes:
+- [Provider policy](provider-policy.md) documents the current live HIBP posture.
+- Automated tests use mocked HIBP-compatible range responses and do not call the live HIBP API.
+
 ## Epic 4: Packaging and Release
 
 Project entry: [#7](https://github.com/phillipmcmahon/pwned-check/issues/7)

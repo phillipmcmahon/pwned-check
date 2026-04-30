@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestCLIRejectsPwnedPasswordWithMockedRangeService(t *testing.T) {
+func TestCLIRejectsPwnedPasswordWithMockedHIBPRangeService(t *testing.T) {
 	prefix, suffix := HashParts("password")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/range/"+prefix {
@@ -20,8 +20,8 @@ func TestCLIRejectsPwnedPasswordWithMockedRangeService(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Setenv("PWNED_CHECK_PROVIDER", "local")
-	t.Setenv("PWNED_CHECK_LOCAL_URL", server.URL)
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", server.URL+"/range/")
 
 	var stderr bytes.Buffer
 	code := CLI{
@@ -73,6 +73,42 @@ func TestCLIFailClosed(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "event=provider_failure fail_closed=true") {
 		t.Fatalf("stderr = %q, want fail-closed provider failure event", stderr.String())
+	}
+}
+
+func TestCLIHIBPFailOpen(t *testing.T) {
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", "http://127.0.0.1:9/range/")
+	t.Setenv("PWNED_CHECK_FAIL_CLOSED", "false")
+
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader("password\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin"})
+	if code != ExitClean {
+		t.Fatalf("code = %d, want %d", code, ExitClean)
+	}
+	if !strings.Contains(stderr.String(), "event=provider_failure fail_closed=false") {
+		t.Fatalf("stderr = %q, want fail-open HIBP provider failure event", stderr.String())
+	}
+}
+
+func TestCLIHIBPFailClosed(t *testing.T) {
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", "http://127.0.0.1:9/range/")
+	t.Setenv("PWNED_CHECK_FAIL_CLOSED", "true")
+
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader("password\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin"})
+	if code != ExitNetworkError {
+		t.Fatalf("code = %d, want %d", code, ExitNetworkError)
+	}
+	if !strings.Contains(stderr.String(), "event=provider_failure fail_closed=true") {
+		t.Fatalf("stderr = %q, want fail-closed HIBP provider failure event", stderr.String())
 	}
 }
 

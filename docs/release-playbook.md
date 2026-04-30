@@ -50,11 +50,12 @@ make validate
 Capture:
 
 - `go test ./...`
+- `make fuzz-release`
 - `go vet ./...`
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result
 - Docker smoke matrix result
-- CI `lint`, `test`, `smoke`, `cross-build`, and `package-linux` jobs
+- CI `lint`, `test`, `smoke`, and `package-linux` jobs
 - any manual Linux/PAM validation once available
 
 ### 4. Build Artifacts
@@ -83,6 +84,8 @@ Each package contains:
 - build and dependency metadata under `metadata/`
 
 Later packaging may add `.deb` and `.rpm` artifacts after the install model settles.
+
+Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish
 

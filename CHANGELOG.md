@@ -19,3 +19,5 @@ The format is intentionally lightweight while the project is pre-production.
 - Operational security docs for logging, rollout checks, troubleshooting, and parser fuzz coverage.
 - CI and smoke coverage for bounded parser fuzzing, mocked HIBP provider checks, and fail-open/fail-closed outage paths.
 - CI Linux artifact duplication removed by keeping Linux release packages as the canonical Linux build output.
+- Parser fuzzing split into 5s CI/pre-push smoke, 60s release validation, and 5m scheduled nightly runs.
+- CI distributable artifacts limited to Linux `amd64` and `arm64` until macOS and Windows signing tracks are ready.

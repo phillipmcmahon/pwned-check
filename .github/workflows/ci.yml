@@ -98,52 +98,6 @@ jobs:
             dist/pwned-check
             dist/pwned-check-pam-helper
 
-  cross-build:
-    name: Non-Linux Build (${{ matrix.goos }}/${{ matrix.goarch }})
-    needs: [lint, test, smoke]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        include:
-          - goos: darwin
-            goarch: arm64
-            output: pwned-check-darwin-arm64
-            helper: pwned-check-pam-helper-darwin-arm64
-          - goos: windows
-            goarch: amd64
-            output: pwned-check-windows-amd64.exe
-            helper: pwned-check-pam-helper-windows-amd64.exe
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      CGO_ENABLED: "0"
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "1.26"
-          check-latest: true
-
-      - name: Build binaries
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o "dist/${{ matrix.output }}" ./cmd/pwned-check
-          go build -o "dist/${{ matrix.helper }}" ./cmd/pwned-check-pam-helper
-
-      - name: Upload binaries
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.output }}
-          path: |
-            dist/${{ matrix.output }}
-            dist/${{ matrix.helper }}
-
   package-linux:
     name: Package Linux (${{ matrix.goarch }})
     needs: [lint, test, smoke]
@@ -207,6 +161,15 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Run release parser fuzz
+        run: make fuzz-release
 
       - name: Download packages
         uses: actions/download-artifact@v8

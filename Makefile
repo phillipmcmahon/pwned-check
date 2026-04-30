@@ -1,9 +1,11 @@
-.PHONY: fmt test fuzz-smoke vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$(VERSION)
+FUZZ_PACKAGE := ./internal/pwned
+FUZZ_TARGET := FuzzParseRangeResponse
 
 fmt:
 	gofmt -w .
@@ -12,7 +14,13 @@ test:
 	go test ./...
 
 fuzz-smoke:
-	go test ./internal/pwned -run '^$$' -fuzz=FuzzParseRangeResponse -fuzztime=5s
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=5s
+
+fuzz-release:
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=60s
+
+fuzz-nightly:
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=5m
 
 vet:
 	go vet ./...

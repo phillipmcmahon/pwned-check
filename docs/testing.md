@@ -37,6 +37,18 @@ scripts/install-git-hooks.sh
 
 The hook runs the same validation gate before `git push`.
 
+## Fuzz Schedule
+
+Parser fuzzing runs at three depths:
+
+| Scope | Command | Fuzz time | Purpose |
+|---|---|---:|---|
+| Normal CI and pre-push | `make fuzz-smoke` | `5s` | Fast regression signal for everyday changes |
+| Release validation | `make fuzz-release` | `60s` | Longer parser robustness check before publishing |
+| Scheduled workflow | `make fuzz-nightly` | `5m` | Deeper recurring search for rare provider parsing bugs |
+
+The scheduled fuzz workflow runs daily and can also be started manually from GitHub Actions. CI and release fuzzing must stay independent of the live HIBP API.
+
 ## Test Layout
 
 | Area | Focus |
@@ -60,8 +72,9 @@ The GitHub workflow is split into:
 - `lint`: gofmt check, `go vet`, and Staticcheck
 - `test`: race-enabled Go tests and bounded parser fuzz smoke
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
-- `cross-build`: non-Linux feasibility builds gated on lint, test, and smoke
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
+- `release`: tagged release publishing with 60s parser fuzz before artifact publication
+- `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 Release-sensitive checks:
 
@@ -71,11 +84,13 @@ Release-sensitive checks:
 - mocked HIBP-compatible provider contract
 - provider timeout/failure behavior
 - fail-open/fail-closed provider outage behavior
-- bounded parser fuzz coverage
+- bounded parser fuzz coverage, including a 60s release gate
 - binary smoke test
 - Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 - Docker PAM package smoke across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 - Linux package build for `amd64` and `arm64` with SHA256 files
+
+CI intentionally produces only Linux `amd64` and `arm64` distributable artifacts while Linux remains the active integration target. macOS and Windows artifacts should be reintroduced together, with both x64 and arm64 coverage, when those roadmap tracks include their signing requirements.
 
 ## Linux Integration Testing
 

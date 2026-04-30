@@ -35,6 +35,9 @@ fi
 echo "go test -v -race ./..."
 go test -v -race ./...
 
+echo "make fuzz-smoke"
+make fuzz-smoke
+
 echo "go vet ./..."
 go vet ./...
 

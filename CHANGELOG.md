@@ -17,3 +17,4 @@ The format is intentionally lightweight while the project is pre-production.
 - Docker PAM package smoke tests that install the Linux package, write `/etc/pam.d` config, and validate allow/reject combinations through `pam_exec.so expose_authtok`.
 - Live HIBP provider policy documentation and mocked HIBP endpoint tests for fail-open/fail-closed behavior.
 - Operational security docs for logging, rollout checks, troubleshooting, and parser fuzz coverage.
+- CI and smoke coverage for bounded parser fuzzing, mocked HIBP provider checks, and fail-open/fail-closed outage paths.

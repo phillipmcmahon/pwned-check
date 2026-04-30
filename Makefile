@@ -1,4 +1,4 @@
-.PHONY: fmt test vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test fuzz-smoke vet staticcheck build smoke docker-smoke docker-pam-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -10,6 +10,9 @@ fmt:
 
 test:
 	go test ./...
+
+fuzz-smoke:
+	go test ./internal/pwned -run '^$$' -fuzz=FuzzParseRangeResponse -fuzztime=5s
 
 vet:
 	go vet ./...
@@ -23,7 +26,7 @@ build:
 
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)
-	printf 'password\n' | PWNED_CHECK_PROVIDER=local PWNED_CHECK_LOCAL_URL=http://127.0.0.1:9 PWNED_CHECK_FAIL_CLOSED=false $(PAM_HELPER_BIN) --checker $(BIN) --timeout 3s
+	printf 'password\n' | PWNED_CHECK_PROVIDER=hibp PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/ PWNED_CHECK_FAIL_CLOSED=false $(PAM_HELPER_BIN) --checker $(BIN) --timeout 3s
 
 docker-smoke:
 	./scripts/docker-smoke.sh

@@ -13,9 +13,11 @@ Artifacts are staged under `/private/tmp` on macOS and `/tmp` elsewhere, then co
 The container runner then checks:
 
 - both binaries report a version
-- `pwned-check --stdin` rejects a mocked pwned password
-- `pwned-check-pam-helper` allows a clean fail-open result
+- `pwned-check --stdin` rejects a mocked pwned password through the HIBP provider path
+- `pwned-check --stdin` follows fail-open and fail-closed outage policy without calling the live HIBP API
+- `pwned-check-pam-helper` allows a clean fail-open provider outage
 - `pwned-check-pam-helper` rejects a mocked pwned password
+- `pwned-check-pam-helper` rejects fail-closed provider outage as a checker provider failure
 - `pwned-check-pam-helper` rejects checker timeout
 - neither checker nor helper logs the plaintext password in the tested paths
 

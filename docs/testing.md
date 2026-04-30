@@ -19,6 +19,7 @@ Equivalent commands:
 ```bash
 gofmt -l .
 go test ./...
+make fuzz-smoke
 go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
@@ -57,8 +58,8 @@ CI should not depend on the live HIBP API. Automated tests use mocked HIBP-compa
 The GitHub workflow is split into:
 
 - `lint`: gofmt check, `go vet`, and Staticcheck
-- `test`: race-enabled Go tests
-- `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke
+- `test`: race-enabled Go tests and bounded parser fuzz smoke
+- `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `cross-build`: artifact builds gated on lint, test, and smoke
 
 Release-sensitive checks:
@@ -68,6 +69,8 @@ Release-sensitive checks:
 - stable safe log event shape
 - mocked HIBP-compatible provider contract
 - provider timeout/failure behavior
+- fail-open/fail-closed provider outage behavior
+- bounded parser fuzz coverage
 - binary smoke test
 - Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 - Docker PAM package smoke across Debian, Ubuntu, Alpine, Arch Linux, and Fedora

@@ -25,8 +25,11 @@ func main() {
 	checkVersion(checker, "pwned-check ")
 	checkVersion(helper, "pwned-check-pam-helper ")
 	checkerRejectsPwnedPassword(checker)
+	checkerAllowsProviderFailureFailOpen(checker)
+	checkerRejectsProviderFailureFailClosed(checker)
 	helperAllowsCleanPassword(checker, helper)
 	helperRejectsPwnedPassword(checker, helper)
+	helperRejectsProviderFailureFailClosed(checker, helper)
 	helperRejectsTimeout(helper)
 }
 
@@ -55,8 +58,8 @@ func checkerRejectsPwnedPassword(checker string) {
 	cmd := exec.Command(checker, "--stdin")
 	cmd.Stdin = strings.NewReader("password\n")
 	cmd.Env = append(os.Environ(),
-		"PWNED_CHECK_PROVIDER=local",
-		"PWNED_CHECK_LOCAL_URL="+server.URL,
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT="+server.URL+"/range/",
 	)
 	output, err := cmd.CombinedOutput()
 	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
@@ -75,12 +78,58 @@ func checkerRejectsPwnedPassword(checker string) {
 	fail("checker expected exit 1, got 0:\n%s", output)
 }
 
+func checkerAllowsProviderFailureFailOpen(checker string) {
+	cmd := exec.Command(checker, "--stdin")
+	cmd.Stdin = strings.NewReader("candidate\n")
+	cmd.Env = append(os.Environ(),
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/",
+		"PWNED_CHECK_FAIL_CLOSED=false",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fail("checker fail-open expected exit 0, got %v:\n%s", err, output)
+	}
+	text := string(output)
+	if !strings.Contains(text, "event=provider_failure fail_closed=false") {
+		fail("checker fail-open expected provider failure event, got:\n%s", text)
+	}
+	if strings.Contains(text, "candidate") {
+		fail("checker fail-open leaked candidate password:\n%s", text)
+	}
+}
+
+func checkerRejectsProviderFailureFailClosed(checker string) {
+	cmd := exec.Command(checker, "--stdin")
+	cmd.Stdin = strings.NewReader("candidate\n")
+	cmd.Env = append(os.Environ(),
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/",
+		"PWNED_CHECK_FAIL_CLOSED=true",
+	)
+	output, err := cmd.CombinedOutput()
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 3 {
+		text := string(output)
+		if !strings.Contains(text, "event=provider_failure fail_closed=true") {
+			fail("checker fail-closed expected provider failure event, got:\n%s", text)
+		}
+		if strings.Contains(text, "candidate") {
+			fail("checker fail-closed leaked candidate password:\n%s", text)
+		}
+		return
+	}
+	if err != nil {
+		fail("checker fail-closed expected exit 3, got %v:\n%s", err, output)
+	}
+	fail("checker fail-closed expected exit 3, got 0:\n%s", output)
+}
+
 func helperAllowsCleanPassword(checker, helper string) {
 	cmd := exec.Command(helper, "--checker", checker, "--timeout", "3s")
 	cmd.Stdin = strings.NewReader("candidate\n")
 	cmd.Env = append(os.Environ(),
-		"PWNED_CHECK_PROVIDER=local",
-		"PWNED_CHECK_LOCAL_URL=http://127.0.0.1:9",
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/",
 		"PWNED_CHECK_FAIL_CLOSED=false",
 	)
 	output, err := cmd.CombinedOutput()
@@ -110,8 +159,8 @@ func helperRejectsPwnedPassword(checker, helper string) {
 	cmd := exec.Command(helper, "--checker", checker, "--timeout", "3s")
 	cmd.Stdin = strings.NewReader("password\n")
 	cmd.Env = append(os.Environ(),
-		"PWNED_CHECK_PROVIDER=local",
-		"PWNED_CHECK_LOCAL_URL="+server.URL,
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT="+server.URL+"/range/",
 	)
 	output, err := cmd.CombinedOutput()
 	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
@@ -128,6 +177,31 @@ func helperRejectsPwnedPassword(checker, helper string) {
 		fail("helper expected reject exit 1, got %v:\n%s", err, output)
 	}
 	fail("helper expected reject exit 1, got 0:\n%s", output)
+}
+
+func helperRejectsProviderFailureFailClosed(checker, helper string) {
+	cmd := exec.Command(helper, "--checker", checker, "--timeout", "3s")
+	cmd.Stdin = strings.NewReader("candidate\n")
+	cmd.Env = append(os.Environ(),
+		"PWNED_CHECK_PROVIDER=hibp",
+		"PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/",
+		"PWNED_CHECK_FAIL_CLOSED=true",
+	)
+	output, err := cmd.CombinedOutput()
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		text := string(output)
+		if !strings.Contains(text, "event=pam_helper_failure reason=checker_provider") {
+			fail("helper expected provider failure reject event, got:\n%s", text)
+		}
+		if strings.Contains(text, "candidate") {
+			fail("helper provider failure leaked candidate password:\n%s", text)
+		}
+		return
+	}
+	if err != nil {
+		fail("helper expected provider failure reject exit 1, got %v:\n%s", err, output)
+	}
+	fail("helper expected provider failure reject exit 1, got 0:\n%s", output)
 }
 
 func helperRejectsTimeout(helper string) {

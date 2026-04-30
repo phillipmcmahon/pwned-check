@@ -1,7 +1,6 @@
-"```python
-Config loader: TOML file + env overrides.
-"""
+"""Config loader: TOML file + env overrides."""
 from __future__ import annotations
+
 import os
 import tomllib
 from dataclasses import dataclass
@@ -27,7 +26,6 @@ def load(path: Path | None = None) -> Config:
         timeout_seconds=float(data.get("timeout_seconds", 5.0)),
         local_url=data.get("local_url"),
     )
-    # Env overrides
     if v := os.getenv("PWNED_CHECK_PROVIDER"):
         cfg.provider = v
     if v := os.getenv("PWNED_CHECK_FAIL_CLOSED"):

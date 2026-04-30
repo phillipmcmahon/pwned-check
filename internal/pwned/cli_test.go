@@ -123,6 +123,31 @@ func TestCLIVersion(t *testing.T) {
 	}
 }
 
+func TestCLIRejectsOversizedPassword(t *testing.T) {
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader(strings.Repeat("a", 4097)),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin"})
+
+	if code != ExitConfig {
+		t.Fatalf("code = %d, want %d", code, ExitConfig)
+	}
+	if !strings.Contains(stderr.String(), "password exceeds 4096 bytes") {
+		t.Fatalf("stderr = %q, want oversized password error", stderr.String())
+	}
+}
+
+func TestReadPasswordTrimsLineEndings(t *testing.T) {
+	password, err := readPassword(strings.NewReader("candidate\r\nignored"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if password != "candidate" {
+		t.Fatalf("password = %q, want candidate", password)
+	}
+}
+
 func TestCLIFailClosedProviderTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)

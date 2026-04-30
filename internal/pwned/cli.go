@@ -95,9 +95,15 @@ func (c CLI) Run(args []string) int {
 }
 
 func readPassword(reader io.Reader) (string, error) {
-	line, err := bufio.NewReader(reader).ReadString('\n')
+	const maxPasswordBytes = 4096
+
+	limited := io.LimitReader(reader, maxPasswordBytes+1)
+	line, err := bufio.NewReader(limited).ReadString('\n')
 	if err != nil && err != io.EOF {
 		return "", err
+	}
+	if len(line) > maxPasswordBytes {
+		return "", fmt.Errorf("password exceeds %d bytes", maxPasswordBytes)
 	}
 	return strings.TrimRight(line, "\r\n"), nil
 }

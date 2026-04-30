@@ -64,6 +64,8 @@ password requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-p
 
 Place the line before `pam_unix.so` in `/etc/pam.d/common-password` so rejected passwords fail before the local password is changed.
 
+The helper reads at most 4096 bytes from stdin by default. Operators can tune this with `--max-bytes <n>` if a deployment has a documented need for a different bound; values above 1048576 bytes are rejected.
+
 ## Manual Test Plan
 
 Use a disposable VM. Keep an existing root shell open while testing PAM changes.

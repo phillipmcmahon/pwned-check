@@ -22,3 +22,7 @@ The format is intentionally lightweight while the project is pre-production.
 - Parser fuzzing split into 5s CI/pre-push smoke, 60s release validation, and 5m scheduled nightly runs.
 - CI distributable artifacts limited to Linux `amd64` and `arm64` until macOS and Windows signing tracks are ready.
 - Coverage gate added with 85% minimum coverage for internal product logic packages.
+- Operational hardening for bounded checker input, public HIBP HTTPS validation, single-context provider timeouts, and bounded PAM checker stderr diagnostics.
+- Documentation updates for Ubuntu PAM deployment, rollback, helper exit mapping, HIBP request volume, threat model details, versioning, and log examples.
+- Staticcheck split into a standalone CI job ready for required branch protection, with release provenance attestation over published checksums.
+- PAM helper `--max-bytes` option and Prometheus-style counter examples for operational log pipelines.

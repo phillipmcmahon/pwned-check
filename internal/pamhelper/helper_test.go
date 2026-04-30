@@ -51,7 +51,7 @@ func TestHelperRejectsPwnedPassword(t *testing.T) {
 }
 
 func TestHelperRejectsCheckerProviderFailure(t *testing.T) {
-	checker := fakeChecker(t, "exit 3")
+	checker := fakeChecker(t, "echo provider unavailable >&2\nexit 3")
 
 	var stderr bytes.Buffer
 	code := Helper{
@@ -65,10 +65,13 @@ func TestHelperRejectsCheckerProviderFailure(t *testing.T) {
 	if !strings.Contains(stderr.String(), "reason=checker_provider") {
 		t.Fatalf("stderr = %q, want provider failure", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), `checker_stderr="provider unavailable"`) {
+		t.Fatalf("stderr = %q, want checker stderr excerpt", stderr.String())
+	}
 }
 
 func TestHelperRejectsCheckerConfigFailure(t *testing.T) {
-	checker := fakeChecker(t, "exit 2")
+	checker := fakeChecker(t, "echo invalid provider >&2\nexit 2")
 
 	var stderr bytes.Buffer
 	code := Helper{
@@ -82,10 +85,13 @@ func TestHelperRejectsCheckerConfigFailure(t *testing.T) {
 	if !strings.Contains(stderr.String(), "reason=checker_config") {
 		t.Fatalf("stderr = %q, want checker config failure", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), `checker_stderr="invalid provider"`) {
+		t.Fatalf("stderr = %q, want checker stderr excerpt", stderr.String())
+	}
 }
 
 func TestHelperRejectsUnexpectedCheckerExit(t *testing.T) {
-	checker := fakeChecker(t, "exit 9")
+	checker := fakeChecker(t, "echo unexpected failure >&2\nexit 9")
 
 	var stderr bytes.Buffer
 	code := Helper{
@@ -98,6 +104,9 @@ func TestHelperRejectsUnexpectedCheckerExit(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "reason=checker_exit code=9") {
 		t.Fatalf("stderr = %q, want checker exit failure", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), `checker_stderr="unexpected failure"`) {
+		t.Fatalf("stderr = %q, want checker stderr excerpt", stderr.String())
 	}
 }
 
@@ -164,6 +173,50 @@ func TestHelperRejectsOversizedToken(t *testing.T) {
 	}
 }
 
+func TestHelperAllowsCustomMaxBytes(t *testing.T) {
+	checker := fakeChecker(t, "exit 0")
+
+	var stderr bytes.Buffer
+	code := Helper{
+		Stdin:  strings.NewReader("abcde\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--checker", checker, "--timeout", "1s", "--max-bytes", "8"})
+
+	if code != ExitAllow {
+		t.Fatalf("code = %d, want %d; stderr=%s", code, ExitAllow, stderr.String())
+	}
+}
+
+func TestHelperRejectsInvalidMaxBytes(t *testing.T) {
+	var stderr bytes.Buffer
+	code := Helper{
+		Stdin:  strings.NewReader("candidate\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--checker", "/bin/true", "--timeout", "1s", "--max-bytes", "0"})
+
+	if code != ExitUsage {
+		t.Fatalf("code = %d, want %d", code, ExitUsage)
+	}
+	if !strings.Contains(stderr.String(), "max-bytes must be greater than zero") {
+		t.Fatalf("stderr = %q, want max-bytes validation", stderr.String())
+	}
+}
+
+func TestHelperRejectsExcessiveMaxBytes(t *testing.T) {
+	var stderr bytes.Buffer
+	code := Helper{
+		Stdin:  strings.NewReader("candidate\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--checker", "/bin/true", "--timeout", "1s", "--max-bytes", "1048577"})
+
+	if code != ExitUsage {
+		t.Fatalf("code = %d, want %d", code, ExitUsage)
+	}
+	if !strings.Contains(stderr.String(), "max-bytes must be less than or equal to 1048576") {
+		t.Fatalf("stderr = %q, want max-bytes upper-bound validation", stderr.String())
+	}
+}
+
 func TestHelperRejectsMissingChecker(t *testing.T) {
 	var stderr bytes.Buffer
 	code := Helper{
@@ -211,7 +264,7 @@ func TestHelperVersion(t *testing.T) {
 }
 
 func TestReadTokenTrimsLineEndings(t *testing.T) {
-	token, err := readToken(strings.NewReader("candidate\r\n"))
+	token, err := readToken(strings.NewReader("candidate\r\n"), 4096)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,9 +274,19 @@ func TestReadTokenTrimsLineEndings(t *testing.T) {
 }
 
 func TestReadTokenPropagatesReadError(t *testing.T) {
-	_, err := readToken(errReader{})
+	_, err := readToken(errReader{}, 4096)
 	if err == nil {
 		t.Fatal("readToken succeeded, want error")
+	}
+}
+
+func TestCheckerStderrFieldIsBounded(t *testing.T) {
+	field := checkerStderrField(strings.Repeat("a", 300))
+	if !strings.HasPrefix(field, ` checker_stderr="`) {
+		t.Fatalf("field = %q, want checker_stderr field", field)
+	}
+	if strings.Count(field, "a") != 256 {
+		t.Fatalf("field has %d a characters, want 256", strings.Count(field, "a"))
 	}
 }
 

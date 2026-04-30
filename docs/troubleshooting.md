@@ -22,6 +22,8 @@ This guide maps common rollout symptoms to safe diagnostics and likely fixes.
 | `event=pam_helper_failure reason=checker_provider` | Checker hit provider failure in fail-closed mode. | Confirm live HIBP reachability or switch to fail-open if availability is the priority. |
 | `event=pam_helper_failure reason=checker_exit` | Checker returned an unexpected code. | Capture version and command configuration, then investigate as a defect. |
 
+For checker configuration, provider, and unexpected-exit failures, the helper may include a bounded `checker_stderr` excerpt. This field is intended for operational triage and should contain only the checker's safe event output.
+
 ## Common Checks
 
 Confirm binaries:

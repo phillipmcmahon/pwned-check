@@ -1,10 +1,10 @@
-"```python
-HIBP Pwned Passwords Range API provider (k-anonymity, no API key).
-"""
+"""HIBP Pwned Passwords Range API provider (k-anonymity, no API key)."""
 from __future__ import annotations
-import urllib.request
+
 import urllib.error
-from .base import PwnedProvider, NetworkError
+import urllib.request
+
+from .base import NetworkError, PwnedProvider
 
 _ENDPOINT = "https://api.pwnedpasswords.com/range/"
 _UA = "pwned-check/0.1 (+https://github.com/phillipmcmahon/pwned-check)"

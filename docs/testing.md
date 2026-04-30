@@ -43,6 +43,14 @@ scripts/install-git-hooks.sh
 
 The hook runs the same validation gate before `git push`.
 
+For native PAM development, run the persistent Ubuntu smoke container:
+
+```bash
+make native-pam-ubuntu-smoke
+```
+
+The first run builds a reusable Ubuntu 24.04 image with Rust and PAM development headers, creates a persistent container named `pwned-check-native-pam-dev`, syncs the current checkout into it, builds `pam_pwned_check.so`, installs it into Ubuntu's PAM security module directory, and exercises `pam_chauthtok` through a generated PAM service. Use `./scripts/native-pam-ubuntu-smoke.sh shell` to inspect the container between runs, or `./scripts/native-pam-ubuntu-smoke.sh clean` to remove it.
+
 ## Coverage Gate
 
 Product logic packages must meet at least 85% test coverage per package:
@@ -81,6 +89,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
+| `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, and `pam_chauthtok` smoke path |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
@@ -127,6 +136,8 @@ The repository currently has no branch protection enabled. Once branch protectio
 `golangci-lint` would let the project add `gosec`, `errcheck`, `revive`, and related checks behind one runner. Do not enable it casually: introduce it with a checked-in configuration, review findings for signal, and document any suppressions so the gate does not become noisy coverage theater.
 
 ## Linux Integration Testing
+
+The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. While the module skeleton still returns `PAM_IGNORE` for `PAM_UPDATE_AUTHTOK`, this smoke validates module loading, exported PAM symbols, dependency allowlisting, and the persistent development container workflow. As checker execution lands, extend this smoke to cover clean, pwned, timeout, provider-failure, dry-run, and conversation-message cases.
 
 The PAM package smoke path proves:
 

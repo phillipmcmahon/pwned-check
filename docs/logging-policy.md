@@ -10,6 +10,17 @@
 - Log only stable event names and bounded fields.
 - Keep logs on stderr so stdout remains available for explicit command output such as `--version`.
 
+## Safe Strings
+
+User-facing conversation messages must be checked in as constants and covered by log-safety fixtures before they are used by a PAM integration. The current approved messages are:
+
+```text
+This password appears in a known breach corpus. Choose a different password.
+Password breach check failed. Try again later or contact your administrator.
+```
+
+Tests must assert these exact strings can be emitted to the PAM conversation layer without appearing in checker argv, checker stdin diagnostics, structured log fields, provider requests, or metrics labels.
+
 ## Checker Events
 
 | Event | Meaning | Fields |

@@ -151,6 +151,8 @@ The module runs inside privileged PAM-using processes. It must keep its behavior
 - avoid loading additional shared libraries beyond libpam, the platform C library, and libraries required by the Rust runtime/build target
 - keep provider access out of the module process
 
+Before implementation, the release must define an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist is expected to include only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, adjusted for the target libc and linker behavior. CI must run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
+
 If the module implements dump suppression, it must call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory and restore the prior value before returning, unless a later design decision documents why leaving dumpability disabled is safer for host processes.
 
 ### Fail Predictably
@@ -283,7 +285,7 @@ If both `fail_open` and `fail_closed` are set, the module must treat the configu
 
 Unknown arguments must be treated as configuration errors. A typo such as `fail_clsoed` must not silently change security posture. In enforcement mode, invalid module configuration returns `PAM_AUTHTOK_ERR`; in dry-run mode, invalid runtime outcomes may allow, but invalid module configuration should still be visible and fail closed unless a later decision explicitly changes this.
 
-Future arguments may include `min_count=<n>` once the checker supports structured count-based policy decisions. The first native release remains any-hit rejection only.
+Future arguments may include `min_count=<n>` once the checker supports structured count-based policy decisions. The current checker exit-code contract is any-hit only, so count-based policy requires a checker contract change before the module can enforce it. The first native release remains any-hit rejection only.
 
 ### Checker Invocation
 
@@ -320,13 +322,13 @@ A long-running daemon over a Unix socket remains a future option. Adding that IP
 On pwned-password rejection, the module sends a fixed, bounded `PAM_ERROR_MSG` through the PAM conversation function:
 
 ```text
-This password appears in a known breach corpus. Please choose a different one.
+This password appears in a known breach corpus. Choose a different password.
 ```
 
 Provider, config, timeout, and exec failures may use a different fixed message:
 
 ```text
-Password breach check failed. Please try again or contact your administrator.
+Password breach check failed. Try again later or contact your administrator.
 ```
 
 Dry-run mode must not show rejection messages to the user.
@@ -441,6 +443,8 @@ Required test layers:
 - fault injection for provider HTTP 5xx, provider timeout, checker missing, checker not executable, checker timeout, checker config failure, provider failure, malformed module args, SELinux enforcing, and AppArmor enforcing
 - dry-run tests proving would-be rejections do not block password changes
 - no-secret-output tests covering module logs, conversation messages, checker argv, and diagnostics
+- fixture tests for the exact safe conversation strings documented in [Logging policy](logging-policy.md)
+- CI dependency allowlist checks for `pam_pwned_check.so`, using `ldd` or the target distro's equivalent dynamic dependency inspection
 - parser fuzzing for module argv handling
 - sanitizer or memory-check test path for FFI seams where practical, including ASan and Valgrind where supported
 - lockout-safety tests that intentionally misconfigure the module and assert documented root recovery paths still work
@@ -491,7 +495,7 @@ If added later, the module contract should remain stable. Only the internal IPC 
 These questions must be decided before implementation begins:
 
 - Should the user-facing rejection message be localizable in the first release, or fixed English-only?
-- Should `min_count` remain reserved until a later checker contract, or be designed into the first module release?
+- Should `min_count` remain reserved until a later checker contract, or should the checker contract be changed before the first module release to support count-based policy?
 - Should the module emit through `syslog(3)` only, or use native journald support where available?
 - Should SELinux policy ship in-tree, as a separate package, or as operator-managed documentation?
 - Is the module argv contract stable at the first native module release, or explicitly unstable until a module-specific `v1.0.0`?

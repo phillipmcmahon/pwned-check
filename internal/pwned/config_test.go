@@ -77,3 +77,21 @@ func TestLoadConfigRejectsInvalidLocalURL(t *testing.T) {
 		t.Fatal("LoadConfig succeeded, want invalid local URL error")
 	}
 }
+
+func TestLoadConfigRejectsHTTPPublicHIBPEndpoint(t *testing.T) {
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", "http://api.pwnedpasswords.com/range/")
+
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("LoadConfig succeeded, want public HIBP https error")
+	}
+}
+
+func TestLoadConfigAllowsHTTPCustomHIBPEndpointForTests(t *testing.T) {
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", "http://127.0.0.1:8000/range/")
+
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("LoadConfig failed for controlled test endpoint: %v", err)
+	}
+}

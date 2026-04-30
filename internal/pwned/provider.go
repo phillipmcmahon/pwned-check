@@ -26,7 +26,7 @@ func NewHIBPProvider(endpoint string, timeout time.Duration) RangeProvider {
 	headers.Set("Add-Padding", "true")
 	return RangeProvider{
 		BaseURL: strings.TrimRight(endpoint, "/") + "/",
-		Client:  &http.Client{Timeout: timeout},
+		Client:  &http.Client{},
 		Header:  headers,
 		Timeout: timeout,
 	}
@@ -35,7 +35,7 @@ func NewHIBPProvider(endpoint string, timeout time.Duration) RangeProvider {
 func NewLocalProvider(baseURL string, timeout time.Duration) RangeProvider {
 	return RangeProvider{
 		BaseURL: strings.TrimRight(baseURL, "/") + "/range/",
-		Client:  &http.Client{Timeout: timeout},
+		Client:  &http.Client{},
 		Header:  http.Header{},
 		Timeout: timeout,
 	}
@@ -59,7 +59,11 @@ func (p RangeProvider) Lookup(prefix, suffix string) (int, error) {
 		}
 	}
 
-	resp, err := p.Client.Do(req)
+	client := p.Client
+	if client == nil {
+		client = &http.Client{}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, err
 	}

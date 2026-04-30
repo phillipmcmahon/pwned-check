@@ -85,7 +85,8 @@ CI should not depend on the live HIBP API. Automated tests use mocked HIBP-compa
 
 The GitHub workflow is split into:
 
-- `lint`: gofmt check, `go vet`, and Staticcheck
+- `lint`: gofmt check and `go vet`
+- `staticcheck`: standalone Staticcheck job, intended to be configured as a required branch-protection check
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
@@ -108,6 +109,12 @@ Release-sensitive checks:
 - Linux package build for `amd64` and `arm64` with SHA256 files
 
 CI intentionally produces only Linux `amd64` and `arm64` distributable artifacts while Linux remains the active integration target. macOS and Windows artifacts should be reintroduced together, with both x64 and arm64 coverage, when those roadmap tracks include their signing requirements.
+
+The repository currently has no branch protection enabled. Once branch protection or rulesets are enabled for `main`, require the `Staticcheck` job alongside the existing test and packaging checks.
+
+## Additional Linters Under Consideration
+
+`golangci-lint` would let the project add `gosec`, `errcheck`, `revive`, and related checks behind one runner. Do not enable it casually: introduce it with a checked-in configuration, review findings for signal, and document any suppressions so the gate does not become noisy coverage theater.
 
 ## Linux Integration Testing
 

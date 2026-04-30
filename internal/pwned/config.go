@@ -10,12 +10,11 @@ import (
 )
 
 type Config struct {
-	Provider       string
-	FailClosed     bool
-	Timeout        time.Duration
-	LocalURL       string
-	HIBPEndpoint   string
-	InteractiveTTY bool
+	Provider     string
+	FailClosed   bool
+	Timeout      time.Duration
+	LocalURL     string
+	HIBPEndpoint string
 }
 
 func LoadConfig() (Config, error) {
@@ -54,27 +53,38 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("missing PWNED_CHECK_LOCAL_URL for provider=local")
 	}
 	if cfg.Provider == "local" {
-		if err := validateHTTPURL("PWNED_CHECK_LOCAL_URL", cfg.LocalURL); err != nil {
+		if _, err := validateHTTPURL("PWNED_CHECK_LOCAL_URL", cfg.LocalURL); err != nil {
 			return Config{}, err
 		}
 	}
-	if err := validateHTTPURL("PWNED_CHECK_HIBP_ENDPOINT", cfg.HIBPEndpoint); err != nil {
+	if err := validateHIBPEndpoint(cfg.HIBPEndpoint); err != nil {
 		return Config{}, err
 	}
 
 	return cfg, nil
 }
 
-func validateHTTPURL(name, value string) error {
+func validateHIBPEndpoint(value string) error {
+	parsed, err := validateHTTPURL("PWNED_CHECK_HIBP_ENDPOINT", value)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(parsed.Hostname(), "api.pwnedpasswords.com") && parsed.Scheme != "https" {
+		return fmt.Errorf("PWNED_CHECK_HIBP_ENDPOINT must use https for api.pwnedpasswords.com")
+	}
+	return nil
+}
+
+func validateHTTPURL(name, value string) (*url.URL, error) {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return fmt.Errorf("invalid %s", name)
+		return nil, fmt.Errorf("invalid %s", name)
 	}
 	switch parsed.Scheme {
 	case "http", "https":
-		return nil
+		return parsed, nil
 	default:
-		return fmt.Errorf("invalid %s scheme %q", name, parsed.Scheme)
+		return nil, fmt.Errorf("invalid %s scheme %q", name, parsed.Scheme)
 	}
 }
 

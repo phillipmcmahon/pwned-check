@@ -69,6 +69,8 @@ flowchart LR
 
 This contract is intentionally small. Changes to it should be treated as architecture decisions and documented before implementation.
 
+The project may change the contract before `v1.0.0` while the concept is still being shaped. At `v1.0.0`, the stdin input model, exit-code meanings, and safe log event shape should be treated as stable unless a future major version explicitly changes them.
+
 ## Controls
 
 ### Security Controls

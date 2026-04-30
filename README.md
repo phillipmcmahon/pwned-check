@@ -26,6 +26,7 @@ echo $?
 
 Input:
 - `--stdin` reads one password from standard input.
+- stdin input is bounded to 4096 bytes.
 
 Exit codes:
 - `0`: clean, or provider failure when fail-open is enabled
@@ -41,6 +42,8 @@ Version:
 ```
 pwned-check --version
 ```
+
+The project does not promise backwards compatibility while the concept is being shaped. The CLI stdin, exit-code, and safe logging contracts are expected to stabilize at `v1.0.0`.
 
 ## Configuration
 

@@ -73,6 +73,59 @@ Override locations when needed:
 sudo INSTALL_ROOT=/opt/pwned-check BIN_DIR=/usr/local/bin ./install.sh
 ```
 
+## Ubuntu 24.04 PAM Walkthrough
+
+Use a disposable VM first and keep an existing privileged shell open while editing PAM. The example below uses the packaged install layout on Ubuntu 24.04.
+
+1. Install and verify the package:
+
+   ```bash
+   tar -xzf pwned-check_<version>_linux_amd64.tar.gz
+   cd pwned-check_<version>_linux_amd64
+   sha256sum -c ../pwned-check_<version>_linux_amd64.tar.gz.sha256
+   sudo ./install.sh
+   /usr/local/bin/pwned-check --version
+   /usr/local/bin/pwned-check-pam-helper --version
+   ```
+
+2. Smoke test rejection without PAM:
+
+   ```bash
+   printf 'password\n' | sudo /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check --timeout 3s
+   echo $?
+   ```
+
+   Expected result: exit code `1` with `event=pam_helper_result result=reject reason=pwned`.
+
+3. Back up the PAM password stack:
+
+   ```bash
+   sudo cp /etc/pam.d/common-password /etc/pam.d/common-password.pwned-check.bak
+   ```
+
+4. Add this line before the `pam_unix.so` password line in `/etc/pam.d/common-password`:
+
+   ```text
+   password requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check --timeout 3s
+   ```
+
+5. Test with a dedicated non-production user:
+
+   ```bash
+   sudo passwd <test-user>
+   ```
+
+   Use `password` as the candidate and confirm the change is rejected. Then retry with a strong random value and confirm the normal password-change flow continues.
+
+6. Roll back immediately if password changes behave unexpectedly:
+
+   ```bash
+   sudo cp /etc/pam.d/common-password.pwned-check.bak /etc/pam.d/common-password
+   sudo passwd <test-user>
+   ```
+
+   Keep the privileged shell open until the rollback test reaches the normal password-change flow. If fail-closed provider outages are the issue, switching to fail-open can restore availability, but restoring the PAM backup is the safest emergency recovery.
+
 ## Manual Install Shape
 
 After downloading and verifying a release artifact:
@@ -120,12 +173,28 @@ sudo ln -sfn /usr/local/lib/pwned-check/<previous-helper-binary> /usr/local/lib/
 
 ## PAM Rollback Principle
 
-When PAM integration lands, rollback instructions must include:
+PAM rollback instructions must include:
 
 - how to disable the pwned-check PAM line
 - how to restore the previous PAM file
 - how to test `passwd` after rollback
 - how to avoid locking administrators out of password-change workflows
+
+## PAM Helper Exit Mapping
+
+The PAM helper rejects password changes for more than only known-pwned passwords:
+
+| Checker exit | Meaning | Helper result |
+|---|---|---|
+| `0` | clean, or provider failure when checker fail-open is configured | allow |
+| `1` | pwned password | reject |
+| `2` | checker usage/configuration error | reject |
+| `3` | checker provider/network error in fail-closed mode | reject |
+| timeout | checker exceeded helper timeout | reject |
+
+This means fail-closed provider outages and checker configuration mistakes are deliberately conservative at the PAM boundary.
+
+The helper reads at most 4096 bytes by default. Use `--max-bytes <n>` only if your PAM stack has a documented reason to pass longer tokens; the helper rejects values above 1048576 bytes and should not be treated as an arbitrary stream reader.
 
 ## Configuration
 

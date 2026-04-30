@@ -56,7 +56,7 @@ Capture:
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result
 - Docker smoke matrix result
-- CI `lint`, `test`, `smoke`, and `package-linux` jobs
+- CI `lint`, `staticcheck`, `test`, `smoke`, and `package-linux` jobs
 - any manual Linux/PAM validation once available
 
 ### 4. Build Artifacts
@@ -94,6 +94,8 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Create and push the tag.
 - Let GitHub Actions build release artifacts.
 - Verify artifact checksums.
+- Verify release provenance attestation is present for the published checksums.
+- Verify the attestation can be resolved against `SHA256SUMS.txt`.
 - Confirm release notes include:
   - highlights
   - operator impact

@@ -86,7 +86,7 @@ func ParseRangeResponse(reader io.Reader, suffix string) (int, error) {
 			continue
 		}
 		count, err := strconv.Atoi(strings.TrimSpace(parts[1]))
-		if err != nil {
+		if err != nil || count < 0 {
 			return 0, nil
 		}
 		return count, nil

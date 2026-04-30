@@ -23,7 +23,7 @@ PAM password stack
   -> pam_exec.so expose_authtok
   -> pwned-check-pam-helper --checker /usr/local/bin/pwned-check --timeout 3s
   -> pwned-check --stdin
-  -> HIBP range API or local mirror
+  -> live HIBP range API
 ```
 
 ## Helper Contract
@@ -115,11 +115,11 @@ sudo cp /etc/pam.d/common-password.pwned-check.bak /etc/pam.d/common-password
 
 Then test that `passwd` reaches the normal password-change flow again.
 
-If using a local mirror and fail-closed mode, rollback can also be achieved by changing the helper/checker configuration back to fail-open while leaving the PAM line in place, but restoring the PAM file is the safest emergency rollback.
+If live HIBP access is unavailable and the checker is configured fail-closed, rollback can also be achieved by changing the checker configuration back to fail-open while leaving the PAM line in place, but restoring the PAM file is the safest emergency rollback.
 
 ## Current Limitations
 
 - This is a PoC integration path, not the final native PAM module.
 - Distro PAM stacks vary; test on the exact target distro before rollout.
 - The example is written for Debian/Ubuntu-style `common-password`.
-- Production deployments should prefer a local HIBP-compatible mirror.
+- Production deployments use the live HIBP range API and must choose fail-open or fail-closed behavior before rollout.

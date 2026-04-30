@@ -131,10 +131,10 @@ When PAM integration lands, rollback instructions must include:
 
 Environment variables:
 
-- `PWNED_CHECK_PROVIDER`: `hibp` or `local`
+- `PWNED_CHECK_PROVIDER`: `hibp` for production use; `local` is reserved for tests
 - `PWNED_CHECK_FAIL_CLOSED`: `1`, `true`, or `yes`
 - `PWNED_CHECK_TIMEOUT`: request timeout in seconds
-- `PWNED_CHECK_LOCAL_URL`: base URL for the local provider
+- `PWNED_CHECK_LOCAL_URL`: base URL for the test-only local provider
 - `PWNED_CHECK_HIBP_ENDPOINT`: override HIBP endpoint for controlled tests
 
 For production PAM integration, prefer explicit configuration in the integration layer rather than depending on an ambient shell environment.

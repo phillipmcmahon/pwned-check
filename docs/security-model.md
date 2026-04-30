@@ -13,7 +13,7 @@ Primary assets:
 
 Secondary assets:
 
-- local mirror availability
+- live HIBP range API availability
 - release artifact integrity
 - PAM or platform integration configuration
 
@@ -71,9 +71,11 @@ The PAM integration should enforce its own timeout around the checker process ev
 
 The first Linux PoC uses `pwned-check-pam-helper` for this timeout boundary. The helper reads the PAM-supplied token from stdin and invokes `pwned-check --stdin`; it does not pass the password through argv.
 
-## Local Mirror Preference
+## Live Provider Dependency
 
-Production deployments should prefer an internal HIBP-compatible range mirror where possible. This reduces internet dependency and keeps password-change enforcement under local operational control.
+Production deployments use the live HIBP Pwned Passwords range API. Each deployment must choose fail-open or fail-closed behavior for provider failures and document that decision before rollout.
+
+Offline cache or mirror providers are future considerations. If added, they must preserve the same no-plaintext, no-full-hash provider boundary and must define their own availability and freshness controls.
 
 ## Release Integrity
 

@@ -28,9 +28,9 @@ The implementation is Go to produce native binaries with no Python runtime depen
 
 The plaintext password must never be logged, printed, written to disk, embedded in command arguments, or included in telemetry. The only external lookup material sent to a provider is the first five characters of the SHA-1 hash prefix.
 
-### Provider Isolation
+### Provider Boundary
 
-HIBP and local mirror lookups should share the same range-response contract. Production deployments should prefer a local HIBP-compatible mirror where internet access from password-change paths is undesirable.
+Production checks in the current phase use the live HIBP Pwned Passwords range API. The checker should keep a narrow provider boundary so a future offline cache or mirror provider can be added without changing the `pwned-check --stdin` integration contract. Test code may use mocked HIBP-compatible range responses.
 
 ### Fail Predictably
 
@@ -53,9 +53,9 @@ flowchart LR
     OS["Password change process"] --> Hook["Platform integration layer"]
     Hook -->|stdin + timeout| CLI["pwned-check"]
     CLI --> Hash["SHA-1 prefix/suffix split"]
-    Hash --> Provider{"Provider"}
-    Provider --> HIBP["HIBP range API"]
-    Provider --> Local["Local HIBP-compatible mirror"]
+    Hash --> Provider{"Provider boundary"}
+    Provider --> HIBP["Current: live HIBP range API"]
+    Provider -. "Future" .-> Offline["Offline cache or mirror"]
     CLI --> Result["Exit code + safe log"]
     Result --> Hook
 ```
@@ -77,8 +77,9 @@ This contract is intentionally small. Changes to it should be treated as archite
 - Do not pass passwords through command-line arguments.
 - Do not persist passwords in temporary files.
 - Use HIBP k-anonymity range queries.
-- Prefer local mirror deployment for production password-change paths.
 - Use strict provider and integration timeouts.
+- Make fail-open/fail-closed behavior explicit for live provider failures.
+- Keep provider-specific behavior behind the provider boundary.
 - Keep platform integration layers minimal and auditable.
 
 ### Development Controls
@@ -103,7 +104,8 @@ The intended end state is:
 
 - A stable Go checker binary.
 - A Linux PAM integration that calls the checker with a hard timeout.
-- Support for internal HIBP-compatible mirrors.
+- Live HIBP range API checks with explicit fail-open/fail-closed policy.
+- A provider boundary that can support offline cache or mirror work later.
 - Release artifacts with checksums and deployment guidance.
 - Later macOS and Windows integration layers that reuse the same checker contract without reducing host security settings.
 

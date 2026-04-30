@@ -11,7 +11,7 @@ macOS and Windows integration are intentionally deferred until the Linux flow is
 - Any-hit rejection policy
 - Fail-open by default, with configurable fail-closed behavior
 - HIBP range API provider
-- HIBP-compatible local range service provider for tests or internal mirrors
+- HIBP-compatible local range service provider for automated tests only
 - Logs only the 5-character hash prefix, result, and count
 - Single native binary with no Python runtime dependency
 
@@ -46,10 +46,10 @@ pwned-check --version
 
 Environment variables:
 
-- `PWNED_CHECK_PROVIDER`: `hibp` or `local`
+- `PWNED_CHECK_PROVIDER`: `hibp` for production; `local` for automated tests
 - `PWNED_CHECK_FAIL_CLOSED`: `1`, `true`, or `yes`
 - `PWNED_CHECK_TIMEOUT`: request timeout in seconds
-- `PWNED_CHECK_LOCAL_URL`: base URL for the local provider
+- `PWNED_CHECK_LOCAL_URL`: base URL for the test-only local provider
 - `PWNED_CHECK_HIBP_ENDPOINT`: override HIBP endpoint for controlled tests
 
 ## Development
@@ -67,7 +67,7 @@ The first production-shaped integration should be Linux-first:
 
 1. Keep `pwned-check --stdin` as the simple enforcement contract.
 2. Add a small PAM integration that invokes the binary with a strict timeout.
-3. Prefer a local HIBP-compatible mirror for production password-change paths.
+3. Use the live HIBP Pwned Passwords range API for production checks.
 4. Use fail-closed or fail-open based on the deployment's risk posture.
 
 The checker is now Go so the deployed artifact can be a small native binary. Future macOS and Windows work can reuse the same checker contract while handling notarization, Authenticode signing, and native hook requirements separately.

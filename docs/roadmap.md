@@ -44,24 +44,24 @@ Deliverables:
 - Manual test guide for Ubuntu/Debian first.
 - Rollback instructions.
 
-## Epic 3: Local Provider and Mirror Readiness
+## Epic 3: Live HIBP Provider Policy
 
 Project entry: [#6](https://github.com/phillipmcmahon/pwned-check/issues/6)
 
-Goal: remove production dependency on live internet access during password changes.
+Goal: make current live HIBP provider use explicit, tested, and operationally understandable while preserving the provider boundary for future offline cache or mirror work.
 
 User stories:
-- As an enterprise operator, I want to point the checker at an internal HIBP-compatible range service.
-- As an operator, I want the checker to fail predictably if the internal service is unavailable.
-- As a maintainer, I want contract tests proving local and HIBP providers behave identically.
-- As a security reviewer, I want documentation explaining what hash material is sent to each provider.
+- As an operator, I want to use the live HIBP Pwned Passwords range API for production checks.
+- As an administrator, I want explicit fail-open/fail-closed configuration for live provider outages.
+- As a maintainer, I want automated tests that mock HIBP responses without adding offline cache or mirror scope to the current release.
+- As a security reviewer, I want documentation explaining exactly what hash material is sent to HIBP.
 
 Deliverables:
-- Hardened local provider behavior.
-- Example mock or mirror service for testing.
-- Deployment guidance for internal mirror use.
+- Live HIBP provider configuration guidance.
+- Mocked HIBP-compatible test fixtures.
 - Fail-open/fail-closed decision notes.
 - Provider privacy documentation.
+- Future provider extension notes for offline cache or mirror support.
 
 ## Epic 4: Packaging and Release
 
@@ -72,7 +72,7 @@ Goal: make the tool installable, auditable, and repeatable.
 User stories:
 - As an administrator, I want a downloadable Linux binary with checksums.
 - As a release manager, I want repeatable GitHub release artifacts.
-- As an operator, I want systemd/PAM installation examples.
+- As an operator, I want PAM installation examples for live HIBP checks with fail-open/fail-closed configuration.
 - As a security reviewer, I want dependency visibility for each release.
 
 Deliverables:

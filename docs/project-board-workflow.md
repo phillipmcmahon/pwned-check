@@ -28,7 +28,7 @@ Use labels to classify entries:
 - `status:review`: issue is ready for review or validation.
 - `area: cli`: checker CLI behavior.
 - `area: linux`: Linux/PAM integration.
-- `area: provider`: HIBP/local provider behavior.
+- `area: provider`: live HIBP provider behavior and mocked provider tests.
 - `area: release`: packaging, artifacts, and release automation.
 - `area: security`: threat model, logging, operational controls.
 - `area: macos`: macOS-specific work.

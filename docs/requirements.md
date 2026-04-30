@@ -1,6 +1,6 @@
 # Requirements
 
-`pwned-check` is a password-change enforcement helper. It checks a candidate password against the Have I Been Pwned Pwned Passwords range API or a compatible local mirror.
+`pwned-check` is a password-change enforcement helper. It checks a candidate password against the live Have I Been Pwned Pwned Passwords range API.
 
 ## Production Platform
 
@@ -12,23 +12,22 @@ Initial production assumptions:
 - Native `pwned-check` binary available on the host.
 - Native `pwned-check-pam-helper` binary available on the host for the first PAM PoC.
 - PAM integration invokes the helper through stdin, not command-line arguments.
-- Provider access is either:
-  - the public HIBP range API, or
-  - an internal HIBP-compatible range mirror.
+- Production provider access uses the live public HIBP range API.
+- Provider outage behavior is controlled by explicit fail-open/fail-closed configuration.
 - The integration layer enforces a hard timeout.
 
-## Preferred Production Provider
+## Production Provider
 
-Production password-change paths should prefer a local HIBP-compatible mirror when possible.
+Production password-change paths use the live HIBP Pwned Passwords range API.
 
-Why:
+Operational implications:
 
-- avoids direct internet dependency during password changes
-- reduces latency variance
-- keeps provider availability under operator control
-- avoids policy issues around servers making external calls from authentication paths
+- hosts must be able to reach the HIBP range endpoint during password changes
+- deployments must choose fail-open or fail-closed behavior before rollout
+- provider and helper timeouts must be short and explicit
+- automated validation must mock HIBP-compatible range responses rather than calling the live service
 
-The public HIBP provider remains useful for development, small deployments, and controlled environments where external lookup is acceptable.
+Offline cache or mirror providers are not part of the current production scope, but the checker design should keep provider concerns isolated so those modes can be considered later without changing the PAM integration contract.
 
 ## Non-Production Platforms
 

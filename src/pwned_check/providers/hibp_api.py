@@ -1,6 +1,4 @@
-"```python
-HIBP Pwned Passwords Range API provider (k-anonymity, no API key).
-"""
+"""HIBP Pwned Passwords Range API provider (k-anonymity, no API key)."""
 from __future__ import annotations
 import urllib.request
 import urllib.error

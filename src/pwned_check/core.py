@@ -1,6 +1,4 @@
-"```python
-Core validator - provider-agnostic.
-"""
+"""Core validator - provider-agnostic."""
 from dataclasses import dataclass
 from hashlib import sha1
 from .providers.base import PwnedProvider

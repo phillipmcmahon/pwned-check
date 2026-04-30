@@ -1,6 +1,4 @@
-"```python
-Tests for config loader.
-"""
+"""Tests for config loader."""
 import os
 from pwned_check.config import load
 

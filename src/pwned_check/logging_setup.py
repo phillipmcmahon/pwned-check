@@ -1,6 +1,4 @@
-"```python
-Structured logging. ONLY emits the 5-char prefix + outcome - never the password or full hash.
-"""
+"""Structured logging. Only emits the 5-char prefix and outcome."""
 import logging
 import sys
 

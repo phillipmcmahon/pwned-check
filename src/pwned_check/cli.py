@@ -1,5 +1,4 @@
-"```python
-CLI entrypoint.
+"""CLI entrypoint.
 
 Exit codes:
   0 - clean
@@ -17,6 +16,7 @@ from .config import load as load_config
 from .core import validate
 from .logging_setup import setup as setup_logging
 from .providers.base import NetworkError
+
 PROVIDER_ERROR_EXIT = 3
 
 

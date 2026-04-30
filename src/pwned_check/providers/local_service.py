@@ -1,6 +1,4 @@
-"```python
-Local / offline provider stub. Will speak to an on-prem mirror of the range API.
-"""
+"""Local / offline provider stub. Speaks to an on-prem mirror of the range API."""
 from __future__ import annotations
 import urllib.request
 import urllib.error

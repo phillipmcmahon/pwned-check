@@ -24,6 +24,7 @@ go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
 ./scripts/docker-smoke.sh --platform linux/amd64
+make package-linux
 ```
 
 Install the matching pre-push hook:
@@ -66,6 +67,7 @@ Release-sensitive checks:
 - provider timeout/failure behavior
 - binary smoke test
 - Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
+- Linux package build for `amd64` and `arm64` with SHA256 files
 
 ## Linux Integration Testing
 

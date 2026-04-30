@@ -13,3 +13,4 @@ The format is intentionally lightweight while the project is pre-production.
 - CLI hardening for config validation, provider timeouts, safe log events, and release version injection.
 - Linux PAM PoC helper, example PAM config, and manual test/rollback documentation.
 - Docker smoke matrix for Debian, Ubuntu, Alpine, Arch Linux, and Fedora minimal images.
+- Linux release package workflow with tarballs, install script, build metadata, and SHA256 checksums.

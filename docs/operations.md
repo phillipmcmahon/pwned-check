@@ -23,6 +23,56 @@ Why this layout works well:
 - Upgrades change a symlink rather than PAM configuration.
 - Rollback can be a symlink flip.
 
+## Verify a Release Package
+
+Release packages include:
+
+- `pwned-check`
+- `pwned-check-pam-helper`
+- `install.sh`
+- `README.md`
+- `LICENSE`
+- `metadata/build.json`
+- `metadata/go-modules.txt`
+- Go build metadata for both binaries
+
+Verify a downloaded package checksum:
+
+```bash
+sha256sum -c pwned-check_<version>_linux_<arch>.tar.gz.sha256
+```
+
+On macOS:
+
+```bash
+shasum -a 256 pwned-check_<version>_linux_<arch>.tar.gz
+```
+
+Inspect package contents:
+
+```bash
+tar -tzf pwned-check_<version>_linux_<arch>.tar.gz
+```
+
+## Install from a Release Package
+
+```bash
+tar -xzf pwned-check_<version>_linux_<arch>.tar.gz
+cd pwned-check_<version>_linux_<arch>
+sudo ./install.sh
+```
+
+By default, `install.sh` uses:
+
+- `INSTALL_ROOT=/usr/local/lib/pwned-check`
+- `BIN_DIR=/usr/local/bin`
+
+Override locations when needed:
+
+```bash
+sudo INSTALL_ROOT=/opt/pwned-check BIN_DIR=/usr/local/bin ./install.sh
+```
+
 ## Manual Install Shape
 
 After downloading and verifying a release artifact:

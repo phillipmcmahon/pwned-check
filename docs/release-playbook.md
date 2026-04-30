@@ -61,9 +61,26 @@ Capture:
 
 Expected Linux artifacts:
 
-- `pwned-check_<version>_linux_amd64`
-- `pwned-check_<version>_linux_arm64`
-- SHA256 checksums
+- `pwned-check_<version>_linux_amd64.tar.gz`
+- `pwned-check_<version>_linux_amd64.tar.gz.sha256`
+- `pwned-check_<version>_linux_arm64.tar.gz`
+- `pwned-check_<version>_linux_arm64.tar.gz.sha256`
+- `SHA256SUMS.txt` on published GitHub releases
+
+Build local packages:
+
+```bash
+make package-linux
+```
+
+Each package contains:
+
+- `pwned-check`
+- `pwned-check-pam-helper`
+- `install.sh`
+- `README.md`
+- `LICENSE`
+- build and dependency metadata under `metadata/`
 
 Later packaging may add `.deb` and `.rpm` artifacts after the install model settles.
 

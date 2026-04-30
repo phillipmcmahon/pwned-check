@@ -1,4 +1,4 @@
-.PHONY: fmt test vet staticcheck build smoke docker-smoke validate
+.PHONY: fmt test vet staticcheck build smoke docker-smoke package-linux validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -27,6 +27,10 @@ smoke: build
 
 docker-smoke:
 	./scripts/docker-smoke.sh
+
+package-linux:
+	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch amd64
+	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch arm64
 
 validate:
 	./scripts/validate-before-push.sh

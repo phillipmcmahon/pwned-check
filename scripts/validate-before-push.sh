@@ -50,4 +50,7 @@ make smoke
 echo "make docker-smoke"
 make docker-smoke
 
+echo "make package-linux"
+make package-linux
+
 echo "local validation passed"

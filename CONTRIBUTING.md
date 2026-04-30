@@ -25,6 +25,7 @@ make validate
 This checks formatting, tests, vet, build, and binary smoke behavior.
 It also runs Staticcheck via the module-pinned tool dependency.
 The validation gate mirrors CI and includes the Docker smoke matrix.
+It also builds Linux release packages for `amd64` and `arm64`.
 
 For Linux runtime compatibility checks across minimal distro images:
 

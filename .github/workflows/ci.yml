@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -144,3 +145,103 @@ jobs:
           path: |
             dist/${{ matrix.output }}
             dist/${{ matrix.helper }}
+
+  package-linux:
+    name: Package Linux (${{ matrix.goarch }})
+    needs: [lint, test, smoke]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dev-${GITHUB_SHA::8}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Linux artifact
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASENAME="$(scripts/package-linux-artifact.sh \
+            --version "${{ steps.version.outputs.version }}" \
+            --goarch "${{ matrix.goarch }}" \
+            --output-dir "$PWD/dist/release")"
+          echo "basename=${BASENAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package.outputs.basename }}
+          path: |
+            dist/release/${{ steps.package.outputs.basename }}.tar.gz
+            dist/release/${{ steps.package.outputs.basename }}.tar.gz.sha256
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package-linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find artifacts -type f -name '*.tar.gz' -exec cp {} release/ \;
+          find artifacts -type f -name '*.tar.gz.sha256' -exec cp {} release/ \;
+          cd release
+          sha256sum *.tar.gz > SHA256SUMS.txt
+
+      - name: Create release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+          git tag -l --format='%(contents)' "${GITHUB_REF_NAME}" > "${NOTES_FILE}"
+          for heading in "## Highlights" "## Operator impact" "## Validation"; do
+            if ! grep -F "${heading}" "${NOTES_FILE}" >/dev/null; then
+              echo "::error::release notes from ${GITHUB_REF_NAME} are missing ${heading}"
+              sed -n '1,120p' "${NOTES_FILE}"
+              exit 1
+            fi
+          done
+          gh release create "${GITHUB_REF_NAME}" release/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "${NOTES_FILE}" \
+            --verify-tag

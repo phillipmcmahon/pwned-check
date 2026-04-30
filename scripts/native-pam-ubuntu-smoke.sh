@@ -207,6 +207,44 @@ int main(int argc, char **argv) {
 }
 EOF
     docker exec "$CONTAINER" sh -lc "cc -Wall -Wextra -Werror -o /usr/local/bin/native-pam-smoke-client /tmp/native-pam-smoke-client.c -lpam"
+
+    docker exec -i "$CONTAINER" sh -c "cat > /tmp/pam_smoke_authtok.c" <<'EOF'
+#include <security/pam_appl.h>
+#include <security/pam_modules.h>
+#include <stdlib.h>
+
+PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)argc;
+  (void)argv;
+  if ((flags & PAM_PRELIM_CHECK) != 0) {
+    return PAM_SUCCESS;
+  }
+  if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
+    return PAM_IGNORE;
+  }
+  const char *token = getenv("PWNED_CHECK_NATIVE_SMOKE_TOKEN");
+  if (token == NULL) {
+    return PAM_AUTHTOK_ERR;
+  }
+  return pam_set_item(pamh, PAM_AUTHTOK, token);
+}
+
+PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)pamh; (void)flags; (void)argc; (void)argv; return PAM_IGNORE;
+}
+PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)pamh; (void)flags; (void)argc; (void)argv; return PAM_IGNORE;
+}
+PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)pamh; (void)flags; (void)argc; (void)argv; return PAM_IGNORE;
+}
+PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)pamh; (void)flags; (void)argc; (void)argv; return PAM_IGNORE;
+}
+PAM_EXTERN int pam_sm_close_session(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+  (void)pamh; (void)flags; (void)argc; (void)argv; return PAM_IGNORE;
+}
+EOF
 }
 
 run_smoke() {
@@ -225,15 +263,104 @@ run_smoke() {
         module_dir=\"/lib/\$(gcc -print-multiarch)/security\"
         install -d \"\$module_dir\"
         install -m 0644 dist/pam_pwned_check.so \"\$module_dir/pam_pwned_check.so\"
+        cc -Wall -Wextra -Werror -fPIC -shared -o \"\$module_dir/pam_smoke_authtok.so\" /tmp/pam_smoke_authtok.c -lpam
 
-        cat > '/etc/pam.d/$SERVICE' <<'SERVICE_EOF'
-password required pam_pwned_check.so debug
-password required pam_permit.so
-SERVICE_EOF
+        cat > /usr/local/bin/native-pam-smoke-checker <<'CHECKER_EOF'
+#!/bin/sh
+set -eu
+token=\"\$(/bin/cat)\"
+printf '%s' \"\$token\" >/tmp/native-pam-smoke-checker-token
+mode=\"\$(/bin/cat /tmp/native-pam-smoke-checker-mode)\"
+case \"\$mode\" in
+  clean)
+    exit 0
+    ;;
+  pwned)
+    exit 1
+    ;;
+  config)
+    exit 2
+    ;;
+  provider)
+    if [ \"\${PWNED_CHECK_FAIL_CLOSED:-}\" = \"true\" ]; then
+      exit 3
+    fi
+    exit 0
+    ;;
+  sleep)
+    /bin/sleep 3
+    exit 0
+    ;;
+  *)
+    exit 9
+    ;;
+esac
+CHECKER_EOF
+        chmod 0755 /usr/local/bin/native-pam-smoke-checker
+
+        write_service() {
+          args=\"\$1\"
+          {
+            echo 'password required pam_smoke_authtok.so'
+            echo \"password requisite pam_pwned_check.so checker=/usr/local/bin/native-pam-smoke-checker timeout=1 \$args\"
+            echo 'password required pam_permit.so'
+          } > '/etc/pam.d/$SERVICE'
+        }
+
+        run_case() {
+          name=\"\$1\"
+          mode=\"\$2\"
+          token=\"\$3\"
+          args=\"\$4\"
+          want=\"\$5\"
+
+          printf '%s' \"\$mode\" >/tmp/native-pam-smoke-checker-mode
+          rm -f /tmp/native-pam-smoke-checker-token
+          write_service \"\$args\"
+
+          set +e
+          PWNED_CHECK_NATIVE_SMOKE_TOKEN=\"\$token\" /usr/local/bin/native-pam-smoke-client '$SERVICE' root \"\$token\" >/tmp/native-pam-smoke.out 2>&1
+          rc=\"\$?\"
+          set -e
+
+          if [ \"\$want\" = allow ] && [ \"\$rc\" -ne 0 ]; then
+            cat /tmp/native-pam-smoke.out >&2
+            echo \"Native PAM case failed: \$name rc=\$rc want allow\" >&2
+            exit 1
+          fi
+          if [ \"\$want\" = reject ] && [ \"\$rc\" -eq 0 ]; then
+            cat /tmp/native-pam-smoke.out >&2
+            echo \"Native PAM case failed: \$name rc=\$rc want reject\" >&2
+            exit 1
+          fi
+
+          if echo \"\$args\" | grep -q 'fail_clsoed'; then
+            if [ -f /tmp/native-pam-smoke-checker-token ]; then
+              echo \"Native PAM case failed: \$name unexpectedly invoked checker\" >&2
+              exit 1
+            fi
+          elif [ -f /tmp/native-pam-smoke-checker-token ] && [ \"\$mode\" != sleep ]; then
+            received=\"\$(cat /tmp/native-pam-smoke-checker-token)\"
+            if [ \"\$received\" != \"\$token\" ] && [ \"\$mode\" != config ]; then
+              echo \"Native PAM case failed: \$name checker token mismatch\" >&2
+              exit 1
+            fi
+          fi
+
+          echo \"Native PAM case passed: \$name\"
+        }
 
         test -f \"\$module_dir/pam_pwned_check.so\"
         ldd \"\$module_dir/pam_pwned_check.so\"
-        /usr/local/bin/native-pam-smoke-client '$SERVICE' root candidate
+
+        run_case 'clean allowed' clean candidate 'fail_open' allow
+        run_case 'pwned rejected' pwned password 'fail_open' reject
+        run_case 'provider unavailable fail-open allowed' provider candidate 'fail_open' allow
+        run_case 'provider unavailable fail-closed rejected' provider candidate 'fail_closed' reject
+        run_case 'checker config rejected' config candidate 'fail_open' reject
+        run_case 'checker timeout rejected' sleep candidate 'fail_open' reject
+        run_case 'dry-run pwned allowed' pwned password 'fail_open dry_run' allow
+        run_case 'invalid module arg rejected' clean candidate 'fail_clsoed' reject
     "
 
     echo "Native PAM Ubuntu smoke passed in persistent container: $CONTAINER"

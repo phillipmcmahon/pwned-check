@@ -137,7 +137,7 @@ The repository currently has no branch protection enabled. Once branch protectio
 
 ## Linux Integration Testing
 
-The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. While the module skeleton still returns `PAM_IGNORE` for `PAM_UPDATE_AUTHTOK`, this smoke validates module loading, exported PAM symbols, dependency allowlisting, and the persistent development container workflow. As checker execution lands, extend this smoke to cover clean, pwned, timeout, provider-failure, dry-run, and conversation-message cases.
+The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API.
 
 The PAM package smoke path proves:
 

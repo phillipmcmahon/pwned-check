@@ -83,6 +83,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install PAM development headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpam0g-dev
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 

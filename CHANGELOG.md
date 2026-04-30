@@ -27,4 +27,4 @@ The format is intentionally lightweight while the project is pre-production.
 - Staticcheck split into a standalone CI job ready for required branch protection, with release provenance attestation over published checksums.
 - PAM helper `--max-bytes` option and Prometheus-style counter examples for operational log pipelines.
 - Native PAM module Rust skeleton with safe-string fixtures, argument parsing tests, PAM constant tests, checker outcome mapping tests, exported PAM service stubs, Linux shared-library dependency allowlist CI, and exported-symbol CI.
-- Persistent Ubuntu native PAM smoke container for building, installing, loading, and exercising `pam_pwned_check.so` through `pam_chauthtok` during development.
+- Native PAM module implementation for PAM argv parsing, `PAM_AUTHTOK` retrieval, checker invocation with hard timeout, dry-run mapping, safe user-facing messages, and persistent Ubuntu smoke coverage for clean, pwned, provider, timeout, config, dry-run, and invalid-argument cases.

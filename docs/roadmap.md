@@ -4,6 +4,8 @@ This roadmap captures the product direction as epics and user stories. The curre
 
 ## Epic 1: Harden the Go CLI
 
+Project entry: [#4](https://github.com/phillipmcmahon/pwned-check/issues/4)
+
 Goal: make the standalone checker predictable, safe, and simple enough for OS password-change integrations to call.
 
 User stories:
@@ -22,6 +24,8 @@ Deliverables:
 - CI artifacts for Linux `amd64` and `arm64`.
 
 ## Epic 2: Linux PAM PoC
+
+Project entry: [#5](https://github.com/phillipmcmahon/pwned-check/issues/5)
 
 Goal: prove real password-change integration on Linux.
 
@@ -42,6 +46,8 @@ Deliverables:
 
 ## Epic 3: Local Provider and Mirror Readiness
 
+Project entry: [#6](https://github.com/phillipmcmahon/pwned-check/issues/6)
+
 Goal: remove production dependency on live internet access during password changes.
 
 User stories:
@@ -58,6 +64,8 @@ Deliverables:
 - Provider privacy documentation.
 
 ## Epic 4: Packaging and Release
+
+Project entry: [#7](https://github.com/phillipmcmahon/pwned-check/issues/7)
 
 Goal: make the tool installable, auditable, and repeatable.
 
@@ -77,6 +85,8 @@ Deliverables:
 
 ## Epic 5: Operational Security
 
+Project entry: [#8](https://github.com/phillipmcmahon/pwned-check/issues/8)
+
 Goal: make the tool production-shaped for security-sensitive deployment.
 
 User stories:
@@ -95,6 +105,8 @@ Deliverables:
 - Operational troubleshooting guide.
 
 ## Epic 6: macOS and Windows Feasibility
+
+Project entry: [#9](https://github.com/phillipmcmahon/pwned-check/issues/9)
 
 Goal: plan non-Linux integrations without reducing platform security posture.
 

@@ -7,7 +7,6 @@ Exit codes:
   3 - network error (only when fail_closed=True)
 """
 from __future__ import annotations
-
 import argparse
 import getpass
 import sys

@@ -25,6 +25,12 @@ make validate
 This checks formatting, tests, vet, build, and binary smoke behavior.
 It also runs Staticcheck via the module-pinned tool dependency.
 
+For Linux runtime compatibility checks across minimal distro images:
+
+```bash
+make docker-smoke
+```
+
 ## Public Contract
 
 The public contract is the operator and integration surface:

@@ -1,4 +1,4 @@
-.PHONY: fmt test vet staticcheck build smoke validate
+.PHONY: fmt test vet staticcheck build smoke docker-smoke validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -24,6 +24,9 @@ build:
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)
 	printf 'password\n' | PWNED_CHECK_PROVIDER=local PWNED_CHECK_LOCAL_URL=http://127.0.0.1:9 PWNED_CHECK_FAIL_CLOSED=false $(PAM_HELPER_BIN) --checker $(BIN) --timeout 3s
+
+docker-smoke:
+	./scripts/docker-smoke.sh
 
 validate:
 	./scripts/validate-before-push.sh

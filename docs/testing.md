@@ -23,6 +23,7 @@ go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
+./scripts/docker-smoke.sh --platform linux/amd64
 ```
 
 ## Test Layout
@@ -35,6 +36,7 @@ go run ./scripts/smoke_binary.go dist/pwned-check
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
+| `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 
 ## CI Rules
 
@@ -48,6 +50,7 @@ Release-sensitive checks:
 - local provider contract
 - provider timeout/failure behavior
 - binary smoke test
+- Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 
 ## Linux Integration Testing
 

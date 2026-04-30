@@ -53,6 +53,7 @@ Capture:
 - `go vet ./...`
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result
+- Docker smoke matrix result
 - any manual Linux/PAM validation once available
 
 ### 4. Build Artifacts

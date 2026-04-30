@@ -1,5 +1,5 @@
 """Unit tests for core validator using a fake provider."""
-from pwned_check.core import _hash, validate
+from pwned_check.core import validate, _hash
 from pwned_check.providers.base import PwnedProvider
 
 

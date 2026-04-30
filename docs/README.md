@@ -20,7 +20,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Understand the roadmap | [Roadmap](roadmap.md) |
 | Track issues and board workflow | [Project board workflow](project-board-workflow.md) |
 | Validate code changes | [Testing](testing.md) |
-| Validate Linux distro runtime compatibility | [Docker smoke matrix](docker-smoke.md) |
+| Validate Linux distro runtime and PAM package integration | [Docker smoke matrix](docker-smoke.md) |
 | Prepare a release | [Release playbook](release-playbook.md) |
 
 ## Suggested First-Time Flow

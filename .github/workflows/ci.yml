@@ -84,6 +84,9 @@ jobs:
       - name: Run Docker distro smoke
         run: ./scripts/docker-smoke.sh --platform linux/amd64
 
+      - name: Run Docker PAM package smoke
+        run: ./scripts/docker-pam-smoke.sh --platform linux/amd64
+
       - name: Upload smoke binaries
         uses: actions/upload-artifact@v7
         with:

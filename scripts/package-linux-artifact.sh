@@ -143,7 +143,7 @@ chmod 0755 "$PACKAGE_DIR/install.sh"
 
 (
   cd "$WORK_DIR"
-  tar -czf "$OUTPUT_DIR/$BASENAME.tar.gz" "$BASENAME"
+  COPYFILE_DISABLE=1 tar -czf "$OUTPUT_DIR/$BASENAME.tar.gz" "$BASENAME"
 )
 
 if command -v sha256sum >/dev/null 2>&1; then

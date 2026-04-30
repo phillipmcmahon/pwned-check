@@ -98,3 +98,70 @@ This keeps CI aligned with the canonical Linux release architecture. Local arm64
 - Do not add package-manager installation inside the containers unless a test genuinely needs it.
 - Keep the binaries static with `CGO_ENABLED=0` so the smoke checks test distro runtime compatibility rather than distro toolchain setup.
 - If an image tag changes, update this document and the script in the same commit.
+
+# Docker PAM Package Smoke Matrix
+
+The PAM package smoke matrix validates the Linux process-integration path rather than only binary execution.
+
+The smoke test builds an amd64 Linux release package, copies it into each distro container, installs the package with its bundled `install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then drives that service through the distro-packaged `pamtester` client. Alpine and Arch Linux do not package `pamtester` for the pinned/default image tags, so the runner compiles a tiny PAM client inside those throwaway containers.
+
+The generated PAM service is intentionally isolated from the distro's real password-change files. It uses PAM's `auth` module type so the smoke client can supply a candidate token consistently across minimal containers while still exercising `pam_exec.so expose_authtok` and helper exit-code mapping through the real PAM module boundary:
+
+```text
+auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 1s
+auth required pam_permit.so
+```
+
+This confirms:
+
+- the release package installs `pwned-check` and `pwned-check-pam-helper`
+- install symlinks are created under `/usr/local/lib/pwned-check`
+- `/etc/pam.d` can load `pam_exec.so` and pass the candidate token with `expose_authtok`
+- the helper calls the installed checker through a fixed executable path
+- PAM allows or rejects the flow according to the helper exit code
+
+## PAM Test Cases
+
+The PAM smoke runner validates these combinations:
+
+| Candidate | Provider | Fail mode | Expected PAM result |
+|---|---|---|---|
+| clean | available | fail-open | allow |
+| clean | available | fail-closed | allow |
+| pwned | available | fail-open | reject |
+| pwned | available | fail-closed | reject |
+| clean | unavailable | fail-open | allow |
+| pwned | unavailable | fail-open | allow |
+| clean | unavailable | fail-closed | reject |
+| pwned | unavailable | fail-closed | reject |
+| empty | available | fail-open | reject |
+| clean | checker timeout | fail-open | reject |
+| clean | invalid checker config | fail-open | reject |
+
+The available-provider cases use an in-container mocked HIBP range service. The unavailable-provider cases point the checker at `127.0.0.1:9` so the result is deterministic and does not depend on the public HIBP API.
+
+## Run PAM Smoke Locally
+
+```bash
+make docker-pam-smoke
+```
+
+Equivalent command:
+
+```bash
+./scripts/docker-pam-smoke.sh --platform linux/amd64
+```
+
+The default distro list matches the binary Docker smoke matrix:
+
+```text
+debian:stable-slim ubuntu:24.04 alpine:3.20 archlinux:base-devel fedora:latest
+```
+
+Use a smaller matrix while iterating:
+
+```bash
+./scripts/docker-pam-smoke.sh --images "debian:stable-slim alpine:3.20"
+```
+
+The PAM smoke installs PAM runtime support and either `pamtester` or the minimal packages needed to compile the fallback PAM client inside each throwaway container. That makes it slower than `make docker-smoke`, but it keeps the test reproducible against minimal public distro images without requiring custom fixture images.

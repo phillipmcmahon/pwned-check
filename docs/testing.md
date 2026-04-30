@@ -24,6 +24,7 @@ go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
 ./scripts/docker-smoke.sh --platform linux/amd64
+./scripts/docker-pam-smoke.sh --platform linux/amd64
 make package-linux
 ```
 
@@ -46,6 +47,7 @@ The hook runs the same validation gate before `git push`.
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
+| `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
 
 ## CI Rules
 
@@ -55,7 +57,7 @@ The GitHub workflow is split into:
 
 - `lint`: gofmt check, `go vet`, and Staticcheck
 - `test`: race-enabled Go tests
-- `smoke`: built-binary smoke and Docker distro smoke
+- `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke
 - `cross-build`: artifact builds gated on lint, test, and smoke
 
 Release-sensitive checks:
@@ -67,17 +69,21 @@ Release-sensitive checks:
 - provider timeout/failure behavior
 - binary smoke test
 - Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
+- Docker PAM package smoke across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
 - Linux package build for `amd64` and `arm64` with SHA256 files
 
 ## Linux Integration Testing
 
-When PAM work starts, add a Linux integration test path that proves:
+The PAM package smoke path proves:
 
 - known pwned password is rejected
 - clean password is accepted
 - provider failure follows fail-open/fail-closed configuration
 - child process timeout blocks hangs
-- rollback instructions restore password-change behavior
+- package installation creates stable binary and symlink paths
+- a dedicated `/etc/pam.d/pwned-check-smoke` service can pass the candidate token to the helper
+
+The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. The operator-facing password-change placement remains the Linux PAM PoC path and should be manually tested before enabling it on a host.
 
 ## Static Analysis
 

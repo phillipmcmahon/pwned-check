@@ -50,6 +50,9 @@ make smoke
 echo "make docker-smoke"
 make docker-smoke
 
+echo "make docker-pam-smoke"
+make docker-pam-smoke
+
 echo "make package-linux"
 make package-linux
 

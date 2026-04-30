@@ -32,8 +32,8 @@ if [ -n "$unformatted" ]; then
     exit 1
 fi
 
-echo "go test ./..."
-go test ./...
+echo "go test -v -race ./..."
+go test -v -race ./...
 
 echo "go vet ./..."
 go vet ./...
@@ -46,5 +46,8 @@ make build
 
 echo "make smoke"
 make smoke
+
+echo "make docker-smoke"
+make docker-smoke
 
 echo "local validation passed"

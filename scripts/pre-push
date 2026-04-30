@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+cd "$ROOT"
+./scripts/validate-before-push.sh

@@ -26,6 +26,14 @@ go run ./scripts/smoke_binary.go dist/pwned-check
 ./scripts/docker-smoke.sh --platform linux/amd64
 ```
 
+Install the matching pre-push hook:
+
+```bash
+scripts/install-git-hooks.sh
+```
+
+The hook runs the same validation gate before `git push`.
+
 ## Test Layout
 
 | Area | Focus |
@@ -41,6 +49,13 @@ go run ./scripts/smoke_binary.go dist/pwned-check
 ## CI Rules
 
 CI should not depend on the live HIBP API. Automated tests use mocked HIBP-compatible range responses.
+
+The GitHub workflow is split into:
+
+- `lint`: gofmt check, `go vet`, and Staticcheck
+- `test`: race-enabled Go tests
+- `smoke`: built-binary smoke and Docker distro smoke
+- `cross-build`: artifact builds gated on lint, test, and smoke
 
 Release-sensitive checks:
 

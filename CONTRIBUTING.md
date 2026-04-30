@@ -24,12 +24,29 @@ make validate
 
 This checks formatting, tests, vet, build, and binary smoke behavior.
 It also runs Staticcheck via the module-pinned tool dependency.
+The validation gate mirrors CI and includes the Docker smoke matrix.
 
 For Linux runtime compatibility checks across minimal distro images:
 
 ```bash
 make docker-smoke
 ```
+
+## Git Hooks
+
+Install the local pre-push hook:
+
+```bash
+scripts/install-git-hooks.sh
+```
+
+The hook runs:
+
+```bash
+scripts/validate-before-push.sh
+```
+
+This is intentionally heavier than a pre-commit hook because it runs race-enabled tests and Docker smoke. It should catch CI failures before code reaches `origin`.
 
 ## Public Contract
 

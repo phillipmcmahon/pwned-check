@@ -1,31 +1,102 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
           go-version: "1.26"
           check-latest: true
-      - run: go test ./...
-      - run: go vet ./...
-      - run: go run honnef.co/go/tools/cmd/staticcheck ./...
-      - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o dist/pwned-check ./cmd/pwned-check
-      - run: go build -o dist/pwned-check-pam-helper ./cmd/pwned-check-pam-helper
-      - run: go run ./scripts/smoke_binary.go dist/pwned-check
-      - run: ./scripts/docker-smoke.sh --platform linux/amd64
-      - uses: actions/upload-artifact@v7
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go code is not formatted:"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run Staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          name: pwned-check-linux-amd64
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+  smoke:
+    name: Smoke
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Build local binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o dist/pwned-check ./cmd/pwned-check
+          go build -o dist/pwned-check-pam-helper ./cmd/pwned-check-pam-helper
+
+      - name: Run binary smoke
+        run: go run ./scripts/smoke_binary.go dist/pwned-check
+
+      - name: Run Docker distro smoke
+        run: ./scripts/docker-smoke.sh --platform linux/amd64
+
+      - name: Upload smoke binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: pwned-check-smoke-linux-amd64
           path: |
             dist/pwned-check
             dist/pwned-check-pam-helper
 
   cross-build:
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: [lint, test, smoke]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -51,14 +122,23 @@ jobs:
       CGO_ENABLED: "0"
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
           go-version: "1.26"
           check-latest: true
-      - run: mkdir -p dist
-      - run: go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o "dist/${{ matrix.output }}" ./cmd/pwned-check
-      - run: go build -o "dist/${{ matrix.helper }}" ./cmd/pwned-check-pam-helper
-      - uses: actions/upload-artifact@v7
+
+      - name: Build binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o "dist/${{ matrix.output }}" ./cmd/pwned-check
+          go build -o "dist/${{ matrix.helper }}" ./cmd/pwned-check-pam-helper
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.output }}
           path: |

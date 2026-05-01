@@ -24,6 +24,19 @@ This guide maps common rollout symptoms to safe diagnostics and likely fixes.
 
 For checker configuration, provider, and unexpected-exit failures, the helper may include a bounded `checker_stderr` excerpt. This field is intended for operational triage and should contain only the checker's safe event output.
 
+## Native PAM Module Symptoms
+
+| Symptom | Likely cause | Safe action |
+|---|---|---|
+| Password changes still succeed during rollout but logs show `mode=dry_run` | Expected dry-run behavior. | Review would-be rejections, then plan enforcement only after rollback is tested. |
+| `pam_chauthtok` reports module load failure | Module installed in the wrong security directory or package removal left a stale PAM line. | Disable the package profile/helper, confirm the distro module path, then reinstall or roll back. |
+| Fedora/RHEL `authselect check` fails after enablement | Custom profile drift or interrupted enablement. | Run the packaged rollback helper and restore the recorded authselect backup. |
+| Debian/Ubuntu `common-password` still references the module after removal | `pam-auth-update` profile was not disabled before package removal. | Reinstall or restore the profile temporarily, run `pam-auth-update --disable pwned-check --package`, then remove the package. |
+| Arch/Alpine service file still references the module after rollback | Manual helper state file points at the wrong backup or the service path was overridden. | Run rollback with the explicit backup path, or restore the timestamped backup under `/var/lib/pwned-check/pam-backups/`. |
+| SELinux AVCs mention `pwned-check` or `pam_pwned_check` | Local policy blocks the checker path or network behavior from the password-change domain. | Keep enforcement disabled, collect the AVCs, and apply the operator-managed policy decision before retrying. |
+
+Package-specific rollback commands are in [Operations](operations.md#native-pam-emergency-recovery).
+
 ## Common Checks
 
 Confirm binaries:

@@ -54,6 +54,37 @@ Inspect package contents:
 tar -tzf pwned-check_<version>_linux_<arch>.tar.gz
 ```
 
+## Native PAM Emergency Recovery
+
+Before enabling `pam_pwned_check.so`, keep an existing privileged shell open and confirm you can run the rollback command for the target distro. Test rollback before switching from `dry_run` to enforcement.
+
+Debian/Ubuntu:
+
+```bash
+sudo pam-auth-update --disable pwned-check --package
+! grep pam_pwned_check.so /etc/pam.d/common-password
+sudo passwd <test-user>
+```
+
+Fedora/RHEL/Rocky:
+
+```bash
+sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
+! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+sudo passwd <test-user>
+```
+
+Arch and Alpine Linux-PAM:
+
+```bash
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+! grep pam_pwned_check.so /etc/pam.d/passwd
+sudo passwd <test-user>
+```
+
+If normal sudo access is already affected, boot single-user mode or a rescue image, mount the root filesystem, and remove the `pam_pwned_check.so` line from the affected PAM service. For Fedora/RHEL/Rocky, prefer restoring the recorded authselect backup rather than editing generated `/etc/pam.d/system-auth` or `/etc/pam.d/password-auth` directly.
+
 ## Debian/Ubuntu Native PAM Artifact
 
 The native PAM module has a Debian/Ubuntu filesystem-layout artifact for the current Linux architecture:

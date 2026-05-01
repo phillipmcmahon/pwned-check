@@ -2,7 +2,7 @@
 
 This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same any-hit rejection check as the current `pam_exec`-based integration.
 
-Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, and Linux shared-library dependency inspection. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
+Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, and Linux shared-library dependency inspection. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
 
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 
@@ -358,7 +358,7 @@ event=pam_module_failure reason=checker_exit code=9
 event=pam_module_failure reason=exec error="permission denied"
 ```
 
-Where the platform supports it, logs should use a stable identifier such as `pwned-check` so operators can query with tools like:
+Logs use syslog with the stable identifier `pwned-check` so operators can query with tools like:
 
 ```bash
 journalctl -t pwned-check
@@ -496,7 +496,6 @@ These questions must be decided before implementation begins:
 
 - Should the user-facing rejection message be localizable in the first release, or fixed English-only?
 - Should `min_count` remain reserved until a later checker contract, or should the checker contract be changed before the first module release to support count-based policy?
-- Should the module emit through `syslog(3)` only, or use native journald support where available?
 - Should SELinux policy ship in-tree, as a separate package, or as operator-managed documentation?
 - Is the module argv contract stable at the first native module release, or explicitly unstable until a module-specific `v1.0.0`?
 

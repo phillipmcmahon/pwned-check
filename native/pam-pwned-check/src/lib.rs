@@ -139,12 +139,30 @@ unsafe extern "C" {
     fn sysconf(name: c_int) -> isize;
 }
 
+#[cfg(target_os = "linux")]
+unsafe extern "C" {
+    fn openlog(ident: *const c_char, option: c_int, facility: c_int);
+    fn syslog(priority: c_int, format: *const c_char, ...);
+}
+
 #[cfg(unix)]
 const SIGTERM: c_int = 15;
 #[cfg(unix)]
 const SIGKILL: c_int = 9;
 #[cfg(unix)]
 const SC_OPEN_MAX: c_int = 5;
+#[cfg(target_os = "linux")]
+const LOG_PID: c_int = 0x01;
+#[cfg(target_os = "linux")]
+const LOG_NDELAY: c_int = 0x08;
+#[cfg(target_os = "linux")]
+const LOG_INFO: c_int = 6;
+#[cfg(target_os = "linux")]
+const LOG_AUTHPRIV: c_int = 10 << 3;
+#[cfg(target_os = "linux")]
+const SYSLOG_IDENT: &[u8] = b"pwned-check\0";
+#[cfg(target_os = "linux")]
+const SYSLOG_FORMAT: &[u8] = b"%s\0";
 
 impl Default for ModuleConfig {
     fn default() -> Self {
@@ -481,26 +499,101 @@ fn rejection_message(reason: RejectReason) -> &'static str {
     }
 }
 
-fn emit_result(outcome: CheckerOutcome, decision: ModuleDecision, dry_run: bool) {
+fn emit_config(config: &ModuleConfig) {
+    if config.debug {
+        emit_log_event(&format_config_event(config));
+    }
+}
+
+fn emit_result(outcome: CheckerOutcome, decision: ModuleDecision, config: &ModuleConfig) {
+    if let Some(event) = format_failure_event(outcome, config.timeout_seconds) {
+        emit_log_event(&event);
+    }
+
+    emit_log_event(&format_result_event(outcome, decision, config.dry_run));
+}
+
+fn format_result_event(outcome: CheckerOutcome, decision: ModuleDecision, dry_run: bool) -> String {
     if dry_run {
-        match outcome {
-            CheckerOutcome::Clean => eprintln!("event=pam_module_result result=allow mode=dry_run"),
-            _ => eprintln!(
+        return match outcome {
+            CheckerOutcome::Clean => {
+                "event=pam_module_result result=allow mode=dry_run".to_string()
+            }
+            _ => format!(
                 "event=pam_module_result result=allow mode=dry_run would=reject reason={}",
                 reason_name(reject_reason_for_outcome(outcome))
             ),
-        }
-        return;
+        };
     }
 
     match decision {
-        ModuleDecision::Allow => eprintln!("event=pam_module_result result=allow"),
+        ModuleDecision::Allow => "event=pam_module_result result=allow".to_string(),
         ModuleDecision::Reject { reason } => {
-            eprintln!(
+            format!(
                 "event=pam_module_result result=reject reason={}",
                 reason_name(reason)
-            );
+            )
         }
+    }
+}
+
+fn format_failure_event(outcome: CheckerOutcome, timeout_seconds: u64) -> Option<String> {
+    match outcome {
+        CheckerOutcome::Clean | CheckerOutcome::Pwned => None,
+        CheckerOutcome::ConfigError => {
+            Some("event=pam_module_failure reason=checker_config code=2".to_string())
+        }
+        CheckerOutcome::ProviderFailure => {
+            Some("event=pam_module_failure reason=checker_provider code=3".to_string())
+        }
+        CheckerOutcome::Timeout => Some(format!(
+            "event=pam_module_failure reason=timeout timeout={}s",
+            timeout_seconds
+        )),
+        CheckerOutcome::ExecFailure => Some("event=pam_module_failure reason=exec".to_string()),
+        CheckerOutcome::UnexpectedExit(code) => Some(format!(
+            "event=pam_module_failure reason=checker_exit code={code}"
+        )),
+    }
+}
+
+fn format_config_event(config: &ModuleConfig) -> String {
+    format!(
+        "event=pam_module_config timeout={}s fail_policy={} dry_run={}",
+        config.timeout_seconds,
+        fail_policy_name(config.fail_policy),
+        config.dry_run
+    )
+}
+
+fn emit_log_event(event: &str) {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(c_event) = std::ffi::CString::new(event) {
+            unsafe {
+                openlog(
+                    SYSLOG_IDENT.as_ptr().cast::<c_char>(),
+                    LOG_PID | LOG_NDELAY,
+                    LOG_AUTHPRIV,
+                );
+                syslog(
+                    LOG_INFO,
+                    SYSLOG_FORMAT.as_ptr().cast::<c_char>(),
+                    c_event.as_ptr(),
+                );
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    eprintln!("{event}");
+}
+
+fn fail_policy_name(policy: FailPolicy) -> &'static str {
+    match policy {
+        FailPolicy::Inherit => "inherit",
+        FailPolicy::FailOpen => "fail_open",
+        FailPolicy::FailClosed => "fail_closed",
     }
 }
 
@@ -646,16 +739,17 @@ pub extern "C" fn pam_sm_chauthtok(
             Ok(config) => config,
             Err(_) => {
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
-                eprintln!("event=pam_module_failure reason=checker_config");
+                emit_log_event("event=pam_module_failure reason=module_config");
                 return PAM_AUTHTOK_ERR;
             }
         };
+        emit_config(&config);
 
         let mut candidate = match unsafe { get_authtok(pamh) } {
             Ok(candidate) if !candidate.is_empty() => candidate,
             _ => {
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
-                eprintln!("event=pam_module_failure reason=missing_authtok");
+                emit_log_event("event=pam_module_failure reason=missing_authtok");
                 return PAM_AUTHTOK_ERR;
             }
         };
@@ -663,7 +757,7 @@ pub extern "C" fn pam_sm_chauthtok(
         let checker = run_checker(&config, &candidate);
         candidate.fill(0);
         let decision = map_checker_outcome(checker.outcome, config.dry_run);
-        emit_result(checker.outcome, decision, config.dry_run);
+        emit_result(checker.outcome, decision, &config);
 
         if let ModuleDecision::Reject { reason } = decision {
             unsafe { send_pam_error(pamh, rejection_message(reason)) };
@@ -683,6 +777,9 @@ mod tests {
     use super::*;
     use std::ffi::CString;
     use std::io::Write;
+    use std::sync::{Mutex, MutexGuard};
+
+    static CHECKER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn parse_defaults() {
@@ -825,6 +922,7 @@ mod tests {
 
     #[test]
     fn checker_runner_maps_exit_codes() {
+        let _guard = checker_test_lock();
         let checker = fake_checker(
             r#"#!/bin/sh
 /bin/cat >/dev/null
@@ -852,6 +950,7 @@ exit "$PWNED_CHECK_FAKE_EXIT"
 
     #[test]
     fn checker_runner_passes_fail_policy() {
+        let _guard = checker_test_lock();
         let checker = fake_checker(
             r#"#!/bin/sh
 /bin/cat >/dev/null
@@ -875,6 +974,7 @@ exit 0
 
     #[test]
     fn checker_runner_times_out() {
+        let _guard = checker_test_lock();
         let checker = fake_checker("#!/bin/sh\n/bin/cat >/dev/null\n/bin/sleep 2\nexit 0\n");
         let config = ModuleConfig {
             checker,
@@ -890,6 +990,7 @@ exit 0
 
     #[test]
     fn checker_runner_escalates_timeout_after_grace() {
+        let _guard = checker_test_lock();
         let checker = fake_checker("#!/bin/sh\ntrap '' TERM\n/bin/cat >/dev/null\n/bin/sleep 30\n");
         let config = ModuleConfig {
             checker,
@@ -910,6 +1011,7 @@ exit 0
 
     #[test]
     fn checker_runner_uses_clean_environment() {
+        let _guard = checker_test_lock();
         std::env::set_var("PWNED_CHECK_SHOULD_NOT_LEAK", "secret");
         let env_path = temp_path("env");
         let checker = fake_checker(&format!(
@@ -936,6 +1038,7 @@ exit 0
 
     #[test]
     fn checker_runner_bounds_stderr_capture() {
+        let _guard = checker_test_lock();
         let checker = fake_checker(
             "#!/bin/sh\n/bin/cat >/dev/null\n/usr/bin/yes x | /usr/bin/head -c 2048 >&2\nexit 2\n",
         );
@@ -969,6 +1072,73 @@ exit 0
             pam_return_for_decision(map_checker_outcome(CheckerOutcome::Pwned, true)),
             PAM_SUCCESS
         );
+    }
+
+    #[test]
+    fn formats_native_pam_result_events() {
+        assert_eq!(
+            format_result_event(CheckerOutcome::Clean, ModuleDecision::Allow, false),
+            "event=pam_module_result result=allow"
+        );
+        assert_eq!(
+            format_result_event(
+                CheckerOutcome::Pwned,
+                ModuleDecision::Reject {
+                    reason: RejectReason::Pwned
+                },
+                false,
+            ),
+            "event=pam_module_result result=reject reason=pwned"
+        );
+        assert_eq!(
+            format_result_event(CheckerOutcome::Pwned, ModuleDecision::Allow, true),
+            "event=pam_module_result result=allow mode=dry_run would=reject reason=pwned"
+        );
+    }
+
+    #[test]
+    fn formats_native_pam_failure_events() {
+        assert_eq!(format_failure_event(CheckerOutcome::Clean, 3), None);
+        assert_eq!(format_failure_event(CheckerOutcome::Pwned, 3), None);
+        assert_eq!(
+            format_failure_event(CheckerOutcome::ConfigError, 3),
+            Some("event=pam_module_failure reason=checker_config code=2".to_string())
+        );
+        assert_eq!(
+            format_failure_event(CheckerOutcome::ProviderFailure, 3),
+            Some("event=pam_module_failure reason=checker_provider code=3".to_string())
+        );
+        assert_eq!(
+            format_failure_event(CheckerOutcome::Timeout, 7),
+            Some("event=pam_module_failure reason=timeout timeout=7s".to_string())
+        );
+        assert_eq!(
+            format_failure_event(CheckerOutcome::ExecFailure, 3),
+            Some("event=pam_module_failure reason=exec".to_string())
+        );
+        assert_eq!(
+            format_failure_event(CheckerOutcome::UnexpectedExit(9), 3),
+            Some("event=pam_module_failure reason=checker_exit code=9".to_string())
+        );
+    }
+
+    #[test]
+    fn formats_debug_config_without_paths_or_secrets() {
+        let config = ModuleConfig {
+            checker: "/secret/path/pwned-check".to_string(),
+            timeout_seconds: 9,
+            fail_policy: FailPolicy::FailClosed,
+            dry_run: true,
+            debug: true,
+        };
+        let event = format_config_event(&config);
+
+        assert_eq!(
+            event,
+            "event=pam_module_config timeout=9s fail_policy=fail_closed dry_run=true"
+        );
+        assert!(!event.contains("secret"));
+        assert!(!event.contains("pwned-check"));
     }
 
     #[test]
@@ -1056,5 +1226,9 @@ exit 0
 
     fn shell_quote(path: &std::path::Path) -> String {
         format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"))
+    }
+
+    fn checker_test_lock() -> MutexGuard<'static, ()> {
+        CHECKER_TEST_LOCK.lock().expect("checker test lock")
     }
 }

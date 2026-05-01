@@ -211,6 +211,68 @@ int main(int argc, char **argv) {
 EOF
     docker exec "$CONTAINER" sh -lc "cc -Wall -Wextra -Werror -o /usr/local/bin/native-pam-smoke-client /tmp/native-pam-smoke-client.c -lpam"
 
+    docker exec -i "$CONTAINER" sh -c "cat > /tmp/native-pam-smoke-syslog-capture.c" <<'EOF'
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <unistd.h>
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    fprintf(stderr, "usage: %s <output>\n", argv[0]);
+    return 2;
+  }
+
+  signal(SIGTERM, SIG_DFL);
+  unlink("/dev/log");
+
+  int sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+  if (sock < 0) {
+    perror("socket");
+    return 2;
+  }
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, "/dev/log", sizeof(addr.sun_path) - 1);
+  if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+    perror("bind");
+    return 2;
+  }
+  chmod("/dev/log", 0666);
+
+  int out = open(argv[1], O_CREAT | O_WRONLY | O_APPEND, 0644);
+  if (out < 0) {
+    perror("open");
+    return 2;
+  }
+
+  char buffer[4096];
+  for (;;) {
+    ssize_t n = recv(sock, buffer, sizeof(buffer) - 1, 0);
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      perror("recv");
+      return 2;
+    }
+    buffer[n] = '\0';
+    write(out, buffer, (size_t)n);
+    write(out, "\n", 1);
+    fsync(out);
+  }
+}
+EOF
+    docker exec "$CONTAINER" sh -lc "cc -Wall -Wextra -Werror -o /usr/local/bin/native-pam-smoke-syslog-capture /tmp/native-pam-smoke-syslog-capture.c"
+
     docker exec -i "$CONTAINER" sh -c "cat > /tmp/pam_smoke_authtok.c" <<'EOF'
 #include <security/pam_appl.h>
 #include <security/pam_modules.h>
@@ -267,6 +329,23 @@ run_smoke() {
         install -d \"\$module_dir\"
         install -m 0644 dist/pam_pwned_check.so \"\$module_dir/pam_pwned_check.so\"
         cc -Wall -Wextra -Werror -fPIC -shared -o \"\$module_dir/pam_smoke_authtok.so\" /tmp/pam_smoke_authtok.c -lpam
+        rm -f /tmp/native-pam-smoke-syslog /dev/log
+        /usr/local/bin/native-pam-smoke-syslog-capture /tmp/native-pam-smoke-syslog &
+        syslog_capture_pid=\"\$!\"
+        cleanup_syslog_capture() {
+          kill \"\$syslog_capture_pid\" >/dev/null 2>&1 || true
+          wait \"\$syslog_capture_pid\" >/dev/null 2>&1 || true
+        }
+        trap cleanup_syslog_capture EXIT INT TERM
+        i=0
+        while [ ! -S /dev/log ]; do
+          i=\"\$((i + 1))\"
+          if [ \"\$i\" -gt 50 ]; then
+            echo 'Native PAM syslog capture did not create /dev/log' >&2
+            exit 1
+          fi
+          sleep 0.1
+        done
 
         cat > /usr/local/bin/native-pam-smoke-checker <<'CHECKER_EOF'
 #!/bin/sh
@@ -428,8 +507,32 @@ CHECKER_EOF
         run_case 'provider unavailable fail-closed rejected' provider ProviderClosed123 'fail_closed' reject \"\$failure_message\" yes true
         run_case 'checker config rejected' config ConfigCandidate123 'fail_open' reject \"\$failure_message\" yes false
         run_case 'checker timeout rejected' sleep TimeoutCandidate123 'fail_open' reject \"\$failure_message\" yes false
-        run_case 'dry-run pwned allowed' pwned DryRunCandidate123 'fail_open dry_run' allow '-' yes false
+        run_case 'dry-run pwned allowed' pwned DryRunCandidate123 'fail_open dry_run debug' allow '-' yes false
         run_case 'invalid module arg rejected' clean InvalidArgCandidate123 'fail_clsoed' reject \"\$failure_message\" no ''
+
+        assert_log() {
+          if ! grep -F \"\$1\" /tmp/native-pam-smoke-syslog >/dev/null; then
+            cat /tmp/native-pam-smoke-syslog >&2
+            echo \"Native PAM smoke missing syslog event: \$1\" >&2
+            exit 1
+          fi
+        }
+
+        assert_log 'event=pam_module_result result=allow'
+        assert_log 'event=pam_module_result result=reject reason=pwned'
+        assert_log 'event=pam_module_failure reason=checker_config code=2'
+        assert_log 'event=pam_module_failure reason=timeout timeout=1s'
+        assert_log 'event=pam_module_result result=allow mode=dry_run would=reject reason=pwned'
+        assert_log 'event=pam_module_config timeout=1s fail_policy=fail_open dry_run=true'
+
+        if grep -F 'CleanCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
+           grep -F 'PwnedCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
+           grep -F 'DryRunCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
+           grep -F '/usr/local/bin/native-pam-smoke-checker' /tmp/native-pam-smoke-syslog >/dev/null; then
+          cat /tmp/native-pam-smoke-syslog >&2
+          echo 'Native PAM smoke leaked candidate or checker path to syslog' >&2
+          exit 1
+        fi
     "
 
     echo "Native PAM Ubuntu smoke passed in persistent container: $CONTAINER"

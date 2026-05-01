@@ -108,7 +108,7 @@ MODULE_DIR="$(pkg-config --variable=securedir pam 2>/dev/null || true)"
 if [ -z "$MODULE_DIR" ]; then
     case "$FAMILY" in
         arch) MODULE_DIR="/usr/lib/security" ;;
-        alpine) MODULE_DIR="/lib/security" ;;
+        alpine) MODULE_DIR="/usr/lib/security" ;;
         *) MODULE_DIR="/usr/lib/security" ;;
     esac
 fi

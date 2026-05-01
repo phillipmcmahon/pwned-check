@@ -151,7 +151,7 @@ The module runs inside privileged PAM-using processes. It must keep its behavior
 - avoid loading additional shared libraries beyond libpam, the platform C library, and libraries required by the Rust runtime/build target
 - keep provider access out of the module process
 
-Before implementation, the release must define an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist is expected to include only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI must run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
+Before implementation, the release must define an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist is expected to include only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libc.musl-*`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI must run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
 
 If the module implements dump suppression, it must call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory and restore the prior value before returning, unless a later design decision documents why leaving dumpability disabled is safer for host processes.
 
@@ -384,7 +384,7 @@ Expected file placement:
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` |
 | Fedora/RHEL | `/lib64/security/pam_pwned_check.so` |
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` |
-| Alpine Linux | Validate against the target Linux-PAM package path before release |
+| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` for Alpine Linux-PAM |
 
 Expected package contents:
 

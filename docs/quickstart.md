@@ -29,8 +29,20 @@ echo $?
 
 Expected result:
 
-- stderr includes `event=validation prefix=5BAA6 pwned=true`
+- stderr includes `event=validation prefix=5BAA6 pwned=true count=<n> min_count=1`
 - exit code is `1`
+
+## Check a Threshold
+
+```bash
+printf 'password\n' | dist/pwned-check --stdin --min-count 100000000
+echo $?
+```
+
+Expected result:
+
+- stderr includes `min_count=100000000`
+- exit code is `0` if the provider count is below the threshold
 
 ## Check a Random Password
 

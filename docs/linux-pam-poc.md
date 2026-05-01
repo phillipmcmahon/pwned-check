@@ -47,7 +47,7 @@ Checker exit-code mapping:
 | Checker exit | Meaning | Helper exit |
 |---|---|---|
 | `0` | clean, or provider failure when checker fail-open is configured | `0` |
-| `1` | pwned password | `1` |
+| `1` | pwned password at the default threshold | `1` |
 | `2` | checker config/usage error | `1` |
 | `3` | checker provider/network error in fail-closed mode | `1` |
 | timeout | checker exceeded helper timeout | `1` |

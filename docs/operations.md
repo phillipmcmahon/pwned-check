@@ -1,6 +1,6 @@
 # Operations
 
-This document describes the intended Linux install and rollback model. It will evolve once the PAM integration lands.
+This document describes the Linux install and rollback model for the checker, helper-based PAM integration, and optional native PAM module.
 
 ## Recommended Install Layout
 
@@ -138,7 +138,7 @@ make native-pam-ubuntu-deb-package-smoke
 make native-pam-ubuntu-hardening-assessment
 ```
 
-That smoke installs the Debian/Ubuntu filesystem layout on the host, creates only a disposable PAM service under `/etc/pam.d`, exercises clean and pwned `pam_chauthtok` cases, and removes the installed files again. It does not run `pam-auth-update --enable`.
+The Ubuntu host package smoke installs the Debian/Ubuntu filesystem layout on the host, creates only a disposable PAM service under `/etc/pam.d`, exercises clean and pwned `pam_chauthtok` cases, and removes the installed files again. It does not run `pam-auth-update --enable`.
 
 The `.deb` package smoke builds and installs the native package, exercises the package-managed files through the same disposable PAM service path, enables and disables the `pam-auth-update` profile, verifies `/etc/pam.d/common-password` is restored, removes the package, and verifies managed-file cleanup.
 

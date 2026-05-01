@@ -57,7 +57,7 @@ Capture:
 - binary smoke test result
 - Docker smoke matrix result
 - CI `lint`, `staticcheck`, `test`, `smoke`, and `package-linux` jobs
-- any manual Linux/PAM validation once available
+- native PAM package, VM, and Docker validation results when shipping native PAM changes
 
 ### 4. Build Artifacts
 

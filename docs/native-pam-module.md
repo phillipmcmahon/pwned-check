@@ -1,8 +1,8 @@
 # Native PAM Module
 
-This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same any-hit rejection check as the current `pam_exec`-based integration.
+This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same default any-hit rejection check as the current `pam_exec`-based integration, with optional count-based thresholding through the shared checker contract.
 
-Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
+The current implementation is a Rust `cdylib` under `native/pam-pwned-check`. The crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the module through `pam_chauthtok`.
 
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 
@@ -12,7 +12,7 @@ The native module is an additional supported Linux integration path. It does not
 flowchart LR
     Passwd["passwd / chpasswd / sshd / gdm"] --> PAM["libpam"]
     PAM --> Module["pam_pwned_check.so"]
-    Module -->|fork+exec, stdin pipe, hard timeout| Checker["pwned-check --stdin"]
+    Module -->|"fork+exec, stdin pipe, hard timeout"| Checker["pwned-check --stdin [--min-count n]"]
     Checker --> Provider{"Provider boundary"}
     Provider --> HIBP["Live HIBP range API"]
     Provider -. "future" .-> Offline["Offline cache or mirror"]
@@ -20,7 +20,7 @@ flowchart LR
     Module --> Log["journald / syslog"]
 ```
 
-The module is the only new runtime component in the first release. The checker, provider boundary, and exit-code contract remain unchanged.
+The module is the only new runtime component in the first native release. The provider boundary remains unchanged: provider logic stays in the checker process, not in the PAM module.
 
 ## Intent
 
@@ -35,7 +35,7 @@ The native module exists to:
 The native module does not exist to:
 
 - move provider HTTP logic into privileged PAM-using processes
-- replace the `pwned-check --stdin` checker contract
+- replace the stdin-based checker contract
 - ship a long-running daemon by default
 - link the checker as an in-process library
 - replace the helper-based integration before the native path has independent evidence and tests
@@ -46,13 +46,13 @@ In scope for the first native module release:
 
 - a Rust `cdylib` that builds `pam_pwned_check.so`
 - meaningful implementation of `pam_sm_chauthtok` for password-change enforcement
-- fork and exec of the existing `pwned-check --stdin` checker
+- fork and exec of the existing `pwned-check --stdin` checker, with optional documented policy flags such as `--min-count`
 - explicit timeout handling around the checker process
 - explicit fail-open and fail-closed configuration passed to the checker
 - dry-run mode for staged rollout
 - structured syslog or journald-compatible events aligned with the current logging policy
-- Debian and Fedora packaging plans with documented enablement through `pam-auth-update` and `authselect`
-- unit, PAM-wrapper, and container integration tests for supported distro paths
+- Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine package paths with documented enablement and rollback
+- unit, host PAM harness, persistent Ubuntu, Docker, VM, package, dependency, AppArmor, SELinux, and memory-check validation paths
 
 Out of scope for the first native module release:
 
@@ -61,7 +61,7 @@ Out of scope for the first native module release:
 - an offline cache or mirror provider
 - macOS or Windows native integrations
 - linking provider logic or HTTP clients into the PAM process
-- `min_count` or threshold-based rejection
+- a long-running daemon or in-process provider lookup
 
 ## Design Principles
 
@@ -130,7 +130,7 @@ The password must not appear in:
 
 The module should consider `PR_SET_DUMPABLE = 0` before handling candidate material, but this affects the whole host process, not only the module. That means the control must be implemented deliberately and documented as a process-wide side effect.
 
-Before implementation, decide whether the module:
+Future hardening should decide whether the module:
 
 - sets dumpable to `0` and leaves it there
 - stores and restores the previous value after candidate handling
@@ -151,7 +151,7 @@ The module runs inside privileged PAM-using processes. It must keep its behavior
 - avoid loading additional shared libraries beyond libpam, the platform C library, and libraries required by the Rust runtime/build target
 - keep provider access out of the module process
 
-Before implementation, the release must define an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist is expected to include only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libc.musl-*`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI must run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
+The release defines an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist includes only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libc.musl-*`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI and smoke tests run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
 
 If the module implements dump suppression, it must call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory and restore the prior value before returning, unless a later design decision documents why leaving dumpability disabled is safer for host processes.
 
@@ -193,7 +193,7 @@ The module reads `PAM_AUTHTOK` with `pam_get_item` and never modifies it. Downst
 |---|---|---|
 | `0` clean | `PAM_SUCCESS` | The module has no objection. The stack continues. |
 | `0` provider failure in checker fail-open mode | `PAM_SUCCESS` | The module has no objection because deployment policy is fail-open. The stack continues. |
-| `1` pwned | `PAM_AUTHTOK_ERR` | Password rejected. User-facing message is sent through PAM conversation. |
+| `1` pwned at or above threshold | `PAM_AUTHTOK_ERR` | Password rejected. User-facing message is sent through PAM conversation. |
 | `2` configuration error | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as misconfiguration. |
 | `3` provider failure in checker fail-closed mode | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as provider failure. |
 | Timeout | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as timeout. |
@@ -411,9 +411,9 @@ Packaging order:
 3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
 4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
 
-### Remaining Delivery Sequence
+### Completed Delivery Sequence
 
-Epic 6 should finish in the order below. The order is intentional: platform hardening comes before production package formats, package formats come before CI/release gates, and release gates come before operator-facing release readiness.
+Epic 6 finished in the order below. The order remains documented so future maintenance can understand why platform hardening came before production package formats, package formats came before CI/release gates, and release gates came before operator-facing release readiness.
 
 | Story ID | Story | Depends on | Exit criteria |
 |---|---|---|---|
@@ -427,7 +427,7 @@ Epic 6 should finish in the order below. The order is intentional: platform hard
 | [EP6-S8](https://github.com/phillipmcmahon/pwned-check/issues/22) | Operator rollout and recovery release docs | EP6-S7 | Install, dry-run, enforcement, rollback, rescue, and emergency recovery docs are package-specific and validated against the test runbook |
 | [EP6-S9](https://github.com/phillipmcmahon/pwned-check/issues/23) | Final native PAM hardening closeout | EP6-S8 | Remaining fuzzing, sanitizer or memory-check, no-secret-output, lockout-safety, SELinux/AppArmor, and open-question decisions are complete or explicitly deferred |
 
-Board stories should use these IDs in their titles or descriptions so commits and validation notes can be tied back to this sequence.
+Board stories used these IDs in their titles or descriptions so commits and validation notes can be tied back to this sequence.
 
 Tracked distro delivery matrix:
 

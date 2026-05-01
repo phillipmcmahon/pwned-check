@@ -2,17 +2,17 @@
 
 Small Go CLI that checks a supplied password against the [Have I Been Pwned](https://haveibeenpwned.com/Passwords) Pwned Passwords range API using k-anonymity. Only the first 5 chars of the SHA-1 hash are sent to the provider.
 
-The near-term target is Linux password-change integration. The first PoC uses `pam_exec.so expose_authtok` to pipe a candidate password to `pwned-check-pam-helper`, which invokes `pwned-check --stdin` with a hard timeout.
+The current target is Linux password-change integration. The project supports both the original `pam_exec.so expose_authtok` helper path and an optional native Linux PAM module, `pam_pwned_check.so`, that invokes the same checker contract with a hard timeout.
 
-macOS and Windows integration are intentionally deferred until the Linux flow is proven, because their signing and platform-security requirements should be handled deliberately rather than worked around.
+macOS and Windows integration are intentionally deferred until their signing and platform-security requirements can be handled deliberately rather than worked around.
 
 ## Features
 
-- Any-hit rejection policy
+- Any-hit rejection policy by default, with optional `--min-count <n>` thresholding
 - Fail-open by default, with configurable fail-closed behavior
 - HIBP range API provider
 - HIBP-compatible local range service provider for automated tests only
-- Logs only the 5-character hash prefix, result, and count
+- Logs only the 5-character hash prefix, result, count, and configured minimum count
 - Single native binary with no Python runtime dependency
 
 ## Usage
@@ -26,17 +26,18 @@ echo $?
 
 Input:
 - `--stdin` reads one password from standard input.
+- `--min-count <n>` rejects only when the breach count is at least `n`; default is `1`.
 - stdin input is bounded to 4096 bytes.
 
 Exit codes:
 - `0`: clean, or provider failure when fail-open is enabled
-- `1`: pwned password
+- `1`: pwned password at or above the configured threshold
 - `2`: config or usage error
 - `3`: provider/network error when fail-closed is enabled
 
 Logging:
 - The password is never logged.
-- Logs contain an event name, the 5-character hash prefix, pwned outcome, and count.
+- Logs contain an event name, the 5-character hash prefix, pwned outcome, count, and minimum count.
 
 Version:
 ```
@@ -66,10 +67,10 @@ go run ./scripts/smoke_binary.go dist/pwned-check
 
 ## Linux Integration Direction
 
-The first production-shaped integration should be Linux-first:
+Linux integration is intentionally checker-centered:
 
-1. Keep `pwned-check --stdin` as the simple enforcement contract.
-2. Add a small PAM integration that invokes the binary with a strict timeout.
+1. Keep `pwned-check --stdin` as the simple enforcement contract, with documented policy flags such as `--min-count`.
+2. Use thin PAM integrations that invoke the binary with a strict timeout.
 3. Use the live HIBP Pwned Passwords range API for production checks.
 4. Use fail-closed or fail-open based on the deployment's risk posture.
 

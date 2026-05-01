@@ -7,7 +7,7 @@ This guide maps common rollout symptoms to safe diagnostics and likely fixes.
 | Exit code | Meaning | Operator action |
 |---|---|---|
 | `0` | Password accepted, or provider failure in fail-open mode. | Check stderr events to distinguish clean from fail-open provider failure. |
-| `1` | Password appears in the breach corpus. | Expected rejection. Confirm no plaintext was logged. |
+| `1` | Password appears in the breach corpus at or above the configured threshold. | Expected rejection. Confirm no plaintext was logged. |
 | `2` | Usage or configuration error. | Check environment variables and command flags. |
 | `3` | Provider or network error in fail-closed mode. | Check HIBP reachability, DNS, proxy/firewall rules, and timeout values. |
 

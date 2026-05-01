@@ -1,6 +1,6 @@
 # Requirements
 
-`pwned-check` is a password-change enforcement helper. It checks a candidate password against the live Have I Been Pwned Pwned Passwords range API.
+`pwned-check` is a password-change enforcement checker. It checks a candidate password against the live Have I Been Pwned Pwned Passwords range API.
 
 ## Production Platform
 
@@ -10,8 +10,8 @@ Initial production assumptions:
 
 - Linux host with PAM-based password-change flow.
 - Native `pwned-check` binary available on the host.
-- Native `pwned-check-pam-helper` binary available on the host for the first PAM PoC.
-- PAM integration invokes the helper through stdin, not command-line arguments.
+- Native `pwned-check-pam-helper` binary available on the host for the helper path, or `pam_pwned_check.so` installed for the native PAM path.
+- PAM integration passes the candidate through stdin or `PAM_AUTHTOK`, not command-line arguments.
 - Production provider access uses the live public HIBP range API.
 - Provider outage behavior is controlled by explicit fail-open/fail-closed configuration.
 - The integration layer enforces a hard timeout.
@@ -24,7 +24,7 @@ Operational implications:
 
 - hosts must be able to reach the HIBP range endpoint during password changes
 - deployments must choose fail-open or fail-closed behavior before rollout
-- provider and helper timeouts must be short and explicit
+- provider, helper, and native module timeouts must be short and explicit
 - automated validation must mock HIBP-compatible range responses rather than calling the live service
 
 Offline cache or mirror providers are not part of the current production scope, but the checker design should keep provider concerns isolated so those modes can be considered later without changing the PAM integration contract.

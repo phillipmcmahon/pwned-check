@@ -21,16 +21,23 @@ gofmt -l .
 cargo fmt --check
 go test ./...
 make native-pam-test
+make native-pam-memory-check
 make native-pam-build
 make native-pam-symbols
 make native-pam-deps
 make native-pam-harness
 make native-pam-ubuntu-host-package-smoke
+make native-pam-ubuntu-deb-package-smoke
+make native-pam-ubuntu-hardening-assessment
 make native-pam-distro-smoke
 make native-pam-generic-package-smoke
+make native-pam-arch-package-smoke
+make native-pam-alpine-package-smoke
 make package-native-pam-debian
 make package-native-pam-rpm
 make package-native-pam-generic
+make package-native-pam-arch
+make package-native-pam-alpine
 make fuzz-smoke
 make coverage
 go vet ./...

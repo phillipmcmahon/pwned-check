@@ -73,7 +73,7 @@ The native Linux PAM module emits structured events through syslog with the stab
 | `event=pam_module_failure reason=exec` | The module could not execute the checker. | `reason` |
 | `event=pam_module_failure reason=checker_exit code=9` | Checker returned an unexpected exit code. | `reason`, `code` |
 | `event=pam_module_failure reason=missing_authtok` | PAM did not provide a usable password token to the module. | `reason` |
-| `event=pam_module_config timeout=3s fail_policy=fail_open dry_run=false` | Debug-only module configuration summary. | `timeout`, `fail_policy`, `dry_run` |
+| `event=pam_module_config timeout=3s min_count=10 fail_policy=fail_open dry_run=false` | Debug-only module configuration summary. | `timeout`, `min_count`, `fail_policy`, `dry_run` |
 
 The debug configuration event must not include the checker path, PAM user, candidate password, hashes, provider response data, or module argv.
 
@@ -89,8 +89,8 @@ event=pam_module_result result=allow mode=dry_run would=reject reason=pwned
 
 During rollout, operators can count safe event fields:
 
-- `event=validation pwned=true`
-- `event=validation pwned=false`
+- `event=validation pwned=true min_count=<n>`
+- `event=validation pwned=false min_count=<n>`
 - `event=provider_failure fail_closed=false`
 - `event=provider_failure fail_closed=true`
 - `event=pam_helper_failure reason=timeout`
@@ -107,12 +107,12 @@ Do not add user identifiers, host account names, plaintext candidates, or full h
 A log pipeline can derive Prometheus-style counters from event fields without parsing secrets:
 
 ```text
-pwned_check_validation_total{pwned="true"} 1
-pwned_check_validation_total{pwned="false"} 1
+pwned_check_validation_total{pwned="true",min_count="1"} 1
+pwned_check_validation_total{pwned="false",min_count="1"} 1
 pwned_check_provider_failure_total{fail_closed="true"} 1
 pwned_check_pam_helper_failure_total{reason="checker_provider"} 1
 ```
 
-For Vector-style pipelines, parse the key/value event line and increment counters from `.event`, `.pwned`, `.fail_closed`, and `.reason`. Keep `checker_stderr` as a bounded diagnostic field, not as a counter label.
+For Vector-style pipelines, parse the key/value event line and increment counters from `.event`, `.pwned`, `.min_count`, `.fail_closed`, and `.reason`. Keep `checker_stderr` as a bounded diagnostic field, not as a counter label.
 
-For Promtail/Loki pipelines, prefer labels with low cardinality such as `event`, `pwned`, `fail_closed`, and `reason`. Do not promote `error`, `checker_stderr`, usernames, host account names, hash prefixes, or candidate-derived values into labels.
+For Promtail/Loki pipelines, prefer labels with low cardinality such as `event`, `pwned`, `min_count`, `fail_closed`, and `reason`. Do not promote `error`, `checker_stderr`, usernames, host account names, hash prefixes, or candidate-derived values into labels.

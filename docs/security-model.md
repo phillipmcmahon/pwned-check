@@ -37,7 +37,7 @@ The password is trusted only inside the OS password-change process, integration 
 - Never persist plaintext passwords to disk.
 - Never include plaintext passwords in diagnostics, crash reports, telemetry, or issue examples.
 - Keep tests that assert plaintext is not emitted.
-- Keep logs structured as safe event records, for example `event=validation prefix=<sha1-prefix> pwned=<bool> count=<n>`.
+- Keep logs structured as safe event records, for example `event=validation prefix=<sha1-prefix> pwned=<bool> count=<n> min_count=<n>`.
 
 See [Logging policy](logging-policy.md) for the current event catalog and safe rollout counters.
 
@@ -72,11 +72,11 @@ Provider and integration timeouts are mandatory. Password-change workflows must 
 
 The PAM integration should enforce its own timeout around the checker process even though the checker also has provider timeouts.
 
-The first Linux PoC uses `pwned-check-pam-helper` for this timeout boundary. The helper reads the PAM-supplied token from stdin and invokes `pwned-check --stdin`; it does not pass the password through argv.
+The helper-based PAM path and the native PAM module both enforce a timeout around the checker process. They read the PAM-supplied token from stdin or `PAM_AUTHTOK` and invoke the checker without passing the password through argv.
 
 ## Process and Environment Exposure
 
-The checker and helper are short-lived processes, so plaintext candidates exist in process memory only for the duration of one validation. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current helper; native integration work should revisit this control before handling broader privileged deployments. The helper's `--max-bytes` option has a 1048576-byte ceiling and should not be used to accept arbitrary streams.
+The checker, helper, and native module checker child are short-lived in normal operation, so plaintext candidates exist in process memory only for the duration of one validation. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current helper or native module; any future native-module dump suppression must account for the process-wide side effect. The helper's `--max-bytes` option has a 1048576-byte ceiling and should not be used to accept arbitrary streams.
 
 The PAM helper inherits its environment when invoking the checker. This is intentional so provider settings such as `PWNED_CHECK_FAIL_CLOSED` and `PWNED_CHECK_TIMEOUT` can be supplied by the integration layer. Environment values must not contain plaintext passwords or full hashes.
 

@@ -150,7 +150,7 @@ Deliverables:
 
 Current implementation notes:
 - [Native PAM module](native-pam-module.md) records the agreed design baseline. The native module is optional and does not replace the current helper path.
-- The remaining Epic 6 execution order is tracked in [Native PAM module: Remaining Delivery Sequence](native-pam-module.md#remaining-delivery-sequence). Story IDs `EP6-S1` through `EP6-S9` should be followed in order unless a documented dependency changes.
+- The completed Epic 6 execution order is recorded in [Native PAM module: Completed Delivery Sequence](native-pam-module.md#completed-delivery-sequence).
 - Epic 6 first-release delivery is complete through `EP6-S9`: Fedora SELinux assessment, RPM, `.deb`, Arch, Alpine, package gates, provenance, recovery docs, and closeout decisions are recorded. Follow-up hardening is now covered for argv parser corpus/memory checks, Ubuntu/Debian AppArmor/lockout drills, and count-based `min_count` checker/native-module policy.
 
 ## Epic 7: macOS and Windows Feasibility
@@ -173,6 +173,6 @@ Deliverables:
 - macOS integration feasibility note.
 - Decision record for each platform.
 
-## Near-Term Recommendation
+## Current Recommendation
 
-Start with Epic 2 after the current Go CLI baseline is stable. The preferred shape is a minimal PAM component that receives the candidate password, invokes `pwned-check --stdin` with a strict timeout, and maps the checker exit code to allow or reject. Keep all breach-checking logic in the Go binary.
+Keep the Linux helper and native PAM paths healthy while preparing release candidates. New work should focus on release readiness, signing/provenance, production feedback from supported Linux distros, and the macOS/Windows feasibility tracks. Keep all breach-checking logic in the Go checker binary.

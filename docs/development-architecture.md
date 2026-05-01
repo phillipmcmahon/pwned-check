@@ -18,6 +18,8 @@ The stable integration boundary is:
 candidate password over stdin -> pwned-check --stdin -> exit code
 ```
 
+Count-based deployments may add the documented checker flag `--min-count <n>`. The default threshold is `1`, preserving any-hit rejection.
+
 The checker should not expose a long-running daemon API unless there is a proven operational need. A short-lived process with a clear timeout is easier to reason about in password-change flows.
 
 ### Native, Small, and Deployable
@@ -30,7 +32,7 @@ The plaintext password must never be logged, printed, written to disk, embedded 
 
 ### Provider Boundary
 
-Production checks in the current phase use the live HIBP Pwned Passwords range API. The checker should keep a narrow provider boundary so a future offline cache or mirror provider can be added without changing the `pwned-check --stdin` integration contract. Test code may use mocked HIBP-compatible range responses.
+Production checks in the current phase use the live HIBP Pwned Passwords range API. The checker should keep a narrow provider boundary so a future offline cache or mirror provider can be added without changing the stdin-based checker integration contract. Test code may use mocked HIBP-compatible range responses.
 
 ### Fail Predictably
 
@@ -42,7 +44,7 @@ Both modes must be configurable, documented, and tested. Network timeouts must b
 
 ### Thin Platform Integrations
 
-Platform-specific integrations should be thin. They should collect the candidate password from the OS-supported password-change mechanism, invoke `pwned-check --stdin` with a strict timeout, and map exit codes to allow or reject.
+Platform-specific integrations should be thin. They should collect the candidate password from the OS-supported password-change mechanism, invoke `pwned-check --stdin` with any documented policy flags and a strict timeout, and map exit codes to allow or reject.
 
 Business logic belongs in the checker binary, not in PAM glue, macOS integration glue, or Windows Password Filter DLL code.
 
@@ -63,7 +65,7 @@ flowchart LR
 ## Exit-Code Contract
 
 - `0`: password accepted, or provider failure when fail-open is configured.
-- `1`: password found in the breach corpus and should be rejected.
+- `1`: password found in the breach corpus at or above the configured threshold and should be rejected.
 - `2`: usage or configuration error.
 - `3`: provider/network error when fail-closed is configured.
 
@@ -91,7 +93,7 @@ The project may change the contract before `v1.0.0` while the concept is still b
 - Keep live API dependency out of automated tests.
 - Run `go test ./...`, `go vet ./...`, build, and binary smoke tests before release.
 - Update docs when contract, configuration, or operational behavior changes.
-- Keep result and provider-failure logs in a stable `event=<name> key=value` shape.
+- Keep result and provider-failure logs in a stable `event=<name> key=value` shape, including the safe `min_count` field on validation events.
 
 ### Release Controls
 
@@ -105,7 +107,7 @@ The project may change the contract before `v1.0.0` while the concept is still b
 The intended end state is:
 
 - A stable Go checker binary.
-- A Linux PAM integration that calls the checker with a hard timeout.
+- Linux PAM integrations, including the helper path and optional native PAM module, that call the checker with a hard timeout.
 - Live HIBP range API checks with explicit fail-open/fail-closed policy.
 - A provider boundary that can support offline cache or mirror work later.
 - Release artifacts with checksums and deployment guidance.

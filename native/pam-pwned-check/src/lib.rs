@@ -878,6 +878,54 @@ mod tests {
     }
 
     #[test]
+    fn parse_module_config_property_corpus_does_not_panic() {
+        let corpus = [
+            "",
+            "checker=",
+            "checker=/bin/true",
+            "checker=/tmp/pwned check",
+            "checker=/tmp/pwned-check\nnewline",
+            "timeout=",
+            "timeout=0",
+            "timeout=1",
+            "timeout=999999",
+            "timeout=18446744073709551615",
+            "timeout=18446744073709551616",
+            "timeout=abc",
+            "fail_open",
+            "fail_closed",
+            "dry_run",
+            "debug",
+            "min_count=1",
+            "fail_open=1",
+            "unknown",
+            "checker=/bin/true\ttab",
+        ];
+
+        for first in corpus {
+            assert!(
+                std::panic::catch_unwind(|| parse_module_config(&[first])).is_ok(),
+                "parser panicked for one arg: {first:?}"
+            );
+            for second in corpus {
+                assert!(
+                    std::panic::catch_unwind(|| parse_module_config(&[first, second])).is_ok(),
+                    "parser panicked for two args: {first:?}, {second:?}"
+                );
+                for third in ["fail_open", "fail_closed", "dry_run", "debug", "timeout=2"] {
+                    assert!(
+                        std::panic::catch_unwind(|| {
+                            parse_module_config(&[first, second, third])
+                        })
+                        .is_ok(),
+                        "parser panicked for three args: {first:?}, {second:?}, {third:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn pam_constants_match_linux_pam_headers() {
         assert_eq!(PAM_SUCCESS, 0);
         assert_eq!(PAM_AUTHTOK_ERR, 20);

@@ -79,7 +79,7 @@ Command entrypoints under `cmd/` and smoke/package harnesses under `scripts/` ar
 
 ## Fuzz Schedule
 
-Parser fuzzing runs at three depths:
+Provider parser fuzzing runs at three depths:
 
 | Scope | Command | Fuzz time | Purpose |
 |---|---|---:|---|
@@ -88,6 +88,10 @@ Parser fuzzing runs at three depths:
 | Scheduled workflow | `make fuzz-nightly` | `5m` | Deeper recurring search for rare provider parsing bugs |
 
 The scheduled fuzz workflow runs daily and can also be started manually from GitHub Actions. CI and release fuzzing must stay independent of the live HIBP API.
+
+Native PAM argv parsing has a deterministic property-style corpus in the Rust unit tests. The corpus combines supported arguments, malformed key/value pairs, future-reserved `min_count` input, large numeric values, whitespace, empty values, and conflicting policy flags. `make native-pam-test` runs that corpus on every native PAM test pass.
+
+`make native-pam-memory-check` builds the native PAM Rust test binary and runs the argv parser tests under Valgrind when Valgrind is available. The target skips cleanly on non-Linux hosts and hosts without Valgrind, and CI installs Valgrind for the native PAM job.
 
 ## Test Layout
 
@@ -99,11 +103,12 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `internal/pwned/provider_fuzz_test.go` | Parser fuzz coverage for HIBP-compatible range responses |
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
-| `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
+| `native/pam-pwned-check` | Native PAM module argument parsing, deterministic argv parser corpus coverage, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-host-package-smoke.sh` | Ubuntu host package-layout smoke that installs the Debian/Ubuntu artifact, exercises the installed module through a disposable PAM service, and rolls back host files without enabling `pam-auth-update` |
 | `scripts/native-pam-ubuntu-deb-package-smoke.sh` | Ubuntu/Debian-family `.deb` smoke that builds the native package, installs it through `dpkg`, exercises installed files, verifies `pam-auth-update` enable/disable, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-ubuntu-hardening-assessment.sh` | Ubuntu/Debian-family hardening assessment that wraps the `.deb` package smoke, captures AppArmor state, and proves a deliberately broken disposable PAM service can be restored |
+| `scripts/native-pam-memory-check.sh` | Linux Valgrind memory-check path for the native PAM Rust argv parser tests |
 | `scripts/native-pam-fedora-host-package-smoke.sh` | Fedora/RHEL-family host package-layout smoke that installs the RPM-family artifact, exercises the installed module through a disposable PAM service, enables and verifies a temporary authselect profile, and rolls back host files and authselect state |
 | `scripts/native-pam-fedora-rpm-package-smoke.sh` | Fedora/RHEL-family RPM smoke that builds the native RPM, installs it through package tooling, exercises installed files, verifies authselect rollback, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-fedora-selinux-assessment.sh` | Fedora/RHEL-family SELinux assessment that wraps the host package smoke, captures SELinux/authselect/audit state, and fails on pwned-check-related AVCs |
@@ -126,7 +131,7 @@ The GitHub workflow is split into:
 - `lint`: gofmt check and `go vet`
 - `staticcheck`: standalone Staticcheck job, intended to be configured as a required branch-protection check
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
-- `native-pam`: Rust format check, native PAM unit tests, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
+- `native-pam`: Rust format check, native PAM unit tests, Valgrind-backed native PAM memory check, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication

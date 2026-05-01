@@ -41,6 +41,9 @@ go test -v -race ./...
 echo "make native-pam-test"
 make native-pam-test
 
+echo "make native-pam-memory-check"
+make native-pam-memory-check
+
 echo "make native-pam-build"
 make native-pam-build
 

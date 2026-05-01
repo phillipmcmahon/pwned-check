@@ -572,14 +572,14 @@ Required test layers:
 - no-secret-output tests covering module logs, conversation messages, checker argv, and diagnostics
 - fixture tests for the exact safe conversation strings documented in [Logging policy](logging-policy.md)
 - CI dependency allowlist checks for `pam_pwned_check.so`, using `ldd` or the target distro's equivalent dynamic dependency inspection
-- parser fuzzing for module argv handling
-- sanitizer or memory-check test path for FFI seams where practical, including ASan and Valgrind where supported
+- deterministic property-style parser corpus coverage for module argv handling
+- Valgrind-backed memory-check test path for native PAM argv parsing on Linux, with ASan still available as a future enhancement if the Rust toolchain and target support it cleanly
 - lockout-safety tests that intentionally misconfigure the module and assert documented root recovery paths still work
 
 Current closeout status:
 
 - unit, host harness, Docker distro, package, dependency allowlist, symbol, Ubuntu host, Fedora host, Fedora SELinux, Arch package, and Alpine package gates are in place
-- native module argv fuzzing and sanitizer/memory-check coverage are tracked as [#24](https://github.com/phillipmcmahon/pwned-check/issues/24)
+- native module argv parsing has deterministic property-style corpus coverage, and `make native-pam-memory-check` runs parser tests under Valgrind on Linux CI
 - Ubuntu/Debian AppArmor state capture and lockout recovery drills are covered by `make native-pam-ubuntu-hardening-assessment`
 - count-based `min_count` policy is tracked as [#26](https://github.com/phillipmcmahon/pwned-check/issues/26) because it requires a checker contract change
 

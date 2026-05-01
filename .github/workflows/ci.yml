@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install PAM development headers
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpam0g-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpam0g-dev valgrind
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -93,6 +93,7 @@ jobs:
         run: |
           make native-pam-fmt
           make native-pam-test
+          make native-pam-memory-check
 
       - name: Build native PAM module
         run: make native-pam-build

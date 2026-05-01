@@ -8,6 +8,7 @@ CONTAINER="${NATIVE_PAM_UBUNTU_CONTAINER:-pwned-check-native-pam-dev}"
 PLATFORM="${NATIVE_PAM_UBUNTU_PLATFORM:-}"
 WORKDIR="/workspace/pwned-check"
 SERVICE="pwned-check-native-smoke"
+OUTPUT_DIR="${NATIVE_PAM_UBUNTU_OUTPUT_DIR:-$ROOT/.test-output/native-pam-ubuntu-smoke}"
 
 usage() {
     cat <<'EOF'
@@ -28,6 +29,8 @@ Environment:
   NATIVE_PAM_UBUNTU_IMAGE      Image name (default: pwned-check-native-pam-ubuntu:24.04)
   NATIVE_PAM_UBUNTU_CONTAINER  Container name (default: pwned-check-native-pam-dev)
   NATIVE_PAM_UBUNTU_PLATFORM   Optional Docker platform, such as linux/amd64
+  NATIVE_PAM_UBUNTU_OUTPUT_DIR Directory for copied smoke logs and artifacts
+                                (default: .test-output/native-pam-ubuntu-smoke)
 EOF
 }
 
@@ -118,6 +121,36 @@ reset_container() {
 
 clean_container() {
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+}
+
+prepare_output_dir() {
+    rm -rf "$OUTPUT_DIR/latest"
+    mkdir -p "$OUTPUT_DIR/latest"
+}
+
+capture_smoke_artifacts() {
+    dest="$OUTPUT_DIR/latest"
+    mkdir -p "$dest"
+    docker exec "$CONTAINER" sh -lc "
+        cd /tmp
+        for path in native-pam-smoke.out native-pam-smoke-syslog native-pam-smoke-checker-* native-pam-smoke-case-*.out; do
+            [ -e \"\$path\" ] && printf '%s\n' \"\$path\"
+        done
+    " > "$dest/artifacts.list" 2>/dev/null || true
+
+    if [ -s "$dest/artifacts.list" ]; then
+        while IFS= read -r artifact; do
+            [ -n "$artifact" ] || continue
+            docker cp "$CONTAINER:/tmp/$artifact" "$dest/$artifact" >/dev/null 2>&1 || true
+        done < "$dest/artifacts.list"
+    fi
+
+    docker exec "$CONTAINER" sh -lc "
+        printf 'container=%s\n' '$CONTAINER'
+        printf 'workdir=%s\n' '$WORKDIR'
+        printf 'service=%s\n' '$SERVICE'
+        date -u '+completed_at=%Y-%m-%dT%H:%M:%SZ'
+    " > "$dest/metadata.env" 2>/dev/null || true
 }
 
 sync_repo() {
@@ -316,7 +349,9 @@ run_smoke() {
     start_container
     sync_repo
     write_smoke_client
+    prepare_output_dir
 
+    set +e
     docker exec "$CONTAINER" sh -lc "
         set -eu
         cd '$WORKDIR'
@@ -329,7 +364,7 @@ run_smoke() {
         install -d \"\$module_dir\"
         install -m 0644 dist/pam_pwned_check.so \"\$module_dir/pam_pwned_check.so\"
         cc -Wall -Wextra -Werror -fPIC -shared -o \"\$module_dir/pam_smoke_authtok.so\" /tmp/pam_smoke_authtok.c -lpam
-        rm -f /tmp/native-pam-smoke-syslog /dev/log
+        rm -f /tmp/native-pam-smoke-syslog /tmp/native-pam-smoke-case-*.out /dev/log
         /usr/local/bin/native-pam-smoke-syslog-capture /tmp/native-pam-smoke-syslog &
         syslog_capture_pid=\"\$!\"
         cleanup_syslog_capture() {
@@ -492,6 +527,8 @@ CHECKER_EOF
             fi
           fi
 
+          case_artifact=\"\$(printf '%s' \"\$name\" | tr ' /' '__' | tr -cd 'A-Za-z0-9_.-')\"
+          cp /tmp/native-pam-smoke.out \"/tmp/native-pam-smoke-case-\$case_artifact.out\"
           echo \"Native PAM case passed: \$name\"
         }
 
@@ -533,9 +570,20 @@ CHECKER_EOF
           echo 'Native PAM smoke leaked candidate or checker path to syslog' >&2
           exit 1
         fi
-    "
+    " > "$OUTPUT_DIR/latest/run.log" 2>&1
+    status="$?"
+    set -e
+    cat "$OUTPUT_DIR/latest/run.log"
+    capture_smoke_artifacts
+
+    if [ "$status" -ne 0 ]; then
+        echo "Native PAM Ubuntu smoke failed in persistent container: $CONTAINER" >&2
+        echo "Captured smoke output in: $OUTPUT_DIR/latest" >&2
+        exit "$status"
+    fi
 
     echo "Native PAM Ubuntu smoke passed in persistent container: $CONTAINER"
+    echo "Captured smoke output in: $OUTPUT_DIR/latest"
 }
 
 require_command docker

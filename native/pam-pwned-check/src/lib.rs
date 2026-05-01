@@ -7,10 +7,13 @@ use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+#[cfg(unix)]
+use std::{io, os::unix::process::CommandExt};
 
 const DEFAULT_CHECKER: &str = "/usr/local/bin/pwned-check";
 const DEFAULT_TIMEOUT_SECONDS: u64 = 3;
 const CHECKER_STDERR_LIMIT: usize = 512;
+const CHECKER_TIMEOUT_GRACE: Duration = Duration::from_millis(200);
 
 pub const PWNED_REJECTION_MESSAGE: &str =
     "This password appears in a known breach corpus. Choose a different password.";
@@ -127,6 +130,21 @@ unsafe extern "C" {
     fn pam_get_item(pamh: *const PamHandle, item_type: c_int, item: *mut *const c_void) -> c_int;
     fn free(ptr: *mut c_void);
 }
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn close(fd: c_int) -> c_int;
+    fn kill(pid: c_int, sig: c_int) -> c_int;
+    fn setpgid(pid: c_int, pgid: c_int) -> c_int;
+    fn sysconf(name: c_int) -> isize;
+}
+
+#[cfg(unix)]
+const SIGTERM: c_int = 15;
+#[cfg(unix)]
+const SIGKILL: c_int = 9;
+#[cfg(unix)]
+const SC_OPEN_MAX: c_int = 5;
 
 impl Default for ModuleConfig {
     fn default() -> Self {
@@ -285,6 +303,8 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         .stdout(Stdio::null())
         .stderr(Stdio::from(stderr_for_child));
 
+    configure_child_process(&mut command);
+
     match config.fail_policy {
         FailPolicy::Inherit => {}
         FailPolicy::FailOpen => {
@@ -325,8 +345,7 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
             Ok(Some(status)) => break Some(status),
             Ok(None) => {
                 if Instant::now() >= deadline {
-                    let _ = child.kill();
-                    let _ = child.wait();
+                    terminate_child(&mut child, CHECKER_TIMEOUT_GRACE);
                     break None;
                 }
                 thread::sleep(Duration::from_millis(10));
@@ -351,6 +370,67 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     };
 
     CheckerRun { outcome, stderr }
+}
+
+#[cfg(unix)]
+fn configure_child_process(command: &mut Command) {
+    let max_fd = open_max();
+    unsafe {
+        command.pre_exec(move || {
+            if setpgid(0, 0) != 0 {
+                return Err(io::Error::last_os_error());
+            }
+
+            for fd in 3..max_fd {
+                let _ = close(fd);
+            }
+
+            Ok(())
+        });
+    }
+}
+
+#[cfg(not(unix))]
+fn configure_child_process(_command: &mut Command) {}
+
+#[cfg(unix)]
+fn open_max() -> c_int {
+    let value = unsafe { sysconf(SC_OPEN_MAX) };
+    if value > 3 && value < 65_536 {
+        value as c_int
+    } else {
+        1024
+    }
+}
+
+#[cfg(unix)]
+fn terminate_child(child: &mut std::process::Child, grace: Duration) {
+    let pid = child.id() as c_int;
+    let process_group = -pid;
+    let _ = unsafe { kill(process_group, SIGTERM) };
+
+    let deadline = Instant::now() + grace;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(_) => return,
+        }
+    }
+
+    let _ = unsafe { kill(process_group, SIGKILL) };
+    let _ = child.wait();
+}
+
+#[cfg(not(unix))]
+fn terminate_child(child: &mut std::process::Child, _grace: Duration) {
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 #[cfg(unix)]
@@ -809,6 +889,67 @@ exit 0
     }
 
     #[test]
+    fn checker_runner_escalates_timeout_after_grace() {
+        let checker = fake_checker("#!/bin/sh\ntrap '' TERM\n/bin/cat >/dev/null\n/bin/sleep 30\n");
+        let config = ModuleConfig {
+            checker,
+            timeout_seconds: 1,
+            ..ModuleConfig::default()
+        };
+        let started = Instant::now();
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::Timeout
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "timeout runner did not escalate promptly"
+        );
+    }
+
+    #[test]
+    fn checker_runner_uses_clean_environment() {
+        std::env::set_var("PWNED_CHECK_SHOULD_NOT_LEAK", "secret");
+        let env_path = temp_path("env");
+        let checker = fake_checker(&format!(
+            "#!/bin/sh\n/bin/cat >/dev/null\n/usr/bin/env > {}\nexit 0\n",
+            shell_quote(&env_path)
+        ));
+        let config = ModuleConfig {
+            checker,
+            fail_policy: FailPolicy::FailClosed,
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::Clean
+        );
+        let env = std::fs::read_to_string(&env_path).expect("read checker env");
+        assert!(env.contains("PWNED_CHECK_FAIL_CLOSED=true"));
+        assert!(!env.contains("PWNED_CHECK_SHOULD_NOT_LEAK"));
+        assert!(!env.contains("secret"));
+        let _ = std::fs::remove_file(env_path);
+        std::env::remove_var("PWNED_CHECK_SHOULD_NOT_LEAK");
+    }
+
+    #[test]
+    fn checker_runner_bounds_stderr_capture() {
+        let checker = fake_checker(
+            "#!/bin/sh\n/bin/cat >/dev/null\n/usr/bin/yes x | /usr/bin/head -c 2048 >&2\nexit 2\n",
+        );
+        let config = ModuleConfig {
+            checker,
+            ..ModuleConfig::default()
+        };
+        let run = run_checker(&config, b"candidate");
+
+        assert_eq!(run.outcome, CheckerOutcome::ConfigError);
+        assert!(run.stderr.len() <= CHECKER_STDERR_LIMIT);
+    }
+
+    #[test]
     fn rejected_outcomes_map_to_authtok_error() {
         assert_eq!(
             pam_return_for_decision(ModuleDecision::Reject {
@@ -885,14 +1026,7 @@ exit 0
     }
 
     fn fake_checker(script: &str) -> String {
-        let path = std::env::temp_dir().join(format!(
-            "pam-pwned-check-test-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        let path = temp_path("checker");
         let mut file = std::fs::File::create(&path).expect("create fake checker");
         file.write_all(script.as_bytes())
             .expect("write fake checker");
@@ -907,5 +1041,20 @@ exit 0
         }
 
         path.to_string_lossy().into_owned()
+    }
+
+    fn temp_path(label: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "pam-pwned-check-test-{label}-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ))
+    }
+
+    fn shell_quote(path: &std::path::Path) -> String {
+        format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"))
     }
 }

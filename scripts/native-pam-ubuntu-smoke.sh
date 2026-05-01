@@ -273,6 +273,8 @@ run_smoke() {
 set -eu
 printf '%s' \"\$*\" >/tmp/native-pam-smoke-checker-argv
 printf '%s' \"\${PWNED_CHECK_FAIL_CLOSED:-}\" >/tmp/native-pam-smoke-checker-fail-closed
+printf '%s' \"\$\$\" >/tmp/native-pam-smoke-checker-pid
+/usr/bin/env >/tmp/native-pam-smoke-checker-env
 token=\"\$(/bin/cat)\"
 printf '%s' \"\$token\" >/tmp/native-pam-smoke-checker-token
 mode=\"\$(/bin/cat /tmp/native-pam-smoke-checker-mode)\"
@@ -293,7 +295,8 @@ case \"\$mode\" in
     exit 0
     ;;
   sleep)
-    /bin/sleep 3
+    trap '' TERM
+    /bin/sleep 30
     exit 0
     ;;
   *)
@@ -323,11 +326,17 @@ CHECKER_EOF
           want_fail_closed=\"\$8\"
 
           printf '%s' \"\$mode\" >/tmp/native-pam-smoke-checker-mode
-          rm -f /tmp/native-pam-smoke-checker-token /tmp/native-pam-smoke-checker-argv /tmp/native-pam-smoke-checker-fail-closed
+          rm -f /tmp/native-pam-smoke-checker-token \
+            /tmp/native-pam-smoke-checker-argv \
+            /tmp/native-pam-smoke-checker-fail-closed \
+            /tmp/native-pam-smoke-checker-pid \
+            /tmp/native-pam-smoke-checker-env
           write_service \"\$args\"
 
           set +e
-          PWNED_CHECK_NATIVE_SMOKE_TOKEN=\"\$token\" /usr/local/bin/native-pam-smoke-client '$SERVICE' root \"\$token\" >/tmp/native-pam-smoke.out 2>&1
+          PWNED_CHECK_SHOULD_NOT_LEAK='secret' \
+            PWNED_CHECK_NATIVE_SMOKE_TOKEN=\"\$token\" \
+            /usr/local/bin/native-pam-smoke-client '$SERVICE' root \"\$token\" >/tmp/native-pam-smoke.out 2>&1
           rc=\"\$?\"
           set -e
 
@@ -377,10 +386,23 @@ CHECKER_EOF
               echo \"Native PAM case failed: \$name fail_closed=\$checker_fail_closed want \$want_fail_closed\" >&2
               exit 1
             fi
+            checker_env=\"\$(cat /tmp/native-pam-smoke-checker-env)\"
+            if printf '%s' \"\$checker_env\" | grep -F 'PWNED_CHECK_NATIVE_SMOKE_TOKEN=' >/dev/null ||
+               printf '%s' \"\$checker_env\" | grep -F 'PWNED_CHECK_SHOULD_NOT_LEAK=' >/dev/null ||
+               printf '%s' \"\$checker_env\" | grep -F 'secret' >/dev/null; then
+              echo \"Native PAM case failed: \$name leaked caller environment into checker\" >&2
+              exit 1
+            fi
             if [ \"\$mode\" != sleep ]; then
               received=\"\$(cat /tmp/native-pam-smoke-checker-token)\"
               if [ \"\$received\" != \"\$token\" ]; then
                 echo \"Native PAM case failed: \$name checker token mismatch\" >&2
+                exit 1
+              fi
+            else
+              checker_pid=\"\$(cat /tmp/native-pam-smoke-checker-pid)\"
+              if kill -0 \"\$checker_pid\" 2>/dev/null; then
+                echo \"Native PAM case failed: \$name left checker process alive\" >&2
                 exit 1
               fi
             fi

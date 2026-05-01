@@ -150,6 +150,7 @@ Deliverables:
 
 Current implementation notes:
 - [Native PAM module](native-pam-module.md) records the agreed design baseline. The native module is optional and does not replace the current helper path.
+- The remaining Epic 6 execution order is tracked in [Native PAM module: Remaining Delivery Sequence](native-pam-module.md#remaining-delivery-sequence). Story IDs `EP6-S1` through `EP6-S9` should be followed in order unless a documented dependency changes.
 
 ## Epic 7: macOS and Windows Feasibility
 

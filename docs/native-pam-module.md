@@ -404,6 +404,24 @@ Packaging order:
 3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
 4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
 
+### Remaining Delivery Sequence
+
+Epic 6 should finish in the order below. The order is intentional: platform hardening comes before production package formats, package formats come before CI/release gates, and release gates come before operator-facing release readiness.
+
+| Story ID | Story | Depends on | Exit criteria |
+|---|---|---|---|
+| [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) | Fedora/RHEL SELinux assessment and policy decision | Current Fedora host smoke | SELinux enforcing behavior is tested or bounded, AVCs are captured, and the project records whether policy ships in-tree, separately, or as operator-managed docs |
+| [EP6-S2](https://github.com/phillipmcmahon/pwned-check/issues/16) | RPM-native package delivery | EP6-S1 | Fedora/RHEL/Rocky RPM builds install `pam_pwned_check.so`, checker, docs, authselect helpers, and rollback assets through package tooling |
+| [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `.deb` builds install the multiarch module path, checker, docs, `pam-auth-update` profile, maintainer-script behavior, and rollback assets |
+| [EP6-S4](https://github.com/phillipmcmahon/pwned-check/issues/18) | Arch `PKGBUILD` package delivery | Current Arch Docker generic package smoke | Arch package installs the module, checker, docs, manual PAM enable helper, timestamped backup, and rollback helper |
+| [EP6-S5](https://github.com/phillipmcmahon/pwned-check/issues/19) | Alpine `APKBUILD` package delivery | Current Alpine VM and Docker generic package smoke | Alpine package installs for Linux-PAM deployments, documents BusyBox-only exclusion, and validates module placement and rollback |
+| [EP6-S6](https://github.com/phillipmcmahon/pwned-check/issues/20) | CI distro and dependency gates | EP6-S2 through EP6-S5 package paths | Docker distro smoke, package smoke, symbol checks, and shared-library allowlist checks run in CI or an equivalent documented manual release workflow |
+| [EP6-S7](https://github.com/phillipmcmahon/pwned-check/issues/21) | Native PAM release provenance | EP6-S6 | Signed package artifacts, provenance attestations, pinned toolchains, deterministic build settings, and dependency reports are produced for release candidates |
+| [EP6-S8](https://github.com/phillipmcmahon/pwned-check/issues/22) | Operator rollout and recovery release docs | EP6-S7 | Install, dry-run, enforcement, rollback, rescue, and emergency recovery docs are package-specific and validated against the test runbook |
+| [EP6-S9](https://github.com/phillipmcmahon/pwned-check/issues/23) | Final native PAM hardening closeout | EP6-S8 | Remaining fuzzing, sanitizer or memory-check, no-secret-output, lockout-safety, SELinux/AppArmor, and open-question decisions are complete or explicitly deferred |
+
+Board stories should use these IDs in their titles or descriptions so commits and validation notes can be tied back to this sequence.
+
 Tracked distro delivery matrix:
 
 | Distro family | Package shape | Enable path | Rollback path | Automated coverage |

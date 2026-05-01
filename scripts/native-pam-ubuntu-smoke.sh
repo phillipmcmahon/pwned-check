@@ -9,6 +9,8 @@ PLATFORM="${NATIVE_PAM_UBUNTU_PLATFORM:-}"
 WORKDIR="/workspace/pwned-check"
 SERVICE="pwned-check-native-smoke"
 OUTPUT_DIR="${NATIVE_PAM_UBUNTU_OUTPUT_DIR:-$ROOT/.test-output/native-pam-ubuntu-smoke}"
+RUN_NAME=""
+RUN_DIR=""
 
 usage() {
     cat <<'EOF'
@@ -124,12 +126,16 @@ clean_container() {
 }
 
 prepare_output_dir() {
+    RUN_NAME="$(date -u '+%Y%m%dT%H%M%SZ')-native-pam-ubuntu-smoke"
+    RUN_DIR="$OUTPUT_DIR/$RUN_NAME"
+    rm -rf "$RUN_DIR"
+    mkdir -p "$RUN_DIR"
     rm -rf "$OUTPUT_DIR/latest"
-    mkdir -p "$OUTPUT_DIR/latest"
+    ln -s "$RUN_NAME" "$OUTPUT_DIR/latest"
 }
 
 capture_smoke_artifacts() {
-    dest="$OUTPUT_DIR/latest"
+    dest="$RUN_DIR"
     mkdir -p "$dest"
     docker exec "$CONTAINER" sh -lc "
         cd /tmp
@@ -151,6 +157,40 @@ capture_smoke_artifacts() {
         printf 'service=%s\n' '$SERVICE'
         date -u '+completed_at=%Y-%m-%dT%H:%M:%SZ'
     " > "$dest/metadata.env" 2>/dev/null || true
+
+    bundle="$dest/$RUN_NAME.txt"
+    {
+        echo "Native PAM Ubuntu Smoke"
+        echo "======================="
+        echo
+        echo "[metadata]"
+        if [ -f "$dest/metadata.env" ]; then
+            cat "$dest/metadata.env"
+        fi
+        echo
+        echo "[run.log]"
+        if [ -f "$dest/run.log" ]; then
+            cat "$dest/run.log"
+        fi
+        echo
+        echo "[syslog]"
+        if [ -f "$dest/native-pam-smoke-syslog" ]; then
+            cat "$dest/native-pam-smoke-syslog"
+        fi
+        echo
+        echo "[case output]"
+        for file in "$dest"/native-pam-smoke-case-*.out; do
+            [ -e "$file" ] || continue
+            echo
+            echo "--- $(basename "$file") ---"
+            cat "$file"
+        done
+        echo
+        echo "[artifacts]"
+        if [ -f "$dest/artifacts.list" ]; then
+            cat "$dest/artifacts.list"
+        fi
+    } > "$bundle"
 }
 
 sync_repo() {
@@ -570,7 +610,7 @@ CHECKER_EOF
           echo 'Native PAM smoke leaked candidate or checker path to syslog' >&2
           exit 1
         fi
-    " > "$OUTPUT_DIR/latest/run.log" 2>&1
+    " > "$RUN_DIR/run.log" 2>&1
     status="$?"
     set -e
     cat "$OUTPUT_DIR/latest/run.log"
@@ -578,12 +618,16 @@ CHECKER_EOF
 
     if [ "$status" -ne 0 ]; then
         echo "Native PAM Ubuntu smoke failed in persistent container: $CONTAINER" >&2
-        echo "Captured smoke output in: $OUTPUT_DIR/latest" >&2
+        echo "Captured smoke output in: $RUN_DIR" >&2
+        echo "Latest smoke output link: $OUTPUT_DIR/latest" >&2
+        echo "Combined text output: $RUN_DIR/$RUN_NAME.txt" >&2
         exit "$status"
     fi
 
     echo "Native PAM Ubuntu smoke passed in persistent container: $CONTAINER"
-    echo "Captured smoke output in: $OUTPUT_DIR/latest"
+    echo "Captured smoke output in: $RUN_DIR"
+    echo "Latest smoke output link: $OUTPUT_DIR/latest"
+    echo "Combined text output: $RUN_DIR/$RUN_NAME.txt"
 }
 
 require_command docker

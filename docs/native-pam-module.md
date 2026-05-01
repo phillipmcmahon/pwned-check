@@ -576,6 +576,13 @@ Required test layers:
 - sanitizer or memory-check test path for FFI seams where practical, including ASan and Valgrind where supported
 - lockout-safety tests that intentionally misconfigure the module and assert documented root recovery paths still work
 
+Current closeout status:
+
+- unit, host harness, Docker distro, package, dependency allowlist, symbol, Ubuntu host, Fedora host, Fedora SELinux, Arch package, and Alpine package gates are in place
+- native module argv fuzzing and sanitizer/memory-check coverage are tracked as [#24](https://github.com/phillipmcmahon/pwned-check/issues/24)
+- AppArmor enforcing and deeper lockout recovery drills are tracked as [#25](https://github.com/phillipmcmahon/pwned-check/issues/25)
+- count-based `min_count` policy is tracked as [#26](https://github.com/phillipmcmahon/pwned-check/issues/26) because it requires a checker contract change
+
 The first-wave container test matrix is:
 
 - Debian stable
@@ -621,14 +628,14 @@ The daemon option may become attractive if measured fork/exec cost, DNS behavior
 
 If added later, the module contract should remain stable. Only the internal IPC implementation should change.
 
-## Open Questions
+## Closeout Decisions
 
-These questions must be decided before implementation begins:
+The implementation sequence resolved the first-release questions as follows:
 
-- Should the user-facing rejection message be localizable in the first release, or fixed English-only?
-- Should `min_count` remain reserved until a later checker contract, or should the checker contract be changed before the first module release to support count-based policy?
-- Should SELinux policy ship in-tree, as a separate package, or as operator-managed documentation?
-- Is the module argv contract stable at the first native module release, or explicitly unstable until a module-specific `v1.0.0`?
+- User-facing native PAM conversation messages are fixed English-only for the first native package release. Localization can be added later without changing the checker contract.
+- `min_count` remains reserved. The current checker contract is any-hit through exit code `1`; count-based policy requires a future checker contract change before module enforcement.
+- SELinux policy is operator-managed documentation for the first release. Fedora 44 enforcing-mode assessment passed without project-specific AVCs, so the package should not ship a broad policy module by default.
+- The module argv contract is stable for the documented first native package release options: `checker`, `timeout`, `fail_open`, `fail_closed`, `dry_run`, and `debug`. New policy arguments should be additive or gated behind a documented contract revision.
 
 ## Non-Goals
 

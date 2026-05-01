@@ -126,17 +126,24 @@ scripts/package-native-pam-arch-package.sh --version <version>
 pacman -Qip dist/release/pwned-check-native-pam-<pkgver>-1-*.pkg.tar.*
 ```
 
-The staging artifact and native Arch package include:
+Build the native Alpine package with:
+
+```bash
+scripts/package-native-pam-alpine-package.sh --version <version>
+apk info --contents --allow-untrusted dist/release/pwned-check-native-pam-<pkgver>-r0.apk
+```
+
+The staging artifact, native Arch package, and native Alpine package include:
 
 - `/usr/bin/pwned-check`
-- `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch and Alpine Linux-PAM
+- `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch and `/lib/security` for Alpine Linux-PAM
 - `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`
 - `/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh`
 - `/usr/share/doc/pwned-check/`
 
 Package installation should not silently enable enforcement. The manual helper edits `/etc/pam.d/passwd` by default, stores a timestamped backup under `/var/lib/pwned-check/pam-backups/`, records the latest backup path, and inserts the module in `dry_run` mode.
 
-Installing the native `pwned-check-native-pam` Arch package follows the same rule: package installation places files on disk only. Operators must run the manual helper explicitly to enable dry-run mode.
+Installing the native `pwned-check-native-pam` Arch or Alpine package follows the same rule: package installation places files on disk only. Operators must run the manual helper explicitly to enable dry-run mode. Alpine support applies only to Linux-PAM deployments, not BusyBox-only authentication paths.
 
 Enable only after reviewing the target PAM service path:
 

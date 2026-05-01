@@ -32,6 +32,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 MODULE_DIR="$(pkg-config --variable=securedir pam 2>/dev/null || true)"
+if [ -z "$MODULE_DIR" ] && [ -r /etc/os-release ] && grep -Eq '^ID=alpine$' /etc/os-release; then
+    MODULE_DIR="/lib/security"
+fi
 [ -n "$MODULE_DIR" ] || MODULE_DIR="/usr/lib/security"
 
 CHECKER_PATH="/usr/bin/pwned-check"
@@ -39,6 +42,7 @@ MODULE_PATH="$MODULE_DIR/pam_pwned_check.so"
 ENABLE_HELPER="/usr/share/pwned-check/manual-pam/enable-manual-pam.sh"
 ROLLBACK_HELPER="/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
+AUTHTOK_MODULE_PATH="$MODULE_DIR/pam_manual_authtok.so"
 
 [ -x "$CHECKER_PATH" ] || fail "checker is not installed at $CHECKER_PATH"
 [ -x "$MODULE_PATH" ] || fail "module is not installed at $MODULE_PATH"
@@ -56,6 +60,7 @@ cleanup() {
         PWNED_CHECK_STATE_FILE="$STATE_FILE" \
         "$ROLLBACK_HELPER" >/dev/null 2>&1
     as_root rm -f "$SERVICE_FILE"
+    as_root rm -f "$AUTHTOK_MODULE_PATH"
     rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
@@ -167,6 +172,7 @@ EOF
 
 cc -Wall -Wextra -Werror -o "$TMP/native-pam-manual-client" "$TMP/native-pam-manual-client.c" -lpam
 cc -Wall -Wextra -Werror -fPIC -shared -o "$TMP/pam_manual_authtok.so" "$TMP/pam_manual_authtok.c" -lpam
+as_root install -m 0755 "$TMP/pam_manual_authtok.so" "$AUTHTOK_MODULE_PATH"
 
 CHECKER="$TMP/native-pam-manual-checker"
 cat > "$CHECKER" <<EOF
@@ -184,7 +190,7 @@ EOF
 chmod 0755 "$CHECKER"
 
 cat > "$TMP/service" <<EOF
-password required $TMP/pam_manual_authtok.so
+password required pam_manual_authtok.so
 password required pam_permit.so
 EOF
 as_root install -m 0644 "$TMP/service" "$SERVICE_FILE"
@@ -240,5 +246,6 @@ fi
 
 trap - EXIT INT TERM
 as_root rm -f "$SERVICE_FILE"
+as_root rm -f "$AUTHTOK_MODULE_PATH"
 rm -rf "$TMP"
 echo "Native PAM manual installed smoke passed"

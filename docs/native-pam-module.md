@@ -384,7 +384,7 @@ Expected file placement:
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` |
 | Fedora/RHEL | `/lib64/security/pam_pwned_check.so` |
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` |
-| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` for Alpine Linux-PAM |
+| Alpine Linux | `/lib/security/pam_pwned_check.so` for Alpine Linux-PAM |
 
 Expected package contents:
 
@@ -414,7 +414,7 @@ Epic 6 should finish in the order below. The order is intentional: platform hard
 | [EP6-S2](https://github.com/phillipmcmahon/pwned-check/issues/16) | RPM-native package delivery | EP6-S1 | `make package-native-pam-rpm` builds a native RPM, and `make native-pam-fedora-rpm-package-smoke` verifies package install, installed-file PAM behavior, authselect rollback, removal, and managed-file cleanup |
 | [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `make package-native-pam-debian` builds a native `.deb`, and `make native-pam-ubuntu-deb-package-smoke` verifies package install, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, removal, and managed-file cleanup |
 | [EP6-S4](https://github.com/phillipmcmahon/pwned-check/issues/18) | Arch `PKGBUILD` package delivery | Current Arch Docker generic package smoke | `make package-native-pam-arch` builds a pacman package from `packaging/arch/PKGBUILD.in`, and `make native-pam-arch-package-smoke` verifies package install, installed-file PAM behavior, manual rollback, removal, and managed-file cleanup |
-| [EP6-S5](https://github.com/phillipmcmahon/pwned-check/issues/19) | Alpine `APKBUILD` package delivery | Current Alpine VM and Docker generic package smoke | Alpine package installs for Linux-PAM deployments, documents BusyBox-only exclusion, and validates module placement and rollback |
+| [EP6-S5](https://github.com/phillipmcmahon/pwned-check/issues/19) | Alpine `APKBUILD` package delivery | Current Alpine VM and Docker generic package smoke | `make package-native-pam-alpine` builds an Alpine package from `packaging/alpine/APKBUILD.in`, and `make native-pam-alpine-package-smoke` verifies package install, installed-file PAM behavior, manual rollback, removal, and managed-file cleanup |
 | [EP6-S6](https://github.com/phillipmcmahon/pwned-check/issues/20) | CI distro and dependency gates | EP6-S2 through EP6-S5 package paths | Docker distro smoke, package smoke, symbol checks, and shared-library allowlist checks run in CI or an equivalent documented manual release workflow |
 | [EP6-S7](https://github.com/phillipmcmahon/pwned-check/issues/21) | Native PAM release provenance | EP6-S6 | Signed package artifacts, provenance attestations, pinned toolchains, deterministic build settings, and dependency reports are produced for release candidates |
 | [EP6-S8](https://github.com/phillipmcmahon/pwned-check/issues/22) | Operator rollout and recovery release docs | EP6-S7 | Install, dry-run, enforcement, rollback, rescue, and emergency recovery docs are package-specific and validated against the test runbook |
@@ -429,7 +429,7 @@ Tracked distro delivery matrix:
 | Debian/Ubuntu | Native filesystem-layout artifact plus native `pwned-check-native-pam` `.deb` | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly; `.deb` smoke validates package install, profile enable/disable, removal, and managed-file cleanup |
 | Fedora/RHEL/Rocky | RPM-family filesystem-layout artifact plus native `pwned-check-native-pam` RPM | Authselect helper creates and selects `custom/pwned-check` in dry-run mode | Restore the authselect backup recorded during enablement, then remove the RPM when uninstalling | Distro smoke builds and loads the module directly; host smoke validates filesystem-layout behavior; RPM smoke validates package install, authselect enable/rollback, removal, and managed-file cleanup; SELinux assessment passes on Fedora 44 enforcing mode |
 | Arch Linux | Generic filesystem-layout artifact plus native pacman package from `PKGBUILD` | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Arch; Arch package smoke validates pacman install/removal and managed-file cleanup |
-| Alpine Linux | Generic filesystem-layout artifact, then APK packaging after Linux-PAM path validation | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM |
+| Alpine Linux | Generic filesystem-layout artifact plus native APK package from `APKBUILD` after Linux-PAM path validation | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM; Alpine package smoke validates APK install/removal and managed-file cleanup |
 
 ### Debian And Ubuntu
 
@@ -495,7 +495,7 @@ The first release decision is to avoid shipping an in-tree SELinux policy module
 
 Arch Linux packages should:
 
-- install the module at `/usr/lib/security/pam_pwned_check.so`
+- install the module at `/lib/security/pam_pwned_check.so` for Alpine Linux-PAM
 - install the checker at a stable executable path such as `/usr/bin/pwned-check`
 - install manual PAM enable and rollback helpers under `/usr/share/pwned-check/manual-pam/`
 - document the exact PAM password-stack edit or package-managed include file used to enable the module
@@ -526,6 +526,20 @@ Alpine Linux packages should:
 - document that native PAM integration applies only to Linux-PAM deployments, not BusyBox-only authentication paths
 - preserve a timestamped backup of any edited PAM file before enablement
 - test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
+
+Build the Alpine package with:
+
+```bash
+make package-native-pam-alpine
+```
+
+Validate package-manager behavior through the Docker route with:
+
+```bash
+make native-pam-alpine-package-smoke
+```
+
+The package is built from `packaging/alpine/APKBUILD.in` and is named `pwned-check-native-pam`. Native PAM integration remains Linux-PAM-only; BusyBox-only authentication paths are outside this package's supported behavior. Package installation places files on disk only, and operators must run `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh` explicitly to enable dry-run mode against the chosen PAM service.
 
 ### Signing And Provenance
 

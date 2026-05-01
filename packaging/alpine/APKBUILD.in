@@ -1,0 +1,18 @@
+# Maintainer: pwned-check maintainers <noreply@example.invalid>
+pkgname=pwned-check-native-pam
+pkgver=@PKGVER@
+pkgrel=0
+pkgdesc="Native Linux PAM module for pwned-check"
+url="https://github.com/phillipmcmahon/pwned-check"
+arch="x86_64 aarch64"
+license="MIT"
+depends="linux-pam"
+options="!check"
+source="@ARTIFACT@"
+
+package() {
+	mkdir -p "$pkgdir"
+	cp -a "$srcdir/@ARTIFACT_DIR@/rootfs/." "$pkgdir/"
+}
+
+sha512sums="@SHA512@  @ARTIFACT@"

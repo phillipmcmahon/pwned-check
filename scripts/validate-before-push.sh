@@ -50,6 +50,9 @@ make native-pam-symbols
 echo "make native-pam-deps"
 make native-pam-deps
 
+echo "make native-pam-harness"
+make native-pam-harness
+
 echo "make fuzz-smoke"
 make fuzz-smoke
 

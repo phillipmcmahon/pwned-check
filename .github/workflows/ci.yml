@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install PAM development headers
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpam0g-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpam0g-dev
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -102,6 +102,9 @@ jobs:
 
       - name: Check native PAM exported symbols
         run: make native-pam-symbols
+
+      - name: Run native PAM integration harness
+        run: make native-pam-harness
 
   smoke:
     name: Smoke

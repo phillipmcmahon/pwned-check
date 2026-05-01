@@ -24,6 +24,7 @@ make native-pam-test
 make native-pam-build
 make native-pam-symbols
 make native-pam-deps
+make native-pam-harness
 make fuzz-smoke
 make coverage
 go vet ./...
@@ -89,6 +90,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
+| `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, and `pam_chauthtok` smoke path |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
@@ -103,7 +105,7 @@ The GitHub workflow is split into:
 - `lint`: gofmt check and `go vet`
 - `staticcheck`: standalone Staticcheck job, intended to be configured as a required branch-protection check
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
-- `native-pam`: Rust format check, native PAM unit tests, Linux `pam_pwned_check.so` build, exported PAM symbol check, and dynamic dependency allowlist check
+- `native-pam`: Rust format check, native PAM unit tests, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
@@ -138,6 +140,8 @@ The repository currently has no branch protection enabled. Once branch protectio
 ## Linux Integration Testing
 
 The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API. The smoke also asserts the checker receives only `--stdin`, receives the candidate over stdin, receives the expected fail-closed environment without ambient caller variables, is not invoked for invalid module arguments, emits the exact approved PAM conversation messages, emits the expected syslog events through `/dev/log`, does not echo candidate tokens into PAM output or logs, and does not leave the timeout checker process alive.
+
+The host-level native PAM harness is the CI-oriented counterpart to the persistent smoke. It builds the module on the current Linux runner, compiles a tiny token-seeding PAM module and PAM client, creates a temporary service under `/etc/pam.d`, and loads `pam_pwned_check.so` by absolute path. It covers the same core allow/reject matrix plus checker exec failure and unexpected checker exit, while avoiding persistent Docker state.
 
 The PAM package smoke path proves:
 

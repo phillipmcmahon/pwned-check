@@ -438,7 +438,7 @@ The native module must not rely on the live HIBP API in automated tests.
 Required test layers:
 
 - unit tests for argument parsing, checker outcome mapping, and event formatting
-- `libpam_wrapper` or equivalent PAM-wrapper tests for module loading and conversation behavior without root
+- equivalent host-level PAM harness tests for module loading and conversation behavior in CI, with `libpam_wrapper` still available as a future no-root refinement
 - container integration tests that install the package and exercise real PAM stack behavior on supported distros
 - fault injection for provider HTTP 5xx, provider timeout, checker missing, checker not executable, checker timeout, checker config failure, provider failure, malformed module args, SELinux enforcing, and AppArmor enforcing
 - dry-run tests proving would-be rejections do not block password changes

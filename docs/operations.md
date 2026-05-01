@@ -112,14 +112,21 @@ The `.deb` package smoke builds and installs the native package, exercises the p
 
 ## Arch/Alpine Native PAM Artifact
 
-Arch and Linux-PAM-enabled Alpine use the generic manual-PAM filesystem-layout artifact until distro-native pacman/APK metadata is added:
+Arch and Linux-PAM-enabled Alpine use the generic manual-PAM filesystem-layout artifact as the staging input:
 
 ```bash
 scripts/package-native-pam-generic-artifact.sh --version <version> --family arch
 scripts/package-native-pam-generic-artifact.sh --version <version> --family alpine
 ```
 
-The artifact includes:
+Build the native Arch package with:
+
+```bash
+scripts/package-native-pam-arch-package.sh --version <version>
+pacman -Qip dist/release/pwned-check-native-pam-<pkgver>-1-*.pkg.tar.*
+```
+
+The staging artifact and native Arch package include:
 
 - `/usr/bin/pwned-check`
 - `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch and Alpine Linux-PAM
@@ -128,6 +135,8 @@ The artifact includes:
 - `/usr/share/doc/pwned-check/`
 
 Package installation should not silently enable enforcement. The manual helper edits `/etc/pam.d/passwd` by default, stores a timestamped backup under `/var/lib/pwned-check/pam-backups/`, records the latest backup path, and inserts the module in `dry_run` mode.
+
+Installing the native `pwned-check-native-pam` Arch package follows the same rule: package installation places files on disk only. Operators must run the manual helper explicitly to enable dry-run mode.
 
 Enable only after reviewing the target PAM service path:
 

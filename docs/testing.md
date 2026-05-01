@@ -109,6 +109,8 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
 | `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven enablement, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
+| `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises clean/reject behavior and rollback through installed manual helpers |
+| `scripts/native-pam-arch-package-smoke.sh` | Arch Docker smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |

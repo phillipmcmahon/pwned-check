@@ -1,0 +1,15 @@
+pkgname=pwned-check-native-pam
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc='Native Linux PAM module for pwned-check'
+arch=('x86_64' 'aarch64')
+url='https://github.com/phillipmcmahon/pwned-check'
+license=('MIT')
+depends=('pam' 'glibc')
+options=('!debug' '!strip')
+source=('@ARTIFACT@')
+sha256sums=('@SHA256@')
+
+package() {
+  cp -a "$srcdir/@ARTIFACT_DIR@/rootfs/." "$pkgdir/"
+}

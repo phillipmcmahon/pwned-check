@@ -333,9 +333,10 @@ Until a persistent Arch VM is available, use the Docker tests as the Arch accept
 ```bash
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
 ```
 
-These prove the Arch toolchain can build the module, the module loads from `/usr/lib/security`, the generic artifact installs, manual enablement works, clean/pwned outcomes are correct, and rollback restores the disposable PAM service.
+These prove the Arch toolchain can build the module, the module loads from `/usr/lib/security`, the generic artifact installs, the `PKGBUILD` package builds and installs with `pacman`, manual enablement works, clean/pwned outcomes are correct, package removal cleans managed files, and rollback restores the disposable PAM service.
 
 ## When To Run What
 
@@ -375,5 +376,5 @@ Before claiming a distro package path is ready:
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security`.
-- Arch currently has Docker coverage for both direct native PAM loading and generic package install/enable/rollback.
+- Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/enable/rollback/removal.
 - Debian coverage is Docker-first: binary smoke, helper PAM package smoke, and direct native PAM loading run against `debian:stable-slim`; no dedicated Debian VM is currently required.

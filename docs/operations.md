@@ -110,7 +110,7 @@ scripts/package-native-pam-generic-artifact.sh --version <version> --family alpi
 The artifact includes:
 
 - `/usr/bin/pwned-check`
-- `pam_pwned_check.so` in the distro Linux-PAM security module directory
+- `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch and Alpine Linux-PAM
 - `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`
 - `/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh`
 - `/usr/share/doc/pwned-check/`

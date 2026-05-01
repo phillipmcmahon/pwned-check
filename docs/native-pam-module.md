@@ -499,6 +499,8 @@ The existing Docker PAM smoke tests provide the starting point, but native modul
 
 Per-distro integration tests should install the package, enable the module through the distro's PAM management tool, attempt password changes with known-pwned and known-clean candidates, and assert both syslog content and password state. The tests must continue using the existing HIBP-compatible local provider.
 
+The current Docker and persistent VM distro testing workflow is documented in [distro-testing.md](distro-testing.md).
+
 ## Rollout Posture
 
 Operators should roll out the native module in phases:

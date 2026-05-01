@@ -376,6 +376,28 @@ Before claiming a distro package path is ready:
 - inspect dynamic dependencies with `ldd pam_pwned_check.so`
 - record any new shared-library dependency in the allowlist and docs only after review
 
+## CI And Release Gates
+
+The heavy native PAM package gates run through the `Native PAM Package Gates` GitHub Actions workflow. It is scheduled weekly and can be started manually with `workflow_dispatch`.
+
+Automated in that workflow:
+
+- Ubuntu `.deb` package smoke on an ephemeral Ubuntu runner
+- direct native PAM distro smoke across the first-wave Docker images
+- generic manual-PAM package smoke across Arch and Alpine Docker images
+- Arch `PKGBUILD` package smoke through Docker
+- Alpine `APKBUILD` package smoke through Docker
+
+Host-specific release gates remain manual because they depend on persistent VM state and real host PAM management tools:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
+ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
+```
+
+The Fedora RPM and SELinux gates are not run on generic CI runners because the acceptance path validates real `authselect` selection, backup restoration, SELinux enforcing mode, and host rollback. Record their output in `.test-output/` or the release validation notes before release.
+
 ## Current Observations
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.

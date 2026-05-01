@@ -1,0 +1,56 @@
+name: Native PAM Package Gates
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 3 * * 2"
+
+jobs:
+  ubuntu-deb-package:
+    name: Ubuntu .deb Package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install PAM build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential gcc libpam0g-dev pkg-config
+
+      - name: Run Ubuntu .deb package smoke
+        run: make native-pam-ubuntu-deb-package-smoke
+
+  docker-native-pam-packages:
+    name: Docker Native PAM Packages
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Run direct native PAM distro smoke
+        run: ./scripts/native-pam-distro-smoke.sh --platform linux/amd64
+
+      - name: Run generic native package smoke
+        run: ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64
+
+      - name: Run Arch package smoke
+        run: ./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
+
+      - name: Run Alpine package smoke
+        run: ./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64

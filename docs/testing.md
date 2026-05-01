@@ -129,6 +129,8 @@ The GitHub workflow is split into:
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
+
+The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine package smoke. Fedora RPM/SELinux host validation remains a documented release gate on the persistent Fedora VM because it depends on real `authselect` and SELinux host state.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 Release-sensitive checks:

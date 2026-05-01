@@ -383,6 +383,8 @@ Expected file placement:
 |---|---|
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` |
 | Fedora/RHEL | `/lib64/security/pam_pwned_check.so` |
+| Arch Linux | `/usr/lib/security/pam_pwned_check.so` |
+| Alpine Linux | Validate against the target Linux-PAM package path before release |
 
 Expected package contents:
 
@@ -391,15 +393,25 @@ Expected package contents:
 - documentation under `/usr/share/doc/pwned-check/`
 - Debian `pam-auth-update` profile under `/usr/share/pam-configs/pwned-check`
 - Fedora/RHEL `authselect` feature plan or package-specific enablement notes
+- Arch Linux package or generic-tarball enablement notes
+- Alpine Linux package or generic-tarball enablement notes for Linux-PAM deployments
 - rollback and emergency recovery instructions
 
 Packaging order:
 
 1. Debian/Ubuntu package with `pam-auth-update` integration.
 2. Fedora/RHEL package with `authselect` integration and SELinux assessment.
-3. Generic tarball path for unsupported distros.
+3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
+4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
 
-Arch and Alpine packaging can follow once Debian/Ubuntu and Fedora/RHEL behavior is stable.
+Tracked distro delivery matrix:
+
+| Distro family | Package shape | Enable path | Rollback path | Automated coverage |
+|---|---|---|---|---|
+| Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback |
+| Fedora/RHEL/Rocky | RPM package with `/lib64/security` placement | `authselect` feature or documented profile workflow | Restore previous `authselect` profile or disable the feature, then verify password changes | Pending Fedora/RHEL container smoke with SELinux assessment |
+| Arch Linux | Pacman package or generic tarball with distro docs | Explicit PAM file edit or package-managed include | Restore backed-up PAM file and remove package files | Pending Arch container smoke with direct native module loading |
+| Alpine Linux | APK or generic tarball after Linux-PAM support is validated | Explicit PAM file edit for Linux-PAM deployments | Restore backed-up PAM file and remove package files | Pending musl/Linux-PAM package-path validation |
 
 ### Debian And Ubuntu
 
@@ -410,6 +422,7 @@ Debian and Ubuntu packages should:
 - call `pam-auth-update --package` from maintainer scripts only when this behavior is safe and documented
 - support `amd64` and `arm64`
 - build on the oldest supported Debian release in the support matrix to keep glibc requirements low
+- test profile enablement and rollback in an Ubuntu or Debian VM/container before release
 
 ### Fedora And RHEL
 
@@ -419,8 +432,29 @@ Fedora and RHEL packages should:
 - install an `authselect` feature under `/usr/share/authselect/vendor/pwned-check/`
 - support `x86_64` and `aarch64`
 - include a SELinux assessment before production release
+- test rollback from the selected `authselect` workflow before release
 
 SELinux may require a policy module granting the checker the minimum network and execution permissions required from password-change domains. The project must decide whether that policy ships in-tree, as a separate package, or as documentation for an operator-managed policy.
+
+### Arch Linux
+
+Arch Linux packages should:
+
+- install the module at `/usr/lib/security/pam_pwned_check.so`
+- install the checker at a stable executable path such as `/usr/bin/pwned-check`
+- document the exact PAM password-stack edit or package-managed include file used to enable the module
+- preserve a timestamped backup of any edited PAM file before enablement
+- test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
+
+### Alpine Linux
+
+Alpine Linux packages should:
+
+- validate the target Linux-PAM module directory before release because Alpine deployments can vary between minimal and Linux-PAM-enabled images
+- install the checker at a stable executable path such as `/usr/bin/pwned-check`
+- document that native PAM integration applies only to Linux-PAM deployments, not BusyBox-only authentication paths
+- preserve a timestamped backup of any edited PAM file before enablement
+- test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
 
 ### Signing And Provenance
 
@@ -449,12 +483,14 @@ Required test layers:
 - sanitizer or memory-check test path for FFI seams where practical, including ASan and Valgrind where supported
 - lockout-safety tests that intentionally misconfigure the module and assert documented root recovery paths still work
 
-The container test matrix should start with:
+The first-wave container test matrix is:
 
 - Debian stable
 - Ubuntu LTS
 - Fedora current
-- Rocky or another RHEL-compatible image once SELinux/authselect behavior is addressed
+- Rocky or another RHEL-compatible image with SELinux/authselect behavior addressed
+- Arch Linux
+- Alpine Linux with Linux-PAM installed
 
 The existing Docker PAM smoke tests provide the starting point, but native module tests must load `pam_pwned_check.so` directly rather than testing through `pam_exec.so`.
 

@@ -128,8 +128,8 @@ Release-sensitive checks:
 - bounded parser fuzz coverage, including a 60s release gate
 - 85% minimum coverage for included product logic packages
 - binary smoke test
-- Docker smoke matrix across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
-- Docker PAM package smoke across Debian, Ubuntu, Alpine, Arch Linux, and Fedora
+- Docker smoke matrix across Debian, Ubuntu, Fedora, Rocky or another RHEL-compatible image, Arch Linux, and Alpine
+- Docker PAM package smoke across Debian, Ubuntu, Fedora, Rocky or another RHEL-compatible image, Arch Linux, and Alpine
 - Linux package build for `amd64` and `arm64` with SHA256 files
 
 CI intentionally produces only Linux `amd64` and `arm64` distributable artifacts while Linux remains the active integration target. macOS and Windows artifacts should be reintroduced together, with both x64 and arm64 coverage, when those roadmap tracks include their signing requirements.
@@ -142,7 +142,7 @@ The repository currently has no branch protection enabled. Once branch protectio
 
 ## Linux Integration Testing
 
-The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API. The smoke also asserts the checker receives only `--stdin`, receives the candidate over stdin, receives the expected fail-closed environment without ambient caller variables, is not invoked for invalid module arguments, emits the exact approved PAM conversation messages, emits the expected syslog events through `/dev/log`, does not echo candidate tokens into PAM output or logs, and does not leave the timeout checker process alive.
+The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API. The smoke also installs the generated Debian/Ubuntu native PAM artifact, enables its `pam-auth-update` profile, verifies the generated `common-password` line, disables the profile, and restores the container PAM state for repeatable rollback testing. The smoke asserts the checker receives only `--stdin`, receives the candidate over stdin, receives the expected fail-closed environment without ambient caller variables, is not invoked for invalid module arguments, emits the exact approved PAM conversation messages, emits the expected syslog events through `/dev/log`, does not echo candidate tokens into PAM output or logs, and does not leave the timeout checker process alive.
 
 The host-level native PAM harness is the CI-oriented counterpart to the persistent smoke. It builds the module on the current Linux runner, compiles a tiny token-seeding PAM module and PAM client, creates a temporary service under `/etc/pam.d`, and loads `pam_pwned_check.so` by absolute path. It covers the same core allow/reject matrix plus checker exec failure and unexpected checker exit, while avoiding persistent Docker state.
 

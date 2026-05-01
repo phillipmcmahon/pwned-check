@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${DOCKER_PAM_SMOKE_PLATFORM:-linux/amd64}"
-IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 alpine:3.20 archlinux:base-devel fedora:latest}"
+IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20}"
 VERSION="${DOCKER_PAM_SMOKE_VERSION:-pam-smoke}"
 
 usage() {
@@ -118,7 +118,7 @@ install_pam_dependencies() {
     return
   fi
   if command -v dnf >/dev/null 2>&1; then
-    dnf install -y ca-certificates pam pamtester
+    dnf install -y ca-certificates gcc pam pam-devel
     dnf clean all
     return
   fi

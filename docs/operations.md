@@ -72,6 +72,24 @@ The artifact includes:
 
 The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement.
 
+Enable the native profile only after installing on a disposable host or VM and keeping a recovery shell open:
+
+```bash
+sudo ./install.sh
+sudo pam-auth-update --enable pwned-check --package
+grep pam_pwned_check.so /etc/pam.d/common-password
+```
+
+Rollback should be tested before enforcement rollout:
+
+```bash
+sudo pam-auth-update --disable pwned-check --package
+! grep pam_pwned_check.so /etc/pam.d/common-password
+sudo passwd <test-user>
+```
+
+The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
+
 ## Install from a Release Package
 
 ```bash

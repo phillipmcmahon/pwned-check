@@ -29,11 +29,12 @@ The default matrix is:
 |---|---|
 | Debian | `debian:stable-slim` |
 | Ubuntu | `ubuntu:24.04` |
-| Alpine | `alpine:3.20` |
-| Arch Linux | `archlinux:base-devel` |
 | Fedora | `fedora:latest` |
+| Rocky Linux | `rockylinux:9` |
+| Arch Linux | `archlinux:base-devel` |
+| Alpine | `alpine:3.20` |
 
-The Debian, Ubuntu, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images.
+The Debian, Ubuntu, Rocky Linux, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images.
 
 ## Run Locally
 
@@ -105,7 +106,7 @@ This keeps CI aligned with the canonical Linux release architecture. Local arm64
 
 The PAM package smoke matrix validates the Linux process-integration path rather than only binary execution.
 
-The smoke test builds an amd64 Linux release package, copies it into each distro container, installs the package with its bundled `install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then drives that service through the distro-packaged `pamtester` client. Alpine and Arch Linux do not package `pamtester` for the pinned/default image tags, so the runner compiles a tiny PAM client inside those throwaway containers.
+The smoke test builds an amd64 Linux release package, copies it into each distro container, installs the package with its bundled `install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then drives that service through the distro-packaged `pamtester` client where available. Alpine, Arch Linux, and Rocky Linux do not package `pamtester` for the pinned/default image tags, so the runner compiles a tiny PAM client inside those throwaway containers.
 
 The generated PAM service is intentionally isolated from the distro's real password-change files. It uses PAM's `auth` module type so the smoke client can supply a candidate token consistently across minimal containers while still exercising `pam_exec.so expose_authtok` and helper exit-code mapping through the real PAM module boundary:
 

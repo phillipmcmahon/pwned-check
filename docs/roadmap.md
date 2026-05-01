@@ -126,7 +126,7 @@ User stories:
 - As an operator, I want dry-run mode so I can validate would-be rejections before enabling enforcement.
 - As a security reviewer, I want the module to keep provider HTTP logic out of privileged PAM-using processes.
 - As a maintainer, I want parity tests proving the native module maps checker outcomes consistently with the documented checker and helper contract.
-- As a packager, I want Debian/Ubuntu and Fedora/RHEL install patterns documented before release packaging starts.
+- As a packager, I want Debian/Ubuntu, Fedora/RHEL, Arch Linux, and Alpine Linux install patterns documented before release packaging starts.
 - As an administrator, I want rollback and recovery guidance before enabling the module on a host.
 
 Deliverables:
@@ -142,6 +142,8 @@ Deliverables:
 - Container integration tests that load the native module directly.
 - Debian/Ubuntu `pam-auth-update` packaging plan.
 - Fedora/RHEL `authselect` and SELinux assessment.
+- Arch Linux package/manual PAM integration plan.
+- Alpine Linux package/manual PAM integration plan for Linux-PAM deployments.
 - Signing, provenance, and reproducible-build plan for native module packages.
 - Install, dry-run rollout, rollback, and emergency recovery documentation.
 - Security review checklist for native PAM deployment.

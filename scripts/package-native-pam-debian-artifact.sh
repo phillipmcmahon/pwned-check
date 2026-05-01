@@ -193,13 +193,13 @@ Install:
 
 \`\`\`sh
 sudo ./install.sh
-sudo pam-auth-update
+sudo pam-auth-update --enable pwned-check --package
 \`\`\`
 
 Rollback:
 
 \`\`\`sh
-sudo pam-auth-update
+sudo pam-auth-update --disable pwned-check --package
 sudo rm -f /usr/share/pam-configs/pwned-check
 sudo rm -f /lib/$MULTIARCH/security/pam_pwned_check.so
 \`\`\`
@@ -216,6 +216,7 @@ copy_tree() {
     dest="$2"
     find "$src" -type d | while IFS= read -r dir; do
         rel="${dir#$src}"
+        [ -n "$rel" ] || continue
         install -d "$dest$rel"
     done
     find "$src" -type f | while IFS= read -r file; do

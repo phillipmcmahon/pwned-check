@@ -438,11 +438,26 @@ run_smoke() {
         rm -f /tmp/native-pam-smoke-syslog /tmp/native-pam-smoke-case-*.out /dev/log
         /usr/local/bin/native-pam-smoke-syslog-capture /tmp/native-pam-smoke-syslog &
         syslog_capture_pid=\"\$!\"
+        common_password_backup=/tmp/native-pam-common-password.before
+        pam_state_backup=/tmp/native-pam-var-lib-pam.before
         cleanup_syslog_capture() {
           kill \"\$syslog_capture_pid\" >/dev/null 2>&1 || true
           wait \"\$syslog_capture_pid\" >/dev/null 2>&1 || true
         }
-        trap cleanup_syslog_capture EXIT INT TERM
+        cleanup_pam_state() {
+          if [ -f \"\$common_password_backup\" ]; then
+            cp \"\$common_password_backup\" /etc/pam.d/common-password || true
+          fi
+          if [ -d \"\$pam_state_backup\" ]; then
+            rm -rf /var/lib/pam
+            cp -a \"\$pam_state_backup\" /var/lib/pam || true
+          fi
+        }
+        cleanup_smoke() {
+          cleanup_pam_state
+          cleanup_syslog_capture
+        }
+        trap cleanup_smoke EXIT INT TERM
         i=0
         while [ ! -S /dev/log ]; do
           i=\"\$((i + 1))\"
@@ -653,6 +668,7 @@ CHECKER_EOF
         tar -tzf \"\$package_path\" | grep -F \"/rootfs/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\" >/dev/null
         tar -tzf \"\$package_path\" | grep -F '/rootfs/usr/bin/pwned-check' >/dev/null
         tar -tzf \"\$package_path\" | grep -F '/rootfs/usr/share/pam-configs/pwned-check' >/dev/null
+        rm -rf \"/tmp/\$package_basename\"
         tar -xzf \"\$package_path\" -C /tmp
         (cd \"/tmp/\$package_basename\" && DESTDIR=\"\$package_root\" ./install.sh)
         test -x \"\$package_root/usr/bin/pwned-check\"
@@ -660,6 +676,27 @@ CHECKER_EOF
         grep -F 'Default: no' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
         grep -F 'dry_run' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
         \"\$package_root/usr/bin/pwned-check\" --version >/dev/null
+
+        cp /etc/pam.d/common-password \"\$common_password_backup\"
+        rm -rf \"\$pam_state_backup\"
+        cp -a /var/lib/pam \"\$pam_state_backup\"
+        (cd \"/tmp/\$package_basename\" && ./install.sh)
+        test -x /usr/bin/pwned-check
+        test -x \"\$module_dir/pam_pwned_check.so\"
+        test -f /usr/share/pam-configs/pwned-check
+        DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package
+        grep -F 'pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run' /etc/pam.d/common-password >/dev/null
+        echo 'Native PAM Debian pam-auth-update enable passed'
+        DEBIAN_FRONTEND=noninteractive pam-auth-update --disable pwned-check --package
+        if grep -F 'pam_pwned_check.so' /etc/pam.d/common-password >/dev/null; then
+          cat /etc/pam.d/common-password >&2
+          echo 'Native PAM Debian pam-auth-update rollback left module enabled' >&2
+          exit 1
+        fi
+        cleanup_pam_state
+        rm -f \"\$common_password_backup\"
+        rm -rf \"\$pam_state_backup\"
+        echo 'Native PAM Debian pam-auth-update rollback passed'
         echo \"Native PAM Debian package artifact passed: \$package_basename\"
     " > "$RUN_DIR/run.log" 2>&1
     status="$?"

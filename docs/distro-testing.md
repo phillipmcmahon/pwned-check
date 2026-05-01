@@ -194,6 +194,20 @@ Core native PAM and RPM-family artifact gates:
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
 ```
 
+Host package and authselect smoke:
+
+```bash
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-host-package-smoke'
+```
+
+The host package smoke installs the RPM-family filesystem layout, creates a disposable PAM service for clean and pwned `pam_chauthtok` cases, enables the packaged authselect helper with a temporary `custom/pwned-check-smoke` profile, verifies the active `system-auth` and `password-auth` stacks contain the dry-run module line, restores the authselect backup, and removes installed test files.
+
+If the Fedora test environment cannot build the Go checker itself, provide an existing Linux binary:
+
+```bash
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-fedora-prebuilt make native-pam-fedora-host-package-smoke'
+```
+
 Fedora currently allows the following additional PAM transitive dependencies beyond the base Rust/C/PAM runtime set:
 
 ```text

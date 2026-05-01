@@ -171,6 +171,14 @@ sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
 sudo passwd <test-user>
 ```
 
+For host-level smoke validation on Fedora/RHEL-family test machines, use:
+
+```bash
+make native-pam-fedora-host-package-smoke
+```
+
+That smoke installs the RPM-family filesystem layout, exercises the installed module through a disposable PAM service, enables a temporary authselect profile, verifies the active authselect-managed stacks, restores the authselect backup, and removes the installed test files.
+
 ## Install from a Release Package
 
 ```bash

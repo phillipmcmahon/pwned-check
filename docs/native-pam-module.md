@@ -408,10 +408,10 @@ Tracked distro delivery matrix:
 
 | Distro family | Package shape | Enable path | Rollback path | Automated coverage |
 |---|---|---|---|---|
-| Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback |
-| Fedora/RHEL/Rocky | RPM package with `/lib64/security` placement | `authselect` feature or documented profile workflow | Restore previous `authselect` profile or disable the feature, then verify password changes | Pending Fedora/RHEL container smoke with SELinux assessment |
-| Arch Linux | Pacman package or generic tarball with distro docs | Explicit PAM file edit or package-managed include | Restore backed-up PAM file and remove package files | Pending Arch container smoke with direct native module loading |
-| Alpine Linux | APK or generic tarball after Linux-PAM support is validated | Explicit PAM file edit for Linux-PAM deployments | Restore backed-up PAM file and remove package files | Pending musl/Linux-PAM package-path validation |
+| Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly |
+| Fedora/RHEL/Rocky | RPM package with `/lib64/security` placement | `authselect` feature or documented profile workflow | Restore previous `authselect` profile or disable the feature, then verify password changes | Distro smoke builds and loads the module directly; SELinux/authselect package workflow still pending |
+| Arch Linux | Pacman package or generic tarball with distro docs | Explicit PAM file edit or package-managed include | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly |
+| Alpine Linux | APK or generic tarball after Linux-PAM support is validated | Explicit PAM file edit for Linux-PAM deployments | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly against Linux-PAM on musl |
 
 ### Debian And Ubuntu
 

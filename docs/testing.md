@@ -25,6 +25,7 @@ make native-pam-build
 make native-pam-symbols
 make native-pam-deps
 make native-pam-harness
+make native-pam-distro-smoke
 make package-native-pam-debian
 make fuzz-smoke
 make coverage
@@ -95,6 +96,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
+| `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
@@ -145,6 +147,8 @@ The repository currently has no branch protection enabled. Once branch protectio
 The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API. The smoke also installs the generated Debian/Ubuntu native PAM artifact, enables its `pam-auth-update` profile, verifies the generated `common-password` line, disables the profile, and restores the container PAM state for repeatable rollback testing. The smoke asserts the checker receives only `--stdin`, receives the candidate over stdin, receives the expected fail-closed environment without ambient caller variables, is not invoked for invalid module arguments, emits the exact approved PAM conversation messages, emits the expected syslog events through `/dev/log`, does not echo candidate tokens into PAM output or logs, and does not leave the timeout checker process alive.
 
 The host-level native PAM harness is the CI-oriented counterpart to the persistent smoke. It builds the module on the current Linux runner, compiles a tiny token-seeding PAM module and PAM client, creates a temporary service under `/etc/pam.d`, and loads `pam_pwned_check.so` by absolute path. It covers the same core allow/reject matrix plus checker exec failure and unexpected checker exit, while avoiding persistent Docker state.
+
+The native PAM distro smoke matrix is the portability counterpart. It uses throwaway containers for the first-wave distro set, installs each distro's Rust and Linux-PAM development packages, builds `pam_pwned_check.so` in that environment, installs it into the distro PAM module directory, and runs direct `pam_chauthtok` allow/reject cases. Use `NATIVE_PAM_DISTRO_SMOKE_IMAGES` or `--images` to run a smaller subset while iterating.
 
 The PAM package smoke path proves:
 

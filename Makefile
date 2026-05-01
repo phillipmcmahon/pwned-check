@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-distro-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -72,6 +72,9 @@ native-pam-harness:
 
 native-pam-ubuntu-smoke:
 	./scripts/native-pam-ubuntu-smoke.sh run
+
+native-pam-distro-smoke:
+	./scripts/native-pam-distro-smoke.sh
 
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)

@@ -126,13 +126,13 @@ struct PamConv {
 
 #[cfg(target_os = "linux")]
 #[link(name = "pam")]
-unsafe extern "C" {
+extern "C" {
     fn pam_get_item(pamh: *const PamHandle, item_type: c_int, item: *mut *const c_void) -> c_int;
     fn free(ptr: *mut c_void);
 }
 
 #[cfg(unix)]
-unsafe extern "C" {
+extern "C" {
     fn close(fd: c_int) -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
     fn setpgid(pid: c_int, pgid: c_int) -> c_int;
@@ -140,7 +140,7 @@ unsafe extern "C" {
 }
 
 #[cfg(target_os = "linux")]
-unsafe extern "C" {
+extern "C" {
     fn openlog(ident: *const c_char, option: c_int, facility: c_int);
     fn syslog(priority: c_int, format: *const c_char, ...);
 }

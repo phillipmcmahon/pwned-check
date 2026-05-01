@@ -158,7 +158,7 @@ Equivalent command:
 The default distro list matches the binary Docker smoke matrix:
 
 ```text
-debian:stable-slim ubuntu:24.04 alpine:3.20 archlinux:base-devel fedora:latest
+debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20
 ```
 
 Use a smaller matrix while iterating:
@@ -168,3 +168,23 @@ Use a smaller matrix while iterating:
 ```
 
 The PAM smoke installs PAM runtime support and either `pamtester` or the minimal packages needed to compile the fallback PAM client inside each throwaway container. That makes it slower than `make docker-smoke`, but it keeps the test reproducible against minimal public distro images without requiring custom fixture images.
+
+## Native PAM Distro Smoke
+
+The native PAM module has a separate first-wave distro smoke that builds and loads `pam_pwned_check.so` directly:
+
+```bash
+make native-pam-distro-smoke
+```
+
+Equivalent command:
+
+```bash
+./scripts/native-pam-distro-smoke.sh --platform linux/amd64
+```
+
+Use a smaller native matrix while iterating:
+
+```bash
+./scripts/native-pam-distro-smoke.sh --images "fedora:latest rockylinux:9"
+```

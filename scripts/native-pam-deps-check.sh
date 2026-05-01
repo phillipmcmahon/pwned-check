@@ -27,7 +27,7 @@ printf '%s\n' "$DEPS" | awk '
     /^[[:space:]]*linux-vdso/ { print $1; next }
 ' | while IFS= read -r dep; do
     case "$dep" in
-        ""|linux-vdso.so.*|ld-linux*.so.*|ld-musl-*.so.*|libc.so.*|libgcc_s.so.*|libdl.so.*|libpthread.so.*|libm.so.*|libpam.so.*|libaudit.so.*|libcap-ng.so.*)
+        ""|linux-vdso.so.*|ld-linux*.so.*|ld-musl-*.so.*|libc.so.*|libgcc_s.so.*|libdl.so.*|libpthread.so.*|libm.so.*|libpam.so.*|libaudit.so.*|libcap-ng.so.*|libeconf.so.*)
             ;;
         *)
             printf '%s\n' "$DEPS" >&2

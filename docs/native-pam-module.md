@@ -550,6 +550,14 @@ Release packages should include:
 - SLSA-style provenance attestations for both `pam_pwned_check.so` and the checker binary
 - reproducible build controls, including pinned toolchains and `SOURCE_DATE_EPOCH` set from the release tag
 
+Native package release candidates must also run:
+
+```bash
+make native-pam-release-provenance
+```
+
+This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM artifacts. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
+
 ## Testing Strategy
 
 The native module must not rely on the live HIBP API in automated tests.

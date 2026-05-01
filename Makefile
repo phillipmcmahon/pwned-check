@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine native-pam-release-provenance validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -134,6 +134,9 @@ package-native-pam-arch:
 
 package-native-pam-alpine:
 	./scripts/package-native-pam-alpine-package.sh --version "$(VERSION)"
+
+native-pam-release-provenance:
+	./scripts/native-pam-release-provenance.sh
 
 validate:
 	./scripts/validate-before-push.sh

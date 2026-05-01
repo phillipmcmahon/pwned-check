@@ -84,7 +84,18 @@ Each package contains:
 - `LICENSE`
 - build and dependency metadata under `metadata/`
 
-Later packaging may add `.deb` and `.rpm` artifacts after the install model settles.
+Native PAM packaging currently includes Debian/Ubuntu `.deb`, Fedora/RHEL `.rpm`, Arch pacman, and Alpine APK package paths.
+
+Native PAM package releases must additionally:
+
+- build the native package artifacts for Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine where supported
+- set `SOURCE_DATE_EPOCH` from the release tag timestamp before package builds
+- run `make native-pam-release-provenance` after native package artifacts are staged under `dist/release`
+- sign `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` with `PWNED_CHECK_RELEASE_SIGNING_KEY` when release signing keys are available
+- sign `.rpm` artifacts with `rpm --addsign` in the release signing environment
+- sign or publish `.deb` artifacts through the project Debian repository/release signing process
+- attach checksum, provenance, and signature files alongside native PAM packages
+- keep private signing keys outside the repository and outside test VMs
 
 Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 

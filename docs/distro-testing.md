@@ -27,7 +27,7 @@ The first-wave distro set is:
 
 | Family | Primary target | Docker image | Persistent VM status |
 |---|---|---|---|
-| Debian | Debian stable | `debian:stable-slim` | Deferred until VM network install is available |
+| Debian | Debian stable | `debian:stable-slim` | Docker route is accepted; no dedicated VM required |
 | Ubuntu | Ubuntu 24.04 | `ubuntu:24.04` | `codex-vm-ubuntu` |
 | Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
 | RHEL-compatible | Rocky Linux 9 | `rockylinux:9` | Docker only for now |
@@ -168,6 +168,18 @@ ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-ubuntu-host-p
 
 The host package smoke installs the Debian/Ubuntu filesystem layout, creates a disposable PAM service, exercises clean and pwned `pam_chauthtok` paths, and removes the installed files. It does not enable the package through the real `common-password` stack.
 
+## Debian Docker Route
+
+Debian is covered through Docker rather than a dedicated VM. Run the Debian slices of the binary, helper PAM, and direct native PAM smoke tests:
+
+```bash
+./scripts/docker-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
+./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
+```
+
+The Ubuntu persistent smoke container and Ubuntu host package smoke continue to cover the shared Debian/Ubuntu `pam-auth-update` artifact behavior. A Debian VM may be added later for extra confidence, but it is not a release-blocking requirement for the current native PAM delivery track.
+
 ## Fedora VM
 
 Install dependencies:
@@ -272,7 +284,7 @@ Before changing packaging or distro paths:
 Before claiming a distro package path is ready:
 
 - run the matching Docker path
-- run the matching persistent VM path if a VM exists
+- run the matching persistent VM path when that distro uses a persistent VM in this runbook
 - verify install and rollback
 - inspect dynamic dependencies with `ldd pam_pwned_check.so`
 - record any new shared-library dependency in the allowlist and docs only after review
@@ -283,4 +295,4 @@ Before claiming a distro package path is ready:
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security`.
 - Arch currently has Docker coverage for both direct native PAM loading and generic package install/enable/rollback.
-- Debian VM coverage is deferred until a reliable VM install is available; Docker still covers Debian binary, helper PAM, and direct native PAM paths.
+- Debian coverage is Docker-first: binary smoke, helper PAM package smoke, and direct native PAM loading run against `debian:stable-slim`; no dedicated Debian VM is currently required.

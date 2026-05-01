@@ -422,7 +422,7 @@ Debian and Ubuntu packages should:
 - call `pam-auth-update --package` from maintainer scripts only when this behavior is safe and documented
 - support `amd64` and `arm64`
 - build on the oldest supported Debian release in the support matrix to keep glibc requirements low
-- test profile enablement and rollback in an Ubuntu or Debian VM/container before release
+- test profile enablement and rollback in the Ubuntu persistent smoke container or host smoke path before release; Debian-specific coverage runs through the Debian Docker smoke route unless a dedicated Debian VM is added later
 
 ### Fedora And RHEL
 

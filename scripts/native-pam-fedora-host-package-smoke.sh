@@ -9,6 +9,7 @@ PROFILE_NAME="${PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE:-pwned-check-smoke}"
 STATE_DIR="${PWNED_CHECK_FEDORA_HOST_SMOKE_STATE_DIR:-/var/lib/pwned-check-smoke}"
 ALLOW_OVERWRITE="${PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE:-}"
 PWNED_CHECK_BIN="${PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN:-}"
+USE_INSTALLED="${PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED:-}"
 
 usage() {
     cat <<'EOF'
@@ -27,6 +28,8 @@ Environment:
   NATIVE_PAM_FEDORA_HOST_SMOKE_VERSION      Version label for the test artifact
   PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE     Custom authselect profile name
   PWNED_CHECK_FEDORA_HOST_SMOKE_STATE_DIR   State directory for authselect backup name
+  PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED
+                                           Set to 1 to test installed files without building/installing the artifact
   PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE    Set to 1 to allow pre-existing files
   PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN    Existing Linux pwned-check binary
 EOF
@@ -74,6 +77,7 @@ require_command cc
 require_command make
 require_command tar
 [ -z "$PWNED_CHECK_BIN" ] || [ -x "$PWNED_CHECK_BIN" ] || fail "prebuilt pwned-check binary is not executable: $PWNED_CHECK_BIN"
+[ -z "$USE_INSTALLED" ] || [ -z "$PWNED_CHECK_BIN" ] || fail "PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN cannot be combined with PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED"
 if [ "$(id -u)" -ne 0 ]; then
     require_command sudo
 fi
@@ -86,7 +90,7 @@ SERVICE_FILE="/etc/pam.d/$SERVICE"
 CUSTOM_PROFILE="/etc/authselect/custom/$PROFILE_NAME"
 
 managed_paths="$CHECKER_PATH $MODULE_PATH $AUTHSELECT_DIR"
-if [ -z "$ALLOW_OVERWRITE" ]; then
+if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     for path in $managed_paths; do
         [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
     done
@@ -131,35 +135,39 @@ cleanup() {
     if [ -z "$CUSTOM_PROFILE_PREEXISTED" ]; then
         as_root rm -rf "$CUSTOM_PROFILE"
     fi
-    restore_or_remove "$CHECKER_PATH"
-    restore_or_remove "$MODULE_PATH"
-    restore_or_remove "$AUTHSELECT_DIR"
-    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-        as_root rm -rf "$DOC_DIR"
+    if [ -z "$USE_INSTALLED" ]; then
+        restore_or_remove "$CHECKER_PATH"
+        restore_or_remove "$MODULE_PATH"
+        restore_or_remove "$AUTHSELECT_DIR"
+        if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
+            as_root rm -rf "$DOC_DIR"
+        fi
     fi
     as_root rm -rf "$STATE_DIR"
     rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
 
-backup_existing "$CHECKER_PATH"
-backup_existing "$MODULE_PATH"
-backup_existing "$AUTHSELECT_DIR"
-backup_existing "$DOC_DIR"
+if [ -z "$USE_INSTALLED" ]; then
+    backup_existing "$CHECKER_PATH"
+    backup_existing "$MODULE_PATH"
+    backup_existing "$AUTHSELECT_DIR"
+    backup_existing "$DOC_DIR"
 
-cd "$ROOT"
-if [ -n "$PWNED_CHECK_BIN" ]; then
-    artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION" --pwned-check-bin "$PWNED_CHECK_BIN")"
-else
-    artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION")"
+    cd "$ROOT"
+    if [ -n "$PWNED_CHECK_BIN" ]; then
+        artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION" --pwned-check-bin "$PWNED_CHECK_BIN")"
+    else
+        artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION")"
+    fi
+    artifact="$ROOT/dist/release/$artifact_name.tar.gz"
+    [ -f "$artifact" ] || fail "artifact was not produced: $artifact"
+    tar -xzf "$artifact" -C "$ARTIFACT_DIR"
+    (
+        cd "$ARTIFACT_DIR/$artifact_name"
+        as_root ./install.sh
+    )
 fi
-artifact="$ROOT/dist/release/$artifact_name.tar.gz"
-[ -f "$artifact" ] || fail "artifact was not produced: $artifact"
-tar -xzf "$artifact" -C "$ARTIFACT_DIR"
-(
-    cd "$ARTIFACT_DIR/$artifact_name"
-    as_root ./install.sh
-)
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
 [ -x "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
@@ -352,16 +360,18 @@ as_root rm -f "$SERVICE_FILE"
 if [ -z "$CUSTOM_PROFILE_PREEXISTED" ]; then
     as_root rm -rf "$CUSTOM_PROFILE"
 fi
-restore_or_remove "$CHECKER_PATH"
-restore_or_remove "$MODULE_PATH"
-restore_or_remove "$AUTHSELECT_DIR"
-if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-    as_root rm -rf "$DOC_DIR"
+if [ -z "$USE_INSTALLED" ]; then
+    restore_or_remove "$CHECKER_PATH"
+    restore_or_remove "$MODULE_PATH"
+    restore_or_remove "$AUTHSELECT_DIR"
+    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
+        as_root rm -rf "$DOC_DIR"
+    fi
 fi
 as_root rm -rf "$STATE_DIR"
 
 [ ! -e "$SERVICE_FILE" ] || fail "disposable PAM service still exists after rollback"
-if [ -z "$ALLOW_OVERWRITE" ]; then
+if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     [ ! -e "$CHECKER_PATH" ] || fail "checker still installed after rollback: $CHECKER_PATH"
     [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
     [ ! -e "$AUTHSELECT_DIR" ] || fail "authselect helpers still installed after rollback: $AUTHSELECT_DIR"

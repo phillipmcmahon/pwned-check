@@ -188,7 +188,7 @@ Install dependencies:
 ssh codex-vm-fedora 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools rpmlint tar gzip xz findutils diffutils jq docker moby-engine podman policycoreutils selinux-policy-devel setools-console'
 ```
 
-Core native PAM and RPM-family artifact gates:
+Core native PAM and RPM-family package gates:
 
 ```bash
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
@@ -201,6 +201,20 @@ ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-host-p
 ```
 
 The host package smoke installs the RPM-family filesystem layout, creates a disposable PAM service for clean and pwned `pam_chauthtok` cases, enables the packaged authselect helper with a temporary `custom/pwned-check-smoke` profile, verifies the active `system-auth` and `password-auth` stacks contain the dry-run module line, restores the authselect backup, and removes installed test files.
+
+RPM package smoke:
+
+```bash
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-package-smoke'
+```
+
+The RPM package smoke builds a native `pwned-check-native-pam` RPM through `rpmbuild`, installs it through `dnf` or `rpm`, verifies the RPM file list, exercises the installed files through the Fedora host smoke in installed-file mode, removes the RPM, and verifies package-managed files are gone.
+
+The lower-level filesystem-layout artifact remains available for staging and inspection:
+
+```bash
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && make package-native-pam-rpm-artifact'
+```
 
 If the Fedora test environment cannot build the Go checker itself, provide an existing Linux binary:
 
@@ -328,6 +342,7 @@ Before claiming a distro package path is ready:
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
+- Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security`.
 - Arch currently has Docker coverage for both direct native PAM loading and generic package install/enable/rollback.

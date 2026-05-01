@@ -144,7 +144,14 @@ scripts/package-native-pam-rpm-artifact.sh --version <version>
 tar -tzf dist/release/pwned-check-native-pam_<version>_rpm_<arch>.tar.gz
 ```
 
-The artifact includes:
+Build the native RPM package with:
+
+```bash
+scripts/package-native-pam-rpm-package.sh --version <version>
+rpm -qpi dist/release/pwned-check-native-pam-<rpm-version>-1*.rpm
+```
+
+Both the staging artifact and the native RPM include:
 
 - `/usr/bin/pwned-check`
 - `/lib64/security/pam_pwned_check.so`
@@ -153,6 +160,8 @@ The artifact includes:
 - `/usr/share/doc/pwned-check/`
 
 Package installation should not silently enable enforcement. The authselect helper creates a `custom/pwned-check` profile from the currently selected profile, inserts the native module at the start of the password stack in `dry_run` mode, selects that custom profile with an authselect backup, and records the backup name under `/var/lib/pwned-check/`.
+
+Installing the native `pwned-check-native-pam` RPM follows the same rule: package installation places files on disk only. Operators must run the authselect helper explicitly to enable dry-run mode.
 
 Enable only after installing on a disposable host or VM and keeping a recovery shell open:
 
@@ -175,9 +184,12 @@ For host-level smoke validation on Fedora/RHEL-family test machines, use:
 
 ```bash
 make native-pam-fedora-host-package-smoke
+make native-pam-fedora-rpm-package-smoke
 ```
 
 That smoke installs the RPM-family filesystem layout, exercises the installed module through a disposable PAM service, enables a temporary authselect profile, verifies the active authselect-managed stacks, restores the authselect backup, and removes the installed test files.
+
+The RPM package smoke builds and installs the native RPM, exercises the package-managed files through the same PAM/authselect path, removes the package, and verifies managed-file cleanup.
 
 ## Install from a Release Package
 

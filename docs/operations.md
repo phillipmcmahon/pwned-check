@@ -90,6 +90,14 @@ sudo passwd <test-user>
 
 The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
 
+For native Ubuntu host validation without touching the real password stack, use:
+
+```bash
+make native-pam-ubuntu-host-package-smoke
+```
+
+That smoke installs the Debian/Ubuntu filesystem layout on the host, creates only a disposable PAM service under `/etc/pam.d`, exercises clean and pwned `pam_chauthtok` cases, and removes the installed files again. It does not run `pam-auth-update --enable`.
+
 ## Arch/Alpine Native PAM Artifact
 
 Arch and Linux-PAM-enabled Alpine use the generic manual-PAM filesystem-layout artifact until distro-native pacman/APK metadata is added:

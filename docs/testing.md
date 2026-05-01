@@ -25,6 +25,7 @@ make native-pam-build
 make native-pam-symbols
 make native-pam-deps
 make native-pam-harness
+make package-native-pam-debian
 make fuzz-smoke
 make coverage
 go vet ./...
@@ -93,7 +94,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `native/pam-pwned-check` | Native PAM module argument parsing, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
-| `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, and `pam_chauthtok` smoke path |
+| `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |

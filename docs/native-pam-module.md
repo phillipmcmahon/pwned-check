@@ -2,7 +2,7 @@
 
 This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same any-hit rejection check as the current `pam_exec`-based integration.
 
-Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, and Linux shared-library dependency inspection. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
+Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, and an initial Debian/Ubuntu native PAM filesystem-layout artifact. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
 
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 

@@ -74,6 +74,7 @@ RUN apt-get update \
         curl \
         file \
         gcc \
+        golang-go \
         libpam0g-dev \
         make \
         pkg-config \
@@ -204,11 +205,40 @@ sync_repo() {
     fi
     COPYFILE_DISABLE=1 tar $TAR_XATTR_FLAGS \
         --exclude=.git \
+        --exclude=.test-output \
+        --exclude=build \
         --exclude=dist \
         --exclude=target \
         -C "$ROOT" \
         -cf - . \
         | docker exec -i "$CONTAINER" tar -C "$WORKDIR" -xf -
+}
+
+build_package_checker_for_container() {
+    container_arch="$(docker exec "$CONTAINER" sh -lc "dpkg --print-architecture 2>/dev/null || uname -m")"
+    case "$container_arch" in
+        amd64|x86_64)
+            goarch=amd64
+            goamd64="${GOAMD64:-v1}"
+            ;;
+        arm64|aarch64)
+            goarch=arm64
+            goamd64=""
+            ;;
+        *)
+            fail "unsupported native PAM package smoke architecture: $container_arch"
+            ;;
+    esac
+
+    mkdir -p "$RUN_DIR/prebuilt"
+    (
+        cd "$ROOT"
+        CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" GOAMD64="$goamd64" \
+            go build -trimpath \
+            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=native-smoke" \
+            -o "$RUN_DIR/prebuilt/pwned-check" ./cmd/pwned-check
+    )
+    docker cp "$RUN_DIR/prebuilt/pwned-check" "$CONTAINER:/tmp/native-pam-package-pwned-check"
 }
 
 write_smoke_client() {
@@ -387,9 +417,10 @@ EOF
 
 run_smoke() {
     start_container
+    prepare_output_dir
+    build_package_checker_for_container
     sync_repo
     write_smoke_client
-    prepare_output_dir
 
     set +e
     docker exec "$CONTAINER" sh -lc "
@@ -610,6 +641,26 @@ CHECKER_EOF
           echo 'Native PAM smoke leaked candidate or checker path to syslog' >&2
           exit 1
         fi
+
+        package_out=/tmp/native-pam-debian-package
+        package_root=/tmp/native-pam-debian-package-root
+        rm -rf \"\$package_out\" \"\$package_root\"
+        mkdir -p \"\$package_out\" \"\$package_root\"
+        package_basename=\"\$(./scripts/package-native-pam-debian-artifact.sh --version native-smoke --output-dir \"\$package_out\" --pwned-check-bin /tmp/native-pam-package-pwned-check)\"
+        package_path=\"\$package_out/\$package_basename.tar.gz\"
+        test -f \"\$package_path\"
+        test -f \"\$package_path.sha256\"
+        tar -tzf \"\$package_path\" | grep -F \"/rootfs/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\" >/dev/null
+        tar -tzf \"\$package_path\" | grep -F '/rootfs/usr/bin/pwned-check' >/dev/null
+        tar -tzf \"\$package_path\" | grep -F '/rootfs/usr/share/pam-configs/pwned-check' >/dev/null
+        tar -xzf \"\$package_path\" -C /tmp
+        (cd \"/tmp/\$package_basename\" && DESTDIR=\"\$package_root\" ./install.sh)
+        test -x \"\$package_root/usr/bin/pwned-check\"
+        test -x \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\"
+        grep -F 'Default: no' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
+        grep -F 'dry_run' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
+        \"\$package_root/usr/bin/pwned-check\" --version >/dev/null
+        echo \"Native PAM Debian package artifact passed: \$package_basename\"
     " > "$RUN_DIR/run.log" 2>&1
     status="$?"
     set -e

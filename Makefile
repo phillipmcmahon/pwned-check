@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke smoke docker-smoke docker-pam-smoke package-linux validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -86,6 +86,9 @@ docker-pam-smoke:
 package-linux:
 	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch amd64
 	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch arm64
+
+package-native-pam-debian:
+	./scripts/package-native-pam-debian-artifact.sh --version "$(VERSION)"
 
 validate:
 	./scripts/validate-before-push.sh

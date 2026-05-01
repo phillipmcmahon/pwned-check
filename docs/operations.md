@@ -54,6 +54,24 @@ Inspect package contents:
 tar -tzf pwned-check_<version>_linux_<arch>.tar.gz
 ```
 
+## Debian/Ubuntu Native PAM Artifact
+
+The native PAM module has a Debian/Ubuntu filesystem-layout artifact for the current Linux architecture:
+
+```bash
+scripts/package-native-pam-debian-artifact.sh --version <version>
+tar -tzf dist/release/pwned-check-native-pam_<version>_debian_<arch>.tar.gz
+```
+
+The artifact includes:
+
+- `/usr/bin/pwned-check`
+- `/lib/<multiarch>/security/pam_pwned_check.so`
+- `/usr/share/pam-configs/pwned-check`
+- `/usr/share/doc/pwned-check/`
+
+The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement.
+
 ## Install from a Release Package
 
 ```bash

@@ -412,7 +412,7 @@ Epic 6 should finish in the order below. The order is intentional: platform hard
 |---|---|---|---|
 | [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) | Fedora/RHEL SELinux assessment and policy decision | Current Fedora host smoke | `make native-pam-fedora-selinux-assessment` passes in enforcing mode or records a bounded exception, AVCs are captured, and the project records whether policy ships in-tree, separately, or as operator-managed docs |
 | [EP6-S2](https://github.com/phillipmcmahon/pwned-check/issues/16) | RPM-native package delivery | EP6-S1 | `make package-native-pam-rpm` builds a native RPM, and `make native-pam-fedora-rpm-package-smoke` verifies package install, installed-file PAM behavior, authselect rollback, removal, and managed-file cleanup |
-| [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `.deb` builds install the multiarch module path, checker, docs, `pam-auth-update` profile, maintainer-script behavior, and rollback assets |
+| [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `make package-native-pam-debian` builds a native `.deb`, and `make native-pam-ubuntu-deb-package-smoke` verifies package install, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, removal, and managed-file cleanup |
 | [EP6-S4](https://github.com/phillipmcmahon/pwned-check/issues/18) | Arch `PKGBUILD` package delivery | Current Arch Docker generic package smoke | Arch package installs the module, checker, docs, manual PAM enable helper, timestamped backup, and rollback helper |
 | [EP6-S5](https://github.com/phillipmcmahon/pwned-check/issues/19) | Alpine `APKBUILD` package delivery | Current Alpine VM and Docker generic package smoke | Alpine package installs for Linux-PAM deployments, documents BusyBox-only exclusion, and validates module placement and rollback |
 | [EP6-S6](https://github.com/phillipmcmahon/pwned-check/issues/20) | CI distro and dependency gates | EP6-S2 through EP6-S5 package paths | Docker distro smoke, package smoke, symbol checks, and shared-library allowlist checks run in CI or an equivalent documented manual release workflow |
@@ -426,7 +426,7 @@ Tracked distro delivery matrix:
 
 | Distro family | Package shape | Enable path | Rollback path | Automated coverage |
 |---|---|---|---|---|
-| Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly |
+| Debian/Ubuntu | Native filesystem-layout artifact plus native `pwned-check-native-pam` `.deb` | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly; `.deb` smoke validates package install, profile enable/disable, removal, and managed-file cleanup |
 | Fedora/RHEL/Rocky | RPM-family filesystem-layout artifact plus native `pwned-check-native-pam` RPM | Authselect helper creates and selects `custom/pwned-check` in dry-run mode | Restore the authselect backup recorded during enablement, then remove the RPM when uninstalling | Distro smoke builds and loads the module directly; host smoke validates filesystem-layout behavior; RPM smoke validates package install, authselect enable/rollback, removal, and managed-file cleanup; SELinux assessment passes on Fedora 44 enforcing mode |
 | Arch Linux | Generic filesystem-layout artifact, then pacman packaging | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Arch |
 | Alpine Linux | Generic filesystem-layout artifact, then APK packaging after Linux-PAM path validation | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM |
@@ -441,6 +441,20 @@ Debian and Ubuntu packages should:
 - support `amd64` and `arm64`
 - build on the oldest supported Debian release in the support matrix to keep glibc requirements low
 - test profile enablement and rollback in the Ubuntu persistent smoke container or host smoke path before release; Debian-specific coverage runs through the Debian Docker smoke route unless a dedicated Debian VM is added later
+
+Build the native `.deb` package with:
+
+```bash
+make package-native-pam-debian
+```
+
+Validate package-manager behavior on an Ubuntu host with:
+
+```bash
+make native-pam-ubuntu-deb-package-smoke
+```
+
+The Debian package is named `pwned-check-native-pam`. Package installation places the module, checker, documentation, and `pam-auth-update` profile on disk, but does not enable the PAM module. Enablement remains an explicit operator action through `pam-auth-update --enable pwned-check --package`, and the smoke verifies that disablement restores `/etc/pam.d/common-password`.
 
 ### Fedora And RHEL
 

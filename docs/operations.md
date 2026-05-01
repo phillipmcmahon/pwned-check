@@ -63,7 +63,14 @@ scripts/package-native-pam-debian-artifact.sh --version <version>
 tar -tzf dist/release/pwned-check-native-pam_<version>_debian_<arch>.tar.gz
 ```
 
-The artifact includes:
+Build the native `.deb` package with:
+
+```bash
+scripts/package-native-pam-debian-package.sh --version <version>
+dpkg-deb --info dist/release/pwned-check-native-pam_<debian-version>_<arch>.deb
+```
+
+Both the staging artifact and the native `.deb` include:
 
 - `/usr/bin/pwned-check`
 - `/lib/<multiarch>/security/pam_pwned_check.so`
@@ -71,6 +78,8 @@ The artifact includes:
 - `/usr/share/doc/pwned-check/`
 
 The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement.
+
+Installing the native `pwned-check-native-pam` `.deb` follows the same rule: package installation places files on disk only. Operators must run `pam-auth-update --enable pwned-check --package` explicitly to enable dry-run mode.
 
 Enable the native profile only after installing on a disposable host or VM and keeping a recovery shell open:
 
@@ -94,9 +103,12 @@ For native Ubuntu host validation without touching the real password stack, use:
 
 ```bash
 make native-pam-ubuntu-host-package-smoke
+make native-pam-ubuntu-deb-package-smoke
 ```
 
 That smoke installs the Debian/Ubuntu filesystem layout on the host, creates only a disposable PAM service under `/etc/pam.d`, exercises clean and pwned `pam_chauthtok` cases, and removes the installed files again. It does not run `pam-auth-update --enable`.
+
+The `.deb` package smoke builds and installs the native package, exercises the package-managed files through the same disposable PAM service path, enables and disables the `pam-auth-update` profile, verifies `/etc/pam.d/common-password` is restored, removes the package, and verifies managed-file cleanup.
 
 ## Arch/Alpine Native PAM Artifact
 

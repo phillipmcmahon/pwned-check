@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -76,6 +76,9 @@ native-pam-ubuntu-smoke:
 native-pam-ubuntu-host-package-smoke:
 	./scripts/native-pam-ubuntu-host-package-smoke.sh
 
+native-pam-ubuntu-deb-package-smoke:
+	./scripts/native-pam-ubuntu-deb-package-smoke.sh
+
 native-pam-fedora-host-package-smoke:
 	./scripts/native-pam-fedora-host-package-smoke.sh
 
@@ -105,8 +108,11 @@ package-linux:
 	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch amd64
 	./scripts/package-linux-artifact.sh --version "$(VERSION)" --goarch arm64
 
-package-native-pam-debian:
+package-native-pam-debian-artifact:
 	./scripts/package-native-pam-debian-artifact.sh --version "$(VERSION)"
+
+package-native-pam-debian:
+	./scripts/package-native-pam-debian-package.sh --version "$(VERSION)"
 
 package-native-pam-rpm-artifact:
 	./scripts/package-native-pam-rpm-artifact.sh --version "$(VERSION)"

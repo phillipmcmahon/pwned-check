@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 SERVICE="pwned-check-native-host-package-smoke"
 SMOKE_VERSION="${NATIVE_PAM_HOST_SMOKE_VERSION:-host-smoke}"
 ALLOW_OVERWRITE="${PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE:-}"
+USE_INSTALLED="${PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED:-}"
 
 usage() {
     cat <<'EOF'
@@ -21,6 +22,8 @@ edit /etc/pam.d/common-password.
 Environment:
   NATIVE_PAM_HOST_SMOKE_VERSION           Version label for the test artifact
   PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE  Set to 1 to allow pre-existing files
+  PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED
+                                           Set to 1 to test installed files without building/installing the artifact
 EOF
 }
 
@@ -77,7 +80,7 @@ DOC_DIR="/usr/share/doc/pwned-check"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
 
 managed_paths="$CHECKER_PATH $MODULE_PATH $PROFILE_PATH"
-if [ -z "$ALLOW_OVERWRITE" ]; then
+if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     for path in $managed_paths; do
         [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
     done
@@ -111,30 +114,34 @@ restore_or_remove() {
 
 cleanup() {
     as_root rm -f "$SERVICE_FILE"
-    restore_or_remove "$CHECKER_PATH"
-    restore_or_remove "$MODULE_PATH"
-    restore_or_remove "$PROFILE_PATH"
-    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-        as_root rm -rf "$DOC_DIR"
+    if [ -z "$USE_INSTALLED" ]; then
+        restore_or_remove "$CHECKER_PATH"
+        restore_or_remove "$MODULE_PATH"
+        restore_or_remove "$PROFILE_PATH"
+        if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
+            as_root rm -rf "$DOC_DIR"
+        fi
     fi
     rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
 
-backup_existing "$CHECKER_PATH"
-backup_existing "$MODULE_PATH"
-backup_existing "$PROFILE_PATH"
-backup_existing "$DOC_DIR"
+if [ -z "$USE_INSTALLED" ]; then
+    backup_existing "$CHECKER_PATH"
+    backup_existing "$MODULE_PATH"
+    backup_existing "$PROFILE_PATH"
+    backup_existing "$DOC_DIR"
 
-cd "$ROOT"
-artifact_name="$(./scripts/package-native-pam-debian-artifact.sh --version "$SMOKE_VERSION")"
-artifact="$ROOT/dist/release/$artifact_name.tar.gz"
-[ -f "$artifact" ] || fail "artifact was not produced: $artifact"
-tar -xzf "$artifact" -C "$ARTIFACT_DIR"
-(
-    cd "$ARTIFACT_DIR/$artifact_name"
-    as_root ./install.sh
-)
+    cd "$ROOT"
+    artifact_name="$(./scripts/package-native-pam-debian-artifact.sh --version "$SMOKE_VERSION")"
+    artifact="$ROOT/dist/release/$artifact_name.tar.gz"
+    [ -f "$artifact" ] || fail "artifact was not produced: $artifact"
+    tar -xzf "$artifact" -C "$ARTIFACT_DIR"
+    (
+        cd "$ARTIFACT_DIR/$artifact_name"
+        as_root ./install.sh
+    )
+fi
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
 [ -x "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
@@ -303,20 +310,27 @@ run_case "clean allowed" clean HostPackageClean123 allow
 run_case "pwned rejected" pwned HostPackagePwned123 reject
 
 as_root rm -f "$SERVICE_FILE"
-restore_or_remove "$CHECKER_PATH"
-restore_or_remove "$MODULE_PATH"
-restore_or_remove "$PROFILE_PATH"
-if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-    as_root rm -rf "$DOC_DIR"
+if [ -z "$USE_INSTALLED" ]; then
+    restore_or_remove "$CHECKER_PATH"
+    restore_or_remove "$MODULE_PATH"
+    restore_or_remove "$PROFILE_PATH"
+    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
+        as_root rm -rf "$DOC_DIR"
+    fi
 fi
 
 [ ! -e "$SERVICE_FILE" ] || fail "disposable PAM service still exists after rollback"
-if [ -z "$ALLOW_OVERWRITE" ]; then
+if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     [ ! -e "$CHECKER_PATH" ] || fail "checker still installed after rollback: $CHECKER_PATH"
     [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
     [ ! -e "$PROFILE_PATH" ] || fail "profile still installed after rollback: $PROFILE_PATH"
 fi
-if grep -R 'pam_pwned_check' /etc/pam.d "$PROFILE_PATH" 2>/dev/null; then
+if [ -n "$USE_INSTALLED" ]; then
+    grep_paths="/etc/pam.d"
+else
+    grep_paths="/etc/pam.d $PROFILE_PATH"
+fi
+if grep -R 'pam_pwned_check' $grep_paths 2>/dev/null; then
     fail "host PAM configuration still references pam_pwned_check after rollback"
 fi
 

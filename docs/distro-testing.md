@@ -151,13 +151,22 @@ ssh codex-vm-<distro> 'cd /home/codex/pwned-check && <command>'
 Install dependencies:
 
 ```bash
-ssh codex-vm-ubuntu 'sudo apt-get update && sudo apt-get install -y build-essential ca-certificates cargo clang file gcc git golang-go libpam0g-dev make pkg-config rustc rustfmt'
+ssh codex-vm-ubuntu 'sudo apt-get update && sudo apt-get install -y build-essential ca-certificates clang curl file gcc git golang-go libpam0g-dev make pkg-config'
+ssh codex-vm-ubuntu 'if [ ! -x "$HOME/.cargo/bin/rustup" ]; then curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi; ~/.cargo/bin/rustup default stable'
 ```
+
+Use `PATH="$HOME/.cargo/bin:$PATH"` for native PAM commands on Ubuntu. Ubuntu 24.04's distro Rust currently cannot parse this repository's Cargo lockfile format.
 
 Core native PAM gates:
 
 ```bash
-ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-debian'
+```
+
+If using rustup as recommended above:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-debian'
 ```
 
 Host package smoke:
@@ -167,6 +176,26 @@ ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-ubuntu-host-p
 ```
 
 The host package smoke installs the Debian/Ubuntu filesystem layout, creates a disposable PAM service, exercises clean and pwned `pam_chauthtok` paths, and removes the installed files. It does not enable the package through the real `common-password` stack.
+
+Debian package smoke:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-ubuntu-deb-package-smoke'
+```
+
+The `.deb` package smoke builds a native `pwned-check-native-pam` package through `dpkg-deb`, installs it through `dpkg`, verifies the package file list, exercises the installed files through the Ubuntu host smoke in installed-file mode, enables and disables the `pam-auth-update` profile, verifies `/etc/pam.d/common-password` is restored, removes the package, and verifies package-managed files are gone.
+
+If the Ubuntu test environment cannot build the Go checker itself, provide an existing Linux binary:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-ubuntu-prebuilt make native-pam-ubuntu-deb-package-smoke'
+```
+
+The lower-level filesystem-layout artifact remains available for staging and inspection:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make package-native-pam-debian-artifact'
+```
 
 ## Debian Docker Route
 
@@ -341,6 +370,7 @@ Before claiming a distro package path is ready:
 ## Current Observations
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
+- Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, package removal, and managed-file cleanup.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.

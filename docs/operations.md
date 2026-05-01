@@ -90,6 +90,43 @@ sudo passwd <test-user>
 
 The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
 
+## Arch/Alpine Native PAM Artifact
+
+Arch and Linux-PAM-enabled Alpine use the generic manual-PAM filesystem-layout artifact until distro-native pacman/APK metadata is added:
+
+```bash
+scripts/package-native-pam-generic-artifact.sh --version <version> --family arch
+scripts/package-native-pam-generic-artifact.sh --version <version> --family alpine
+```
+
+The artifact includes:
+
+- `/usr/bin/pwned-check`
+- `pam_pwned_check.so` in the distro Linux-PAM security module directory
+- `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`
+- `/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh`
+- `/usr/share/doc/pwned-check/`
+
+Package installation should not silently enable enforcement. The manual helper edits `/etc/pam.d/passwd` by default, stores a timestamped backup under `/var/lib/pwned-check/pam-backups/`, records the latest backup path, and inserts the module in `dry_run` mode.
+
+Enable only after reviewing the target PAM service path:
+
+```bash
+sudo ./install.sh
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+grep pam_pwned_check.so /etc/pam.d/passwd
+```
+
+Rollback should be tested before enforcement rollout:
+
+```bash
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+! grep pam_pwned_check.so /etc/pam.d/passwd
+sudo passwd <test-user>
+```
+
 ## Fedora/RHEL/Rocky Native PAM Artifact
 
 The native PAM module has an RPM-family filesystem-layout artifact for the current Linux architecture:

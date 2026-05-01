@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-distro-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian package-native-pam-rpm validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-distro-smoke native-pam-generic-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian package-native-pam-rpm package-native-pam-generic validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -76,6 +76,9 @@ native-pam-ubuntu-smoke:
 native-pam-distro-smoke:
 	./scripts/native-pam-distro-smoke.sh
 
+native-pam-generic-package-smoke:
+	./scripts/native-pam-generic-package-smoke.sh
+
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)
 	printf 'password\n' | PWNED_CHECK_PROVIDER=hibp PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/ PWNED_CHECK_FAIL_CLOSED=false $(PAM_HELPER_BIN) --checker $(BIN) --timeout 3s
@@ -95,6 +98,9 @@ package-native-pam-debian:
 
 package-native-pam-rpm:
 	./scripts/package-native-pam-rpm-artifact.sh --version "$(VERSION)"
+
+package-native-pam-generic:
+	./scripts/package-native-pam-generic-artifact.sh --version "$(VERSION)"
 
 validate:
 	./scripts/validate-before-push.sh

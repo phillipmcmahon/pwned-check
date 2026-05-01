@@ -26,8 +26,10 @@ make native-pam-symbols
 make native-pam-deps
 make native-pam-harness
 make native-pam-distro-smoke
+make native-pam-generic-package-smoke
 make package-native-pam-debian
 make package-native-pam-rpm
+make package-native-pam-generic
 make fuzz-smoke
 make coverage
 go vet ./...
@@ -98,6 +100,7 @@ The scheduled fuzz workflow runs daily and can also be started manually from Git
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
+| `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven enablement, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |

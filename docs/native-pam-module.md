@@ -410,8 +410,8 @@ Tracked distro delivery matrix:
 |---|---|---|---|---|
 | Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly |
 | Fedora/RHEL/Rocky | RPM-family filesystem-layout artifact, then RPM packaging | Authselect helper creates and selects `custom/pwned-check` in dry-run mode | Restore the authselect backup recorded during enablement | Distro smoke builds and loads the module directly; artifact includes authselect enable/rollback helpers; SELinux assessment still pending |
-| Arch Linux | Pacman package or generic tarball with distro docs | Explicit PAM file edit or package-managed include | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly |
-| Alpine Linux | APK or generic tarball after Linux-PAM support is validated | Explicit PAM file edit for Linux-PAM deployments | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly against Linux-PAM on musl |
+| Arch Linux | Generic filesystem-layout artifact, then pacman packaging | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Arch |
+| Alpine Linux | Generic filesystem-layout artifact, then APK packaging after Linux-PAM path validation | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM |
 
 ### Debian And Ubuntu
 
@@ -443,6 +443,7 @@ Arch Linux packages should:
 
 - install the module at `/usr/lib/security/pam_pwned_check.so`
 - install the checker at a stable executable path such as `/usr/bin/pwned-check`
+- install manual PAM enable and rollback helpers under `/usr/share/pwned-check/manual-pam/`
 - document the exact PAM password-stack edit or package-managed include file used to enable the module
 - preserve a timestamped backup of any edited PAM file before enablement
 - test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
@@ -453,6 +454,7 @@ Alpine Linux packages should:
 
 - validate the target Linux-PAM module directory before release because Alpine deployments can vary between minimal and Linux-PAM-enabled images
 - install the checker at a stable executable path such as `/usr/bin/pwned-check`
+- install manual PAM enable and rollback helpers under `/usr/share/pwned-check/manual-pam/`
 - document that native PAM integration applies only to Linux-PAM deployments, not BusyBox-only authentication paths
 - preserve a timestamped backup of any edited PAM file before enablement
 - test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack

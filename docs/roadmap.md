@@ -151,7 +151,7 @@ Deliverables:
 Current implementation notes:
 - [Native PAM module](native-pam-module.md) records the agreed design baseline. The native module is optional and does not replace the current helper path.
 - The remaining Epic 6 execution order is tracked in [Native PAM module: Remaining Delivery Sequence](native-pam-module.md#remaining-delivery-sequence). Story IDs `EP6-S1` through `EP6-S9` should be followed in order unless a documented dependency changes.
-- Epic 6 first-release delivery is complete through `EP6-S9`: Fedora SELinux assessment, RPM, `.deb`, Arch, Alpine, package gates, provenance, recovery docs, and closeout decisions are recorded. Follow-up hardening is tracked separately for argv fuzzing/memory checks, AppArmor/lockout drills, and future `min_count` checker contract work.
+- Epic 6 first-release delivery is complete through `EP6-S9`: Fedora SELinux assessment, RPM, `.deb`, Arch, Alpine, package gates, provenance, recovery docs, and closeout decisions are recorded. Follow-up hardening is tracked separately for argv fuzzing/memory checks and future `min_count` checker contract work; Ubuntu/Debian AppArmor capture and lockout recovery drills are now covered by the hardening assessment.
 
 ## Epic 7: macOS and Windows Feasibility
 

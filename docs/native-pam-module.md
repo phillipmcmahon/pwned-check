@@ -2,7 +2,7 @@
 
 This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same any-hit rejection check as the current `pam_exec`-based integration.
 
-Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, and an initial Debian/Ubuntu native PAM filesystem-layout artifact. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
+Implementation has started with a Rust `cdylib` under `native/pam-pwned-check`. The current crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the in-development module through `pam_chauthtok`.
 
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 
@@ -567,7 +567,7 @@ Required test layers:
 - unit tests for argument parsing, checker outcome mapping, and event formatting
 - equivalent host-level PAM harness tests for module loading and conversation behavior in CI, with `libpam_wrapper` still available as a future no-root refinement
 - container integration tests that install the package and exercise real PAM stack behavior on supported distros
-- fault injection for provider HTTP 5xx, provider timeout, checker missing, checker not executable, checker timeout, checker config failure, provider failure, malformed module args, SELinux enforcing, and AppArmor enforcing
+- fault injection for provider HTTP 5xx, provider timeout, checker missing, checker not executable, checker timeout, checker config failure, provider failure, malformed module args, SELinux enforcing, and AppArmor enforcing or captured host AppArmor state
 - dry-run tests proving would-be rejections do not block password changes
 - no-secret-output tests covering module logs, conversation messages, checker argv, and diagnostics
 - fixture tests for the exact safe conversation strings documented in [Logging policy](logging-policy.md)
@@ -580,7 +580,7 @@ Current closeout status:
 
 - unit, host harness, Docker distro, package, dependency allowlist, symbol, Ubuntu host, Fedora host, Fedora SELinux, Arch package, and Alpine package gates are in place
 - native module argv fuzzing and sanitizer/memory-check coverage are tracked as [#24](https://github.com/phillipmcmahon/pwned-check/issues/24)
-- AppArmor enforcing and deeper lockout recovery drills are tracked as [#25](https://github.com/phillipmcmahon/pwned-check/issues/25)
+- Ubuntu/Debian AppArmor state capture and lockout recovery drills are covered by `make native-pam-ubuntu-hardening-assessment`
 - count-based `min_count` policy is tracked as [#26](https://github.com/phillipmcmahon/pwned-check/issues/26) because it requires a checker contract change
 
 The first-wave container test matrix is:

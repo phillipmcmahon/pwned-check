@@ -185,6 +185,21 @@ ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-ubuntu-deb-pa
 
 The `.deb` package smoke builds a native `pwned-check-native-pam` package through `dpkg-deb`, installs it through `dpkg`, verifies the package file list, exercises the installed files through the Ubuntu host smoke in installed-file mode, enables and disables the `pam-auth-update` profile, verifies `/etc/pam.d/common-password` is restored, removes the package, and verifies package-managed files are gone.
 
+Hardening assessment:
+
+```bash
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-hardening-assessment'
+```
+
+The hardening assessment wraps the `.deb` package smoke, captures AppArmor kernel/profile/journal state, and runs a lockout recovery drill through a disposable PAM service. The drill intentionally points `pam_pwned_check.so` at a missing checker, verifies the safe failure conversation, restores the service, and proves password-change flow succeeds again. It does not edit `common-password`.
+
+Hardening assessment output is written to:
+
+```text
+.test-output/native-pam-ubuntu-hardening-assessment/<timestamp>-native-pam-ubuntu-hardening-assessment/
+.test-output/native-pam-ubuntu-hardening-assessment/latest
+```
+
 If the Ubuntu test environment cannot build the Go checker itself, provide an existing Linux binary:
 
 ```bash
@@ -391,7 +406,7 @@ Automated in that workflow:
 Host-specific release gates remain manual because they depend on persistent VM state and real host PAM management tools:
 
 ```bash
-ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment'
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ```
@@ -402,6 +417,7 @@ The Fedora RPM and SELinux gates are not run on generic CI runners because the a
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
 - Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, package removal, and managed-file cleanup.
+- Ubuntu hardening assessment captures AppArmor state and validates disposable-service lockout recovery without editing `common-password`.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.

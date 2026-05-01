@@ -34,6 +34,7 @@ For checker configuration, provider, and unexpected-exit failures, the helper ma
 | Debian/Ubuntu `common-password` still references the module after removal | `pam-auth-update` profile was not disabled before package removal. | Reinstall or restore the profile temporarily, run `pam-auth-update --disable pwned-check --package`, then remove the package. |
 | Arch/Alpine service file still references the module after rollback | Manual helper state file points at the wrong backup or the service path was overridden. | Run rollback with the explicit backup path, or restore the timestamped backup under `/var/lib/pwned-check/pam-backups/`. |
 | SELinux AVCs mention `pwned-check` or `pam_pwned_check` | Local policy blocks the checker path or network behavior from the password-change domain. | Keep enforcement disabled, collect the AVCs, and apply the operator-managed policy decision before retrying. |
+| AppArmor denials mention `pwned-check`, `pam_pwned_check`, or the native PAM smoke service | Local AppArmor policy blocks the checker or PAM module path. | Keep enforcement disabled, run `make native-pam-ubuntu-hardening-assessment`, and inspect the combined report under `.test-output/native-pam-ubuntu-hardening-assessment/latest/`. |
 
 Package-specific rollback commands are in [Operations](operations.md#native-pam-emergency-recovery).
 

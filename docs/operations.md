@@ -135,11 +135,14 @@ For native Ubuntu host validation without touching the real password stack, use:
 ```bash
 make native-pam-ubuntu-host-package-smoke
 make native-pam-ubuntu-deb-package-smoke
+make native-pam-ubuntu-hardening-assessment
 ```
 
 That smoke installs the Debian/Ubuntu filesystem layout on the host, creates only a disposable PAM service under `/etc/pam.d`, exercises clean and pwned `pam_chauthtok` cases, and removes the installed files again. It does not run `pam-auth-update --enable`.
 
 The `.deb` package smoke builds and installs the native package, exercises the package-managed files through the same disposable PAM service path, enables and disables the `pam-auth-update` profile, verifies `/etc/pam.d/common-password` is restored, removes the package, and verifies managed-file cleanup.
+
+The hardening assessment captures AppArmor state and runs a disposable-service lockout drill. It intentionally misconfigures the module with a missing checker, verifies the safe user-facing failure message, restores the disposable service, and proves password-change flow succeeds again. This drill is safe for persistent Ubuntu/Debian test VMs because it does not edit `common-password`.
 
 ## Arch/Alpine Native PAM Artifact
 

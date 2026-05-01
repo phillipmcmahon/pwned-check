@@ -41,6 +41,7 @@ pub struct PamHandle {
 pub struct ModuleConfig {
     pub checker: String,
     pub timeout_seconds: u64,
+    pub min_count: Option<u64>,
     pub fail_policy: FailPolicy,
     pub dry_run: bool,
     pub debug: bool,
@@ -57,6 +58,7 @@ pub enum FailPolicy {
 pub enum ConfigError {
     EmptyChecker,
     InvalidTimeout,
+    InvalidMinCount,
     ConflictingFailPolicy,
     InvalidUtf8,
     NullArgument,
@@ -169,6 +171,7 @@ impl Default for ModuleConfig {
         Self {
             checker: DEFAULT_CHECKER.to_string(),
             timeout_seconds: DEFAULT_TIMEOUT_SECONDS,
+            min_count: None,
             fail_policy: FailPolicy::Inherit,
             dry_run: false,
             debug: false,
@@ -197,6 +200,16 @@ pub fn parse_module_config(args: &[&str]) -> Result<ModuleConfig, ConfigError> {
                 .filter(|seconds| *seconds > 0)
                 .ok_or(ConfigError::InvalidTimeout)?;
             config.timeout_seconds = seconds;
+            continue;
+        }
+
+        if let Some(value) = arg.strip_prefix("min_count=") {
+            let count = value
+                .parse::<u64>()
+                .ok()
+                .filter(|count| *count > 0)
+                .ok_or(ConfigError::InvalidMinCount)?;
+            config.min_count = Some(count);
             continue;
         }
 
@@ -322,6 +335,10 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         .stderr(Stdio::from(stderr_for_child));
 
     configure_child_process(&mut command);
+
+    if let Some(min_count) = config.min_count {
+        command.arg("--min-count").arg(min_count.to_string());
+    }
 
     match config.fail_policy {
         FailPolicy::Inherit => {}
@@ -558,9 +575,14 @@ fn format_failure_event(outcome: CheckerOutcome, timeout_seconds: u64) -> Option
 }
 
 fn format_config_event(config: &ModuleConfig) -> String {
+    let min_count = config
+        .min_count
+        .map(|value| format!(" min_count={value}"))
+        .unwrap_or_default();
     format!(
-        "event=pam_module_config timeout={}s fail_policy={} dry_run={}",
+        "event=pam_module_config timeout={}s{} fail_policy={} dry_run={}",
         config.timeout_seconds,
+        min_count,
         fail_policy_name(config.fail_policy),
         config.dry_run
     )
@@ -788,6 +810,7 @@ mod tests {
             ModuleConfig {
                 checker: "/usr/local/bin/pwned-check".to_string(),
                 timeout_seconds: 3,
+                min_count: None,
                 fail_policy: FailPolicy::Inherit,
                 dry_run: false,
                 debug: false,
@@ -801,6 +824,7 @@ mod tests {
             parse_module_config(&[
                 "checker=/opt/pwned-check",
                 "timeout=9",
+                "min_count=12",
                 "fail_closed",
                 "dry_run",
                 "debug"
@@ -809,6 +833,7 @@ mod tests {
             ModuleConfig {
                 checker: "/opt/pwned-check".to_string(),
                 timeout_seconds: 9,
+                min_count: Some(12),
                 fail_policy: FailPolicy::FailClosed,
                 dry_run: true,
                 debug: true,
@@ -841,6 +866,18 @@ mod tests {
         assert_eq!(
             parse_module_config(&["timeout=abc"]),
             Err(ConfigError::InvalidTimeout)
+        );
+    }
+
+    #[test]
+    fn parse_rejects_invalid_min_count() {
+        assert_eq!(
+            parse_module_config(&["min_count=0"]),
+            Err(ConfigError::InvalidMinCount)
+        );
+        assert_eq!(
+            parse_module_config(&["min_count=abc"]),
+            Err(ConfigError::InvalidMinCount)
         );
     }
 
@@ -897,6 +934,8 @@ mod tests {
             "dry_run",
             "debug",
             "min_count=1",
+            "min_count=0",
+            "min_count=999999",
             "fail_open=1",
             "unknown",
             "checker=/bin/true\ttab",
@@ -1018,6 +1057,29 @@ exit 0
             run_checker(&config, b"candidate").outcome,
             CheckerOutcome::ProviderFailure
         );
+    }
+
+    #[test]
+    fn checker_runner_passes_min_count_argument() {
+        let _guard = checker_test_lock();
+        let argv_path = temp_path("argv");
+        let checker = fake_checker(&format!(
+            "#!/bin/sh\nprintf '%s' \"$*\" > {}\n/bin/cat >/dev/null\nexit 0\n",
+            shell_quote(&argv_path)
+        ));
+        let config = ModuleConfig {
+            checker,
+            min_count: Some(42),
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::Clean
+        );
+        let argv = std::fs::read_to_string(&argv_path).expect("read checker argv");
+        assert_eq!(argv, "--stdin --min-count 42");
+        let _ = std::fs::remove_file(argv_path);
     }
 
     #[test]
@@ -1175,6 +1237,7 @@ exit 0
         let config = ModuleConfig {
             checker: "/secret/path/pwned-check".to_string(),
             timeout_seconds: 9,
+            min_count: Some(7),
             fail_policy: FailPolicy::FailClosed,
             dry_run: true,
             debug: true,
@@ -1183,7 +1246,7 @@ exit 0
 
         assert_eq!(
             event,
-            "event=pam_module_config timeout=9s fail_policy=fail_closed dry_run=true"
+            "event=pam_module_config timeout=9s min_count=7 fail_policy=fail_closed dry_run=true"
         );
         assert!(!event.contains("secret"));
         assert!(!event.contains("pwned-check"));

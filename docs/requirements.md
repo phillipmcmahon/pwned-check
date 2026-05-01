@@ -52,10 +52,18 @@ The stable checker contract is:
 candidate password over stdin -> pwned-check --stdin -> exit code
 ```
 
+The optional count threshold contract is:
+
+```text
+candidate password over stdin -> pwned-check --stdin --min-count <n> -> exit code
+```
+
+`--min-count` defaults to `1`. The checker returns exit code `1` only when the provider breach count is greater than or equal to the threshold.
+
 Exit codes:
 
 - `0`: password accepted, or provider failure when fail-open is configured
-- `1`: password appears in the breach corpus and should be rejected
+- `1`: password appears in the breach corpus at or above the configured threshold and should be rejected
 - `2`: usage or configuration error
 - `3`: provider/network error when fail-closed is configured
 

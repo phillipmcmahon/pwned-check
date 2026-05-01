@@ -35,8 +35,82 @@ func TestCLIRejectsPwnedPasswordWithMockedHIBPRangeService(t *testing.T) {
 	if !strings.Contains(stderr.String(), "event=validation prefix=5BAA6 pwned=true count=123") {
 		t.Fatalf("stderr = %q, want mocked pwned result", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), "min_count=1") {
+		t.Fatalf("stderr = %q, want default min_count", stderr.String())
+	}
 	if strings.Contains(stderr.String(), "password") {
 		t.Fatalf("stderr leaked password: %q", stderr.String())
+	}
+}
+
+func TestCLIAllowsPwnedPasswordBelowMinCount(t *testing.T) {
+	prefix, suffix := HashParts("password")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/range/"+prefix {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write([]byte(suffix + ":42\n"))
+	}))
+	defer server.Close()
+
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", server.URL+"/range/")
+
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader("password\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin", "--min-count", "43"})
+
+	if code != ExitClean {
+		t.Fatalf("code = %d, want %d; stderr=%s", code, ExitClean, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "event=validation prefix=5BAA6 pwned=false count=42 min_count=43") {
+		t.Fatalf("stderr = %q, want below-threshold validation result", stderr.String())
+	}
+}
+
+func TestCLIRejectsPwnedPasswordAtMinCount(t *testing.T) {
+	prefix, suffix := HashParts("password")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/range/"+prefix {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write([]byte(suffix + ":42\n"))
+	}))
+	defer server.Close()
+
+	t.Setenv("PWNED_CHECK_PROVIDER", "hibp")
+	t.Setenv("PWNED_CHECK_HIBP_ENDPOINT", server.URL+"/range/")
+
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader("password\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin", "--min-count", "42"})
+
+	if code != ExitPwned {
+		t.Fatalf("code = %d, want %d; stderr=%s", code, ExitPwned, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "event=validation prefix=5BAA6 pwned=true count=42 min_count=42") {
+		t.Fatalf("stderr = %q, want threshold validation result", stderr.String())
+	}
+}
+
+func TestCLIRejectsInvalidMinCount(t *testing.T) {
+	var stderr bytes.Buffer
+	code := CLI{
+		Stdin:  strings.NewReader("password\n"),
+		Stderr: &stderr,
+	}.Run([]string{"--stdin", "--min-count", "0"})
+
+	if code != ExitConfig {
+		t.Fatalf("code = %d, want %d", code, ExitConfig)
+	}
+	if !strings.Contains(stderr.String(), "--min-count must be at least 1") {
+		t.Fatalf("stderr = %q, want min-count validation error", stderr.String())
 	}
 }
 

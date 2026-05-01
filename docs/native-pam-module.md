@@ -83,11 +83,11 @@ All other PAM service functions return `PAM_IGNORE` so the module is inert outsi
 
 The module never opens a network socket and never embeds provider lookup behavior.
 
-Provider checks remain inside the existing `pwned-check` binary, invoked with `--stdin`. The live HIBP range API, provider timeout, fail-open and fail-closed policy, mocked test providers, and future provider extensions stay behind the checker boundary.
+Provider checks remain inside the existing `pwned-check` binary, invoked with `--stdin` and optional documented checker flags such as `--min-count`. The live HIBP range API, provider timeout, fail-open and fail-closed policy, mocked test providers, and future provider extensions stay behind the checker boundary.
 
 ### Stable Checker Contract
 
-The module is a caller of `pwned-check --stdin`.
+The module is a caller of `pwned-check --stdin`, optionally with documented policy flags such as `--min-count <n>`.
 
 It does not reach into checker internals. It does not depend on undocumented output. It may include a bounded diagnostic excerpt from checker stderr in module logs, but the module must not parse checker stderr for policy decisions.
 
@@ -278,6 +278,7 @@ Arguments are parsed from `argv` in the PAM stack line. They are root-controlled
 | `fail_closed` | unset | Configure checker provider failures to reject the password change. |
 | `dry_run` | unset | Run the checker, log the would-be outcome, and always return `PAM_SUCCESS` unless the module cannot parse its own configuration. |
 | `debug` | unset | Emit additional structured logs. Never log candidate material. |
+| `min_count=<n>` | unset | Pass `--min-count <n>` to the checker. `n` must be at least `1`; when unset, the checker default of `1` preserves any-hit rejection. |
 
 If neither `fail_open` nor `fail_closed` is set, the module should use the checker's default provider-failure behavior and log that the policy was inherited.
 
@@ -285,7 +286,7 @@ If both `fail_open` and `fail_closed` are set, the module must treat the configu
 
 Unknown arguments must be treated as configuration errors. A typo such as `fail_clsoed` must not silently change security posture. In enforcement mode, invalid module configuration returns `PAM_AUTHTOK_ERR`; in dry-run mode, invalid runtime outcomes may allow, but invalid module configuration should still be visible and fail closed unless a later decision explicitly changes this.
 
-Future arguments may include `min_count=<n>` once the checker supports structured count-based policy decisions. The current checker exit-code contract is any-hit only, so count-based policy requires a checker contract change before the module can enforce it. The first native release remains any-hit rejection only.
+`min_count=<n>` is implemented by the checker contract rather than by parsing checker stderr: the module invokes `pwned-check --stdin --min-count <n>`, and the checker exits `1` only when the breach count is greater than or equal to `n`.
 
 ### Checker Invocation
 
@@ -293,6 +294,12 @@ The module invokes:
 
 ```text
 pwned-check --stdin
+```
+
+When `min_count=<n>` is configured, the module invokes:
+
+```text
+pwned-check --stdin --min-count <n>
 ```
 
 The candidate is supplied only over stdin. The checker path, timeout, and fail policy are configuration values and may appear in module argv or environment.
@@ -308,7 +315,7 @@ The first release uses fork and exec:
 1. The module creates pipes for checker stdin and stderr.
 2. The module sets close-on-exec on file descriptors that should not survive into the child.
 3. The module forks.
-4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture pipe, closes inherited file descriptors above stderr, and calls `execve` with the configured checker and `--stdin`.
+4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture pipe, closes inherited file descriptors above stderr, and calls `execve` with the configured checker and the documented checker arguments.
 5. The child receives a clean environment containing only documented checker/provider variables.
 6. The parent writes the candidate to the checker stdin pipe, closes the write end, and clears its module-owned candidate buffer.
 7. The parent waits with a hard timeout.
@@ -581,7 +588,7 @@ Current closeout status:
 - unit, host harness, Docker distro, package, dependency allowlist, symbol, Ubuntu host, Fedora host, Fedora SELinux, Arch package, and Alpine package gates are in place
 - native module argv parsing has deterministic property-style corpus coverage, and `make native-pam-memory-check` runs parser tests under Valgrind on Linux CI
 - Ubuntu/Debian AppArmor state capture and lockout recovery drills are covered by `make native-pam-ubuntu-hardening-assessment`
-- count-based `min_count` policy is tracked as [#26](https://github.com/phillipmcmahon/pwned-check/issues/26) because it requires a checker contract change
+- count-based `min_count` policy is implemented through `pwned-check --stdin --min-count <n>` and native module `min_count=<n>`
 
 The first-wave container test matrix is:
 
@@ -633,9 +640,9 @@ If added later, the module contract should remain stable. Only the internal IPC 
 The implementation sequence resolved the first-release questions as follows:
 
 - User-facing native PAM conversation messages are fixed English-only for the first native package release. Localization can be added later without changing the checker contract.
-- `min_count` remains reserved. The current checker contract is any-hit through exit code `1`; count-based policy requires a future checker contract change before module enforcement.
+- `min_count` is active. The default checker threshold remains `1`, preserving any-hit rejection unless operators explicitly configure a higher count.
 - SELinux policy is operator-managed documentation for the first release. Fedora 44 enforcing-mode assessment passed without project-specific AVCs, so the package should not ship a broad policy module by default.
-- The module argv contract is stable for the documented first native package release options: `checker`, `timeout`, `fail_open`, `fail_closed`, `dry_run`, and `debug`. New policy arguments should be additive or gated behind a documented contract revision.
+- The module argv contract is stable for the documented first native package release options: `checker`, `timeout`, `fail_open`, `fail_closed`, `dry_run`, `debug`, and `min_count`. New policy arguments should be additive or gated behind a documented contract revision.
 
 ## Non-Goals
 

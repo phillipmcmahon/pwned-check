@@ -42,6 +42,7 @@ func (c CLI) Run(args []string) int {
 	flags := flag.NewFlagSet("pwned-check", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	stdinMode := flags.Bool("stdin", false, "read password from stdin")
+	minCount := flags.Int("min-count", DefaultMinCount, "minimum breach count required to reject")
 	versionMode := flags.Bool("version", false, "print version")
 	if err := flags.Parse(args); err != nil {
 		return ExitConfig
@@ -52,6 +53,10 @@ func (c CLI) Run(args []string) int {
 	}
 	if !*stdinMode {
 		fmt.Fprintln(stderr, "--stdin is required")
+		return ExitConfig
+	}
+	if *minCount < 1 {
+		fmt.Fprintln(stderr, "--min-count must be at least 1")
 		return ExitConfig
 	}
 
@@ -77,7 +82,7 @@ func (c CLI) Run(args []string) int {
 	}
 
 	logger := log.New(stderr, "", log.LstdFlags)
-	result, err := Validate(password, provider)
+	result, err := ValidateWithMinCount(password, provider, *minCount)
 	if err != nil {
 		if cfg.FailClosed {
 			logger.Printf("event=provider_failure fail_closed=true error=%q", err)
@@ -87,7 +92,7 @@ func (c CLI) Run(args []string) int {
 		return ExitClean
 	}
 
-	logger.Printf("event=validation prefix=%s pwned=%t count=%d", result.Prefix, result.Pwned, result.Count)
+	logger.Printf("event=validation prefix=%s pwned=%t count=%d min_count=%d", result.Prefix, result.Pwned, result.Count, *minCount)
 	if result.Pwned {
 		return ExitPwned
 	}

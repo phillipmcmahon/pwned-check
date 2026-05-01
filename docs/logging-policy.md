@@ -25,7 +25,7 @@ Tests must assert these exact strings can be emitted to the PAM conversation lay
 
 | Event | Meaning | Fields |
 |---|---|---|
-| `event=validation` | Provider lookup completed and the candidate was evaluated. | `prefix`, `pwned`, `count` |
+| `event=validation` | Provider lookup completed and the candidate was evaluated. | `prefix`, `pwned`, `count`, `min_count` |
 | `event=provider_failure` | Provider lookup failed or timed out. | `fail_closed`, `error` |
 
 `prefix` is the first five hex characters of the candidate password SHA-1 hash. It is expected to be visible in logs because it is also the material sent to HIBP. The suffix and plaintext password must never appear.
@@ -33,7 +33,7 @@ Tests must assert these exact strings can be emitted to the PAM conversation lay
 Example checker logs:
 
 ```text
-2026-04-30 17:00:00 event=validation prefix=5BAA6 pwned=true count=123
+2026-04-30 17:00:00 event=validation prefix=5BAA6 pwned=true count=123 min_count=1
 2026-04-30 17:00:00 event=provider_failure fail_closed=true error="Get \"https://api.pwnedpasswords.com/range/5BAA6\": context deadline exceeded"
 ```
 

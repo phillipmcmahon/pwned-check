@@ -285,7 +285,11 @@ run_case() {
     else
         [ -f "$TMP/checker-argv" ] || fail "native PAM harness case failed: $name did not invoke checker"
         checker_argv="$(cat "$TMP/checker-argv")"
-        [ "$checker_argv" = "--stdin" ] || fail "native PAM harness case failed: $name checker argv=$checker_argv"
+        want_argv="--stdin"
+        case " $args " in
+            *" min_count=42 "*) want_argv="--stdin --min-count 42" ;;
+        esac
+        [ "$checker_argv" = "$want_argv" ] || fail "native PAM harness case failed: $name checker argv=$checker_argv want $want_argv"
         checker_fail_closed="$(cat "$TMP/checker-fail-closed")"
         [ "$checker_fail_closed" = "$want_fail_closed" ] || fail "native PAM harness case failed: $name fail_closed=$checker_fail_closed want $want_fail_closed"
         checker_env="$(cat "$TMP/checker-env")"
@@ -324,6 +328,7 @@ run_case 'checker timeout rejected' sleep TimeoutHarness123 'fail_open' reject "
 run_case 'unexpected checker exit rejected' unexpected UnexpectedHarness123 'fail_open' reject "$failure_message" yes false -
 run_case 'checker exec failure rejected' clean ExecHarness123 'fail_open' reject "$failure_message" no '' "$TMP/missing-checker"
 run_case 'dry-run pwned allowed' pwned DryRunHarness123 'fail_open dry_run' allow '-' yes false -
+run_case 'min-count forwarded' clean MinCountHarness123 'fail_open min_count=42' allow '-' yes false -
 run_case 'invalid module arg rejected' clean InvalidArgHarness123 'fail_clsoed' reject "$failure_message" no '' -
 
 echo "Native PAM harness passed"

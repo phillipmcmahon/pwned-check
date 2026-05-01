@@ -577,8 +577,12 @@ CHECKER_EOF
               exit 1
             fi
             checker_argv=\"\$(cat /tmp/native-pam-smoke-checker-argv)\"
-            if [ \"\$checker_argv\" != '--stdin' ]; then
-              echo \"Native PAM case failed: \$name checker argv=\$checker_argv\" >&2
+            want_argv='--stdin'
+            case \" \$args \" in
+              *' min_count=42 '*) want_argv='--stdin --min-count 42' ;;
+            esac
+            if [ \"\$checker_argv\" != \"\$want_argv\" ]; then
+              echo \"Native PAM case failed: \$name checker argv=\$checker_argv want \$want_argv\" >&2
               exit 1
             fi
             checker_fail_closed=\"\$(cat /tmp/native-pam-smoke-checker-fail-closed)\"
@@ -631,6 +635,7 @@ CHECKER_EOF
         run_case 'checker config rejected' config ConfigCandidate123 'fail_open' reject \"\$failure_message\" yes false
         run_case 'checker timeout rejected' sleep TimeoutCandidate123 'fail_open' reject \"\$failure_message\" yes false
         run_case 'dry-run pwned allowed' pwned DryRunCandidate123 'fail_open dry_run debug' allow '-' yes false
+        run_case 'min-count forwarded' clean MinCountCandidate123 'fail_open min_count=42 debug' allow '-' yes false
         run_case 'invalid module arg rejected' clean InvalidArgCandidate123 'fail_clsoed' reject \"\$failure_message\" no ''
 
         assert_log() {
@@ -647,10 +652,12 @@ CHECKER_EOF
         assert_log 'event=pam_module_failure reason=timeout timeout=1s'
         assert_log 'event=pam_module_result result=allow mode=dry_run would=reject reason=pwned'
         assert_log 'event=pam_module_config timeout=1s fail_policy=fail_open dry_run=true'
+        assert_log 'event=pam_module_config timeout=1s min_count=42 fail_policy=fail_open dry_run=false'
 
         if grep -F 'CleanCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
            grep -F 'PwnedCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
            grep -F 'DryRunCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
+           grep -F 'MinCountCandidate123' /tmp/native-pam-smoke-syslog >/dev/null ||
            grep -F '/usr/local/bin/native-pam-smoke-checker' /tmp/native-pam-smoke-syslog >/dev/null; then
           cat /tmp/native-pam-smoke-syslog >&2
           echo 'Native PAM smoke leaked candidate or checker path to syslog' >&2

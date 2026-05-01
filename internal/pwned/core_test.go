@@ -38,3 +38,31 @@ func TestValidatePwnedPassword(t *testing.T) {
 		t.Fatalf("result = %+v, want pwned count 42", result)
 	}
 }
+
+func TestValidateWithMinCountAllowsBelowThreshold(t *testing.T) {
+	prefix, suffix := HashParts("password")
+	result, err := ValidateWithMinCount("password", fakeProvider{prefix + ":" + suffix: 42}, 43)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Pwned || result.Count != 42 {
+		t.Fatalf("result = %+v, want clean below threshold count 42", result)
+	}
+}
+
+func TestValidateWithMinCountRejectsAtThreshold(t *testing.T) {
+	prefix, suffix := HashParts("password")
+	result, err := ValidateWithMinCount("password", fakeProvider{prefix + ":" + suffix: 42}, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Pwned || result.Count != 42 {
+		t.Fatalf("result = %+v, want pwned at threshold count 42", result)
+	}
+}
+
+func TestValidateWithMinCountRejectsInvalidThreshold(t *testing.T) {
+	if _, err := ValidateWithMinCount("password", fakeProvider{}, 0); err == nil {
+		t.Fatal("ValidateWithMinCount accepted min-count 0")
+	}
+}

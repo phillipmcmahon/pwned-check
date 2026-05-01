@@ -409,7 +409,7 @@ Tracked distro delivery matrix:
 | Distro family | Package shape | Enable path | Rollback path | Automated coverage |
 |---|---|---|---|---|
 | Debian/Ubuntu | Native filesystem-layout artifact, then `.deb` packaging | `pam-auth-update --enable pwned-check --package` | `pam-auth-update --disable pwned-check --package` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; distro smoke builds and loads the module directly |
-| Fedora/RHEL/Rocky | RPM package with `/lib64/security` placement | `authselect` feature or documented profile workflow | Restore previous `authselect` profile or disable the feature, then verify password changes | Distro smoke builds and loads the module directly; SELinux/authselect package workflow still pending |
+| Fedora/RHEL/Rocky | RPM-family filesystem-layout artifact, then RPM packaging | Authselect helper creates and selects `custom/pwned-check` in dry-run mode | Restore the authselect backup recorded during enablement | Distro smoke builds and loads the module directly; artifact includes authselect enable/rollback helpers; SELinux assessment still pending |
 | Arch Linux | Pacman package or generic tarball with distro docs | Explicit PAM file edit or package-managed include | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly |
 | Alpine Linux | APK or generic tarball after Linux-PAM support is validated | Explicit PAM file edit for Linux-PAM deployments | Restore backed-up PAM file and remove package files | Distro smoke builds and loads the module directly against Linux-PAM on musl |
 
@@ -429,7 +429,8 @@ Debian and Ubuntu packages should:
 Fedora and RHEL packages should:
 
 - install the module at `/lib64/security/pam_pwned_check.so`
-- install an `authselect` feature under `/usr/share/authselect/vendor/pwned-check/`
+- install authselect enable and rollback helpers under `/usr/share/pwned-check/authselect/`
+- create a custom authselect profile from the current profile during explicit enablement, not during package installation
 - support `x86_64` and `aarch64`
 - include a SELinux assessment before production release
 - test rollback from the selected `authselect` workflow before release

@@ -90,6 +90,42 @@ sudo passwd <test-user>
 
 The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
 
+## Fedora/RHEL/Rocky Native PAM Artifact
+
+The native PAM module has an RPM-family filesystem-layout artifact for the current Linux architecture:
+
+```bash
+scripts/package-native-pam-rpm-artifact.sh --version <version>
+tar -tzf dist/release/pwned-check-native-pam_<version>_rpm_<arch>.tar.gz
+```
+
+The artifact includes:
+
+- `/usr/bin/pwned-check`
+- `/lib64/security/pam_pwned_check.so`
+- `/usr/share/pwned-check/authselect/enable-authselect.sh`
+- `/usr/share/pwned-check/authselect/rollback-authselect.sh`
+- `/usr/share/doc/pwned-check/`
+
+Package installation should not silently enable enforcement. The authselect helper creates a `custom/pwned-check` profile from the currently selected profile, inserts the native module at the start of the password stack in `dry_run` mode, selects that custom profile with an authselect backup, and records the backup name under `/var/lib/pwned-check/`.
+
+Enable only after installing on a disposable host or VM and keeping a recovery shell open:
+
+```bash
+sudo ./install.sh
+sudo /usr/share/pwned-check/authselect/enable-authselect.sh
+authselect current
+grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+```
+
+Rollback should be tested before enforcement rollout:
+
+```bash
+sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
+! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+sudo passwd <test-user>
+```
+
 ## Install from a Release Package
 
 ```bash

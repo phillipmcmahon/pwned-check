@@ -27,6 +27,7 @@ make native-pam-deps
 make native-pam-harness
 make native-pam-distro-smoke
 make package-native-pam-debian
+make package-native-pam-rpm
 make fuzz-smoke
 make coverage
 go vet ./...

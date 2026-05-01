@@ -410,7 +410,7 @@ Epic 6 should finish in the order below. The order is intentional: platform hard
 
 | Story ID | Story | Depends on | Exit criteria |
 |---|---|---|---|
-| [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) | Fedora/RHEL SELinux assessment and policy decision | Current Fedora host smoke | SELinux enforcing behavior is tested or bounded, AVCs are captured, and the project records whether policy ships in-tree, separately, or as operator-managed docs |
+| [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) | Fedora/RHEL SELinux assessment and policy decision | Current Fedora host smoke | `make native-pam-fedora-selinux-assessment` passes in enforcing mode or records a bounded exception, AVCs are captured, and the project records whether policy ships in-tree, separately, or as operator-managed docs |
 | [EP6-S2](https://github.com/phillipmcmahon/pwned-check/issues/16) | RPM-native package delivery | EP6-S1 | Fedora/RHEL/Rocky RPM builds install `pam_pwned_check.so`, checker, docs, authselect helpers, and rollback assets through package tooling |
 | [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `.deb` builds install the multiarch module path, checker, docs, `pam-auth-update` profile, maintainer-script behavior, and rollback assets |
 | [EP6-S4](https://github.com/phillipmcmahon/pwned-check/issues/18) | Arch `PKGBUILD` package delivery | Current Arch Docker generic package smoke | Arch package installs the module, checker, docs, manual PAM enable helper, timestamped backup, and rollback helper |
@@ -453,7 +453,15 @@ Fedora and RHEL packages should:
 - include a SELinux assessment before production release
 - test rollback from the selected `authselect` workflow before release
 
-SELinux may require a policy module granting the checker the minimum network and execution permissions required from password-change domains. The project must decide whether that policy ships in-tree, as a separate package, or as documentation for an operator-managed policy.
+SELinux assessment is tracked by [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) and should be run with:
+
+```bash
+make native-pam-fedora-selinux-assessment
+```
+
+The assessment captures SELinux mode, authselect state, Fedora host package smoke output, audit AVCs, and a combined text report under `.test-output/native-pam-fedora-selinux-assessment/`. It fails if AVCs mention pwned-check, `pam_pwned_check`, or the Fedora host smoke service.
+
+The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. The native PAM module itself should only fork/exec the checker and should not contact the provider directly. If a deployment's local SELinux policy blocks the checker network path from password-change domains, the release should document the operator-managed exception rather than silently broadening policy in the package. A dedicated policy package can be added later if repeated production evidence shows the same minimum rule set is required across Fedora/RHEL deployments.
 
 ### Arch Linux
 

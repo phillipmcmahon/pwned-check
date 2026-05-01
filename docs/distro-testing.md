@@ -208,6 +208,27 @@ If the Fedora test environment cannot build the Go checker itself, provide an ex
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-fedora-prebuilt make native-pam-fedora-host-package-smoke'
 ```
 
+SELinux assessment:
+
+```bash
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment'
+```
+
+The assessment records a combined text report under:
+
+```text
+.test-output/native-pam-fedora-selinux-assessment/<timestamp>-native-pam-fedora-selinux-assessment/
+.test-output/native-pam-fedora-selinux-assessment/latest
+```
+
+Acceptance for the Fedora/RHEL SELinux story is:
+
+- the Fedora host package smoke passes
+- SELinux is `Enforcing`, or the report explicitly states the host mode and the exception is tracked before production release
+- audit AVC capture is present in the report
+- no AVC lines mention `pwned-check`, `pam_pwned_check`, `pwned_check`, or the Fedora host smoke service
+- the package decision remains operator-managed SELinux policy unless enforcing-mode evidence shows a common project policy is required
+
 Fedora currently allows the following additional PAM transitive dependencies beyond the base Rust/C/PAM runtime set:
 
 ```text
@@ -307,6 +328,7 @@ Before claiming a distro package path is ready:
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
+- Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security`.
 - Arch currently has Docker coverage for both direct native PAM loading and generic package install/enable/rollback.
 - Debian coverage is Docker-first: binary smoke, helper PAM package smoke, and direct native PAM loading run against `debian:stable-slim`; no dedicated Debian VM is currently required.

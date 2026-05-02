@@ -36,9 +36,20 @@ pub struct CheckerRun {
 extern "C" {
     fn close(fd: c_int) -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
-    fn pipe(fds: *mut c_int) -> c_int;
     fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     fn sysconf(name: c_int) -> isize;
+}
+
+#[cfg(all(unix, not(target_os = "linux")))]
+// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
+extern "C" {
+    fn pipe(fds: *mut c_int) -> c_int;
+}
+
+#[cfg(target_os = "linux")]
+// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
+extern "C" {
+    fn pipe2(fds: *mut c_int, flags: c_int) -> c_int;
 }
 
 #[cfg(all(
@@ -56,6 +67,8 @@ const SIGTERM: c_int = 15;
 const SIGKILL: c_int = 9;
 #[cfg(unix)]
 const SC_OPEN_MAX: c_int = 5;
+#[cfg(target_os = "linux")]
+const O_CLOEXEC: c_int = 0o2000000;
 #[cfg(all(
     target_os = "linux",
     any(target_arch = "x86_64", target_arch = "aarch64")
@@ -257,11 +270,7 @@ struct StderrCapture {
 #[cfg(unix)]
 impl StderrCapture {
     fn new() -> io::Result<Self> {
-        let mut fds = [-1, -1];
-        if unsafe { pipe(fds.as_mut_ptr()) } != 0 {
-            return Err(io::Error::last_os_error());
-        }
-
+        let fds = create_stderr_pipe()?;
         let reader_file = unsafe { File::from_raw_fd(fds[0]) };
         let writer = unsafe { File::from_raw_fd(fds[1]) };
         let reader = thread::spawn(move || read_bounded_stderr(reader_file));
@@ -280,6 +289,24 @@ impl StderrCapture {
         drop(self.writer);
         self.reader.join().unwrap_or_default()
     }
+}
+
+#[cfg(target_os = "linux")]
+fn create_stderr_pipe() -> io::Result<[c_int; 2]> {
+    let mut fds = [-1, -1];
+    if unsafe { pipe2(fds.as_mut_ptr(), O_CLOEXEC) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(fds)
+}
+
+#[cfg(all(unix, not(target_os = "linux")))]
+fn create_stderr_pipe() -> io::Result<[c_int; 2]> {
+    let mut fds = [-1, -1];
+    if unsafe { pipe(fds.as_mut_ptr()) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(fds)
 }
 
 #[cfg(not(unix))]

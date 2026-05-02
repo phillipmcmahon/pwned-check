@@ -4,7 +4,10 @@ use core::ffi::c_long;
 use std::fs::File;
 use std::io::{self, Read, Write};
 #[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
 use std::os::unix::{io::FromRawFd, process::CommandExt};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -74,6 +77,13 @@ const O_CLOEXEC: c_int = 0o2000000;
 const SYS_CLOSE_RANGE: c_long = 436;
 
 pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
+    if checker_is_obviously_unavailable(&config.checker) {
+        return CheckerRun {
+            outcome: CheckerOutcome::ExecFailure,
+            stderr: String::new(),
+        };
+    }
+
     let mut stderr_capture = match StderrCapture::new() {
         Ok(capture) => capture,
         Err(_) => {
@@ -167,6 +177,24 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     };
 
     CheckerRun { outcome, stderr }
+}
+
+#[cfg(unix)]
+fn checker_is_obviously_unavailable(checker: &str) -> bool {
+    let path = Path::new(checker);
+    if !path.is_absolute() && path.components().count() == 1 {
+        return false;
+    }
+
+    match std::fs::metadata(path) {
+        Ok(metadata) => !metadata.is_file() || metadata.permissions().mode() & 0o111 == 0,
+        Err(_) => true,
+    }
+}
+
+#[cfg(not(unix))]
+fn checker_is_obviously_unavailable(_checker: &str) -> bool {
+    false
 }
 
 #[cfg(unix)]

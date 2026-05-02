@@ -463,6 +463,42 @@ exit 0
     }
 
     #[test]
+    fn checker_runner_rejects_missing_checker_before_spawn() {
+        let _guard = checker_test_lock();
+        let marker_path = temp_path("missing-checker-marker");
+        let config = ModuleConfig {
+            checker: format!("{}-absent", marker_path.display()),
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::ExecFailure
+        );
+        assert!(
+            !std::path::Path::new(&marker_path).exists(),
+            "missing checker test should not create marker path"
+        );
+    }
+
+    #[test]
+    fn checker_runner_rejects_non_executable_checker_before_spawn() {
+        let _guard = checker_test_lock();
+        let checker = temp_path("non-executable-checker");
+        std::fs::write(&checker, "#!/bin/sh\nexit 0\n").expect("write non-executable checker");
+        let config = ModuleConfig {
+            checker: checker.to_string_lossy().into_owned(),
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::ExecFailure
+        );
+        let _ = std::fs::remove_file(checker);
+    }
+
+    #[test]
     fn rejected_outcomes_map_to_authtok_error() {
         assert_eq!(
             pam_return_for_decision(ModuleDecision::Reject {

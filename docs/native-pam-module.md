@@ -4,6 +4,8 @@ This document describes the design and contract for a native Linux PAM module, `
 
 The current implementation is a Rust `cdylib` under `native/pam-pwned-check`. The crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the module through `pam_chauthtok`.
 
+The Rust implementation is split into focused modules: `config.rs` owns module argument parsing, `checker.rs` owns checker fork/exec and timeout handling, `events.rs` owns decision mapping and structured log event formatting, `pam_ffi.rs` owns PAM symbols and libc/PAM FFI, and `lib.rs` remains the small public surface plus unit-test host.
+
 The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 
 ## Architecture

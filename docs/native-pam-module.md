@@ -318,10 +318,10 @@ The checker stderr may be captured for bounded diagnostics, following the existi
 
 The first release uses fork and exec:
 
-1. The module creates a pipe for checker stdin and an unnamed temporary file for bounded checker stderr capture.
+1. The module creates a pipe for checker stdin and a separate pipe for bounded checker stderr capture.
 2. The module sets close-on-exec on file descriptors that should not survive into the child.
 3. The module forks.
-4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture file, closes inherited file descriptors above stderr with `close_range(2)` where available and an fd-walk fallback elsewhere, and calls `execve` with the configured checker and the documented checker arguments.
+4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture pipe, closes inherited file descriptors above stderr with `close_range(2)` where available and an fd-walk fallback elsewhere, and calls `execve` with the configured checker and the documented checker arguments.
 5. The child receives a clean environment containing only documented checker/provider variables.
 6. The parent writes the candidate to the checker stdin pipe, closes the write end, and relies on zeroizing module-owned memory when the candidate buffer is dropped.
 7. The parent waits with a hard timeout.

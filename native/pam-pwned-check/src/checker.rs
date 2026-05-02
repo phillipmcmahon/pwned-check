@@ -2,15 +2,12 @@ use core::ffi::c_int;
 #[cfg(target_os = "linux")]
 use core::ffi::c_long;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::io::{self, Read, Write};
 #[cfg(unix)]
-use std::{
-    io,
-    os::unix::{io::FromRawFd, process::CommandExt},
-};
+use std::os::unix::{io::FromRawFd, process::CommandExt};
+use std::process::{Command, Stdio};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use crate::config::{FailPolicy, ModuleConfig};
 
@@ -35,22 +32,13 @@ pub struct CheckerRun {
 }
 
 #[cfg(unix)]
-#[repr(C)]
-struct CFile {
-    _private: [u8; 0],
-}
-
-#[cfg(unix)]
 // Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn close(fd: c_int) -> c_int;
-    fn dup(fd: c_int) -> c_int;
-    fn fclose(stream: *mut CFile) -> c_int;
-    fn fileno(stream: *mut CFile) -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
+    fn pipe(fds: *mut c_int) -> c_int;
     fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     fn sysconf(name: c_int) -> isize;
-    fn tmpfile() -> *mut CFile;
 }
 
 #[cfg(all(
@@ -75,23 +63,13 @@ const SC_OPEN_MAX: c_int = 5;
 const SYS_CLOSE_RANGE: c_long = 436;
 
 pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
-    let mut stderr_file = match temp_stderr_file() {
-        Ok(file) => file,
+    let mut stderr_capture = match StderrCapture::new() {
+        Ok(capture) => capture,
         Err(_) => {
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
                 stderr: String::new(),
             }
-        }
-    };
-
-    let stderr_for_child = match stderr_file.try_clone() {
-        Ok(file) => file,
-        Err(_) => {
-            return CheckerRun {
-                outcome: CheckerOutcome::ExecFailure,
-                stderr: String::new(),
-            };
         }
     };
 
@@ -101,7 +79,7 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         .env_clear()
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
-        .stderr(Stdio::from(stderr_for_child));
+        .stderr(Stdio::from(stderr_capture.take_writer()));
 
     configure_child_process(&mut command);
 
@@ -122,18 +100,20 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(_) => {
+            drop(command);
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
-                stderr: String::new(),
+                stderr: stderr_capture.finish(),
             };
         }
     };
+    drop(command);
 
     if let Some(mut stdin) = child.stdin.take() {
         if stdin.write_all(candidate).is_err() {
             let _ = child.kill();
             let _ = child.wait();
-            let stderr = read_bounded_stderr(&mut stderr_file);
+            let stderr = stderr_capture.finish();
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
                 stderr,
@@ -160,7 +140,7 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         }
     };
 
-    let stderr = read_bounded_stderr(&mut stderr_file);
+    let stderr = stderr_capture.finish();
 
     let outcome = match status {
         Err(()) => CheckerOutcome::ExecFailure,
@@ -269,47 +249,76 @@ fn terminate_child(child: &mut std::process::Child, _grace: Duration) {
 }
 
 #[cfg(unix)]
-fn temp_stderr_file() -> io::Result<File> {
-    let stream = unsafe { tmpfile() };
-    if stream.is_null() {
-        return Err(io::Error::last_os_error());
-    }
+struct StderrCapture {
+    writer: Option<File>,
+    reader: JoinHandle<String>,
+}
 
-    let original_fd = unsafe { fileno(stream) };
-    let owned_fd = if original_fd >= 0 {
-        unsafe { dup(original_fd) }
-    } else {
-        -1
-    };
-    let close_result = unsafe { fclose(stream) };
-
-    if original_fd < 0 || owned_fd < 0 || close_result != 0 {
-        if owned_fd >= 0 {
-            let _ = unsafe { close(owned_fd) };
+#[cfg(unix)]
+impl StderrCapture {
+    fn new() -> io::Result<Self> {
+        let mut fds = [-1, -1];
+        if unsafe { pipe(fds.as_mut_ptr()) } != 0 {
+            return Err(io::Error::last_os_error());
         }
-        return Err(io::Error::last_os_error());
+
+        let reader_file = unsafe { File::from_raw_fd(fds[0]) };
+        let writer = unsafe { File::from_raw_fd(fds[1]) };
+        let reader = thread::spawn(move || read_bounded_stderr(reader_file));
+
+        Ok(Self {
+            writer: Some(writer),
+            reader,
+        })
     }
 
-    Ok(unsafe { File::from_raw_fd(owned_fd) })
+    fn take_writer(&mut self) -> File {
+        self.writer.take().expect("stderr writer should be present")
+    }
+
+    fn finish(self) -> String {
+        drop(self.writer);
+        self.reader.join().unwrap_or_default()
+    }
 }
 
 #[cfg(not(unix))]
-fn temp_stderr_file() -> std::io::Result<File> {
-    Err(std::io::Error::new(
-        std::io::ErrorKind::Unsupported,
-        "native PAM checker runner requires Unix",
-    ))
+struct StderrCapture;
+
+#[cfg(not(unix))]
+impl StderrCapture {
+    fn new() -> std::io::Result<Self> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "native PAM checker runner requires Unix",
+        ))
+    }
+
+    fn take_writer(&mut self) -> File {
+        unreachable!("stderr capture cannot be created on non-Unix targets")
+    }
+
+    fn finish(self) -> String {
+        String::new()
+    }
 }
 
-fn read_bounded_stderr(file: &mut File) -> String {
-    if file.seek(SeekFrom::Start(0)).is_err() {
-        return String::new();
+fn read_bounded_stderr(mut file: File) -> String {
+    let mut captured = Vec::with_capacity(CHECKER_STDERR_LIMIT);
+    let mut buffer = [0_u8; 4096];
+
+    loop {
+        let read = match file.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(read) => read,
+            Err(_) => break,
+        };
+
+        let remaining = CHECKER_STDERR_LIMIT.saturating_sub(captured.len());
+        if remaining > 0 {
+            captured.extend_from_slice(&buffer[..read.min(remaining)]);
+        }
     }
-    let mut buffer = vec![0; CHECKER_STDERR_LIMIT + 1];
-    let read = match file.read(&mut buffer) {
-        Ok(read) => read,
-        Err(_) => return String::new(),
-    };
-    buffer.truncate(read.min(CHECKER_STDERR_LIMIT));
-    String::from_utf8_lossy(&buffer).trim().to_string()
+
+    String::from_utf8_lossy(&captured).trim().to_string()
 }

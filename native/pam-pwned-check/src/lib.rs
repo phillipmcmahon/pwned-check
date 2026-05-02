@@ -450,7 +450,7 @@ exit 0
     fn checker_runner_bounds_stderr_capture() {
         let _guard = checker_test_lock();
         let checker = fake_checker(
-            "#!/bin/sh\n/bin/cat >/dev/null\n/usr/bin/yes x | /usr/bin/head -c 2048 >&2\nexit 2\n",
+            "#!/bin/sh\n/bin/cat >/dev/null\n/usr/bin/yes x | /usr/bin/head -c 131072 >&2\nexit 2\n",
         );
         let config = ModuleConfig {
             checker,

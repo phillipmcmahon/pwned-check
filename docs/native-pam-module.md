@@ -112,9 +112,9 @@ The FFI boundary must stay narrow:
 
 ### No Plaintext Disclosure
 
-The candidate password is retrieved from `PAM_AUTHTOK`, copied once into module-owned zeroizing memory, and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
+The candidate password is retrieved from `PAM_AUTHTOK` when it is already available. If the password stack has not populated `PAM_AUTHTOK` yet, the module calls Linux PAM's `pam_get_authtok` helper so PAM performs the normal password conversation and stores the token for downstream modules. The token is copied once into module-owned zeroizing memory and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
 
-The module must not mutate or zero PAM-owned memory returned by `pam_get_item`.
+The module must not mutate or zero PAM-owned memory returned by `pam_get_item` or `pam_get_authtok`.
 
 The password must not appear in:
 
@@ -226,15 +226,15 @@ The responsibility boundaries below are recommendations for a simple, composable
 
 The module honors this contract so it can compose with other PAM `password` modules:
 
-- read `PAM_AUTHTOK` with `pam_get_item` and never modify it
+- read `PAM_AUTHTOK` with `pam_get_item`, falling back to `pam_get_authtok` when the token is absent, and never modify it
 - never call `pam_set_item(PAM_AUTHTOK, ...)`, `pam_set_item(PAM_OLDAUTHTOK, ...)`, or any other PAM item-setting function
-- never prompt the user directly
+- never prompt the user directly outside PAM's own conversation helpers
 - return `PAM_SUCCESS` to mean "this module has no objection," not "the password is accepted"
 - return `PAM_AUTHTOK_ERR` only for documented rejection reasons
 - avoid `PAM_ABORT`, `PAM_USER_UNKNOWN`, and other return codes outside the mapping table
 - behave the same regardless of whether it is placed before or after `pam_pwquality`, `pam_pwhistory`, `pam_passwdqc`, `pam_unix`, or other password modules
 
-If `PAM_AUTHTOK` is absent during `PAM_UPDATE_AUTHTOK`, the module returns `PAM_AUTHTOK_ERR` and lets the surrounding stack control the user-facing retry behavior.
+If `PAM_AUTHTOK` is absent during `PAM_UPDATE_AUTHTOK`, the module asks PAM to obtain it with `pam_get_authtok`. If PAM cannot obtain a usable token, the module returns `PAM_AUTHTOK_ERR` and lets the surrounding stack control the user-facing retry behavior.
 
 The module intentionally does not pre-fetch HIBP results during `PAM_PRELIM_CHECK`. That keeps the module stateless across PAM phases and avoids caching candidate-derived material inside the host process.
 
@@ -262,7 +262,7 @@ password    requisite                       pam_deny.so
 password    required                        pam_permit.so
 ```
 
-In this stack, `pam_pwned_check.so` rejects known-pwned candidates first. Clean candidates continue to quality, history, and storage modules. Later modules using `use_authtok` see the original candidate because the module does not modify `PAM_AUTHTOK`.
+In this stack, `pam_pwned_check.so` rejects known-pwned candidates first. Clean candidates continue to quality, history, and storage modules. Later modules using `use_authtok` see the original candidate because the module uses PAM's token item and does not modify it. The module can also run in a simpler stack without `pam_pwquality`; in that case it obtains the candidate through `pam_get_authtok` and passes the same token onward to `pam_unix.so use_authtok`.
 
 The example uses `yescrypt`, which is the Debian 12 and Ubuntu 24.04-era default. Older support targets such as Debian 11 may use `sha512`; package examples should match the oldest supported distro in the release support matrix.
 

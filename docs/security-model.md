@@ -72,7 +72,7 @@ Provider and integration timeouts are mandatory. Password-change workflows must 
 
 The PAM integration should enforce its own timeout around the checker process even though the checker also has provider timeouts.
 
-The helper-based PAM path and the native PAM module both enforce a timeout around the checker process. They read the PAM-supplied token from stdin or `PAM_AUTHTOK` and invoke the checker without passing the password through argv.
+The helper-based PAM path and the native PAM module both enforce a timeout around the checker process. They read the PAM-supplied token from stdin or `PAM_AUTHTOK`; when `PAM_AUTHTOK` is absent, the native module uses Linux PAM's `pam_get_authtok` helper so PAM performs the normal password conversation. Both paths invoke the checker without passing the password through argv.
 
 ## Process and Environment Exposure
 

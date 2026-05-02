@@ -298,7 +298,7 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  rc = pam_chauthtok(pamh, PAM_SILENT);
+  rc = pam_chauthtok(pamh, 0);
   if (rc != PAM_SUCCESS) {
     fprintf(stderr, "pam_chauthtok: %s\n", pam_strerror(pamh, rc));
   }
@@ -508,8 +508,11 @@ CHECKER_EOF
 
         write_service() {
           args=\"\$1\"
+          seed_authtok=\"\${2:-yes}\"
           {
-            echo 'password required pam_smoke_authtok.so'
+            if [ \"\$seed_authtok\" = yes ]; then
+              echo 'password required pam_smoke_authtok.so'
+            fi
             echo \"password requisite pam_pwned_check.so checker=/usr/local/bin/native-pam-smoke-checker timeout=1 \$args\"
             echo 'password required pam_permit.so'
           } > '/etc/pam.d/$SERVICE'
@@ -524,6 +527,7 @@ CHECKER_EOF
           want_message=\"\$6\"
           want_checker=\"\$7\"
           want_fail_closed=\"\$8\"
+          seed_authtok=\"\${9:-yes}\"
 
           printf '%s' \"\$mode\" >/tmp/native-pam-smoke-checker-mode
           rm -f /tmp/native-pam-smoke-checker-token \
@@ -531,7 +535,7 @@ CHECKER_EOF
             /tmp/native-pam-smoke-checker-fail-closed \
             /tmp/native-pam-smoke-checker-pid \
             /tmp/native-pam-smoke-checker-env
-          write_service \"\$args\"
+          write_service \"\$args\" \"\$seed_authtok\"
 
           set +e
           PWNED_CHECK_SHOULD_NOT_LEAK='secret' \
@@ -636,6 +640,7 @@ CHECKER_EOF
         run_case 'checker timeout rejected' sleep TimeoutCandidate123 'fail_open' reject \"\$failure_message\" yes false
         run_case 'dry-run pwned allowed' pwned DryRunCandidate123 'fail_open dry_run debug' allow '-' yes false
         run_case 'min-count forwarded' clean MinCountCandidate123 'fail_open min_count=42 debug' allow '-' yes false
+        run_case 'prompts for missing authtok' clean PromptCandidate123 'fail_open' allow '-' yes false no
         run_case 'invalid module arg rejected' clean InvalidArgCandidate123 'fail_clsoed' reject \"\$failure_message\" no ''
 
         assert_log() {

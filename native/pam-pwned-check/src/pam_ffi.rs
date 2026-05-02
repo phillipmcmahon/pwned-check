@@ -62,6 +62,12 @@ struct PamConv {
 // Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn pam_get_item(pamh: *const PamHandle, item_type: c_int, item: *mut *const c_void) -> c_int;
+    fn pam_get_authtok(
+        pamh: *mut PamHandle,
+        item_type: c_int,
+        authtok: *mut *const c_char,
+        prompt: *const c_char,
+    ) -> c_int;
     fn free(ptr: *mut c_void);
 }
 
@@ -84,11 +90,18 @@ unsafe fn get_pam_item(pamh: *mut PamHandle, item_type: c_int) -> Result<*const 
 
 #[cfg(target_os = "linux")]
 unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int> {
-    let item = unsafe { get_pam_item(pamh, PAM_AUTHTOK)? };
+    let mut item = unsafe { get_pam_item(pamh, PAM_AUTHTOK)? }.cast::<c_char>();
+    if item.is_null() {
+        let rc =
+            unsafe { pam_get_authtok(pamh, PAM_AUTHTOK, &mut item, std::ptr::null::<c_char>()) };
+        if rc != PAM_SUCCESS {
+            return Err(rc);
+        }
+    }
     if item.is_null() {
         return Err(PAM_AUTHTOK_ERR);
     }
-    let token = unsafe { CStr::from_ptr(item.cast::<c_char>()) };
+    let token = unsafe { CStr::from_ptr(item) };
     let token_bytes = token.to_bytes();
     let mut candidate = Zeroizing::new(Vec::with_capacity(token_bytes.len()));
     candidate.extend_from_slice(token_bytes);

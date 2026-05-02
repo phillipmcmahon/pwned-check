@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  rc = pam_chauthtok(pamh, PAM_SILENT);
+  rc = pam_chauthtok(pamh, 0);
   if (rc != PAM_SUCCESS) {
     fprintf(stderr, "pam_chauthtok: %s\n", pam_strerror(pamh, rc));
   }
@@ -226,9 +226,12 @@ chmod 0755 "$CHECKER"
 write_service() {
     checker="$1"
     args="$2"
+    seed_authtok="${3:-yes}"
     service_tmp="$TMP/service"
     {
-        printf 'password required %s\n' "$TMP/pam_harness_authtok.so"
+        if [ "$seed_authtok" = yes ]; then
+            printf 'password required %s\n' "$TMP/pam_harness_authtok.so"
+        fi
         printf 'password requisite %s checker=%s timeout=1 %s\n' "$MODULE" "$checker" "$args"
         printf 'password required pam_permit.so\n'
     } > "$service_tmp"
@@ -245,11 +248,12 @@ run_case() {
     want_checker="$7"
     want_fail_closed="$8"
     checker_path="$9"
+    seed_authtok="${10:-yes}"
 
     [ "$checker_path" != "-" ] || checker_path="$CHECKER"
     printf '%s' "$mode" >"$TMP/checker-mode"
     rm -f "$TMP/checker-token" "$TMP/checker-argv" "$TMP/checker-fail-closed" "$TMP/checker-env" "$TMP/checker-pid"
-    write_service "$checker_path" "$args"
+    write_service "$checker_path" "$args" "$seed_authtok"
 
     set +e
     PWNED_CHECK_NATIVE_HARNESS_TOKEN="$token" \
@@ -329,6 +333,7 @@ run_case 'unexpected checker exit rejected' unexpected UnexpectedHarness123 'fai
 run_case 'checker exec failure rejected' clean ExecHarness123 'fail_open' reject "$failure_message" no '' "$TMP/missing-checker"
 run_case 'dry-run pwned allowed' pwned DryRunHarness123 'fail_open dry_run' allow '-' yes false -
 run_case 'min-count forwarded' clean MinCountHarness123 'fail_open min_count=42' allow '-' yes false -
+run_case 'prompts for missing authtok' clean PromptHarness123 'fail_open' allow '-' yes false - no
 run_case 'invalid module arg rejected' clean InvalidArgHarness123 'fail_clsoed' reject "$failure_message" no '' -
 
 echo "Native PAM harness passed"

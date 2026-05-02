@@ -108,7 +108,7 @@ Both the staging artifact and the native `.deb` include:
 - `/usr/share/pam-configs/pwned-check`
 - `/usr/share/doc/pwned-check/`
 
-The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement.
+The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement. The native module obtains the candidate password through existing `PAM_AUTHTOK` state when present, or through Linux PAM's `pam_get_authtok` helper when it is the first password module to need the token; it does not require `pam_pwquality` or another quality module solely to collect the password.
 
 Installing the native `pwned-check-native-pam` `.deb` follows the same rule: package installation places files on disk only. Operators must run `pam-auth-update --enable pwned-check --package` explicitly to enable dry-run mode.
 

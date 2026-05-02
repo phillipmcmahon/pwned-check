@@ -65,6 +65,11 @@ go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
 ```
 
+## Documentation
+
+- [Checker contract](docs/checker-contract.md)
+- [Documentation index](docs/README.md)
+
 ## Linux Integration Direction
 
 Linux integration is intentionally checker-centered:

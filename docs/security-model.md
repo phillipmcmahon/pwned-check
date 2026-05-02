@@ -76,7 +76,7 @@ The helper-based PAM path and the native PAM module both enforce a timeout aroun
 
 ## Process and Environment Exposure
 
-The checker, helper, and native module checker child are short-lived in normal operation, so plaintext candidates exist in process memory only for the duration of one validation. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current helper or native module; any future native-module dump suppression must account for the process-wide side effect. The helper's `--max-bytes` option has a 1048576-byte ceiling and should not be used to accept arbitrary streams.
+The checker, helper, and native module checker child are short-lived in normal operation, so plaintext candidates exist in process memory only for the duration of one validation. The native module keeps its PAM token copy in zeroizing memory, but transient copies can still exist in PAM-owned memory, the checker process, and kernel pipe buffers. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current helper or native module; any future native-module dump suppression must account for the process-wide side effect. The helper's `--max-bytes` option has a 1048576-byte ceiling and should not be used to accept arbitrary streams.
 
 The PAM helper inherits its environment when invoking the checker. This is intentional so provider settings such as `PWNED_CHECK_FAIL_CLOSED` and `PWNED_CHECK_TIMEOUT` can be supplied by the integration layer. Environment values must not contain plaintext passwords or full hashes.
 

@@ -2,13 +2,17 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use std::ffi::CStr;
-use std::fs::{self, OpenOptions};
-use std::io::{Read, Write};
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::process::{Command, Stdio};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 #[cfg(unix)]
-use std::{io, os::unix::process::CommandExt};
+use std::{
+    io,
+    os::unix::{io::FromRawFd, process::CommandExt},
+};
+use zeroize::Zeroizing;
 
 const DEFAULT_CHECKER: &str = "/usr/local/bin/pwned-check";
 const DEFAULT_TIMEOUT_SECONDS: u64 = 3;
@@ -126,6 +130,12 @@ struct PamConv {
     appdata_ptr: *mut c_void,
 }
 
+#[cfg(unix)]
+#[repr(C)]
+struct CFile {
+    _private: [u8; 0],
+}
+
 #[cfg(target_os = "linux")]
 #[link(name = "pam")]
 extern "C" {
@@ -136,9 +146,13 @@ extern "C" {
 #[cfg(unix)]
 extern "C" {
     fn close(fd: c_int) -> c_int;
+    fn dup(fd: c_int) -> c_int;
+    fn fclose(stream: *mut CFile) -> c_int;
+    fn fileno(stream: *mut CFile) -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
     fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     fn sysconf(name: c_int) -> isize;
+    fn tmpfile() -> *mut CFile;
 }
 
 #[cfg(target_os = "linux")]
@@ -299,13 +313,7 @@ pub fn pam_return_for_decision(decision: ModuleDecision) -> c_int {
 }
 
 pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
-    let stderr_path = temp_stderr_path();
-    let stderr_file = match OpenOptions::new()
-        .create_new(true)
-        .read(true)
-        .write(true)
-        .open(&stderr_path)
-    {
+    let mut stderr_file = match temp_stderr_file() {
         Ok(file) => file,
         Err(_) => {
             return CheckerRun {
@@ -318,7 +326,6 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     let stderr_for_child = match stderr_file.try_clone() {
         Ok(file) => file,
         Err(_) => {
-            let _ = fs::remove_file(&stderr_path);
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
                 stderr: String::new(),
@@ -353,7 +360,6 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(_) => {
-            let _ = fs::remove_file(&stderr_path);
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
                 stderr: String::new(),
@@ -365,8 +371,7 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         if stdin.write_all(candidate).is_err() {
             let _ = child.kill();
             let _ = child.wait();
-            let stderr = read_bounded_stderr(&stderr_path);
-            let _ = fs::remove_file(&stderr_path);
+            let stderr = read_bounded_stderr(&mut stderr_file);
             return CheckerRun {
                 outcome: CheckerOutcome::ExecFailure,
                 stderr,
@@ -377,24 +382,28 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
     let deadline = Instant::now() + Duration::from_secs(config.timeout_seconds);
     let status = loop {
         match child.try_wait() {
-            Ok(Some(status)) => break Some(status),
+            Ok(Some(status)) => break Ok(Some(status)),
             Ok(None) => {
                 if Instant::now() >= deadline {
                     terminate_child(&mut child, CHECKER_TIMEOUT_GRACE);
-                    break None;
+                    break Ok(None);
                 }
                 thread::sleep(Duration::from_millis(10));
             }
-            Err(_) => break Some(exit_status_from_error()),
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                break Err(());
+            }
         }
     };
 
-    let stderr = read_bounded_stderr(&stderr_path);
-    let _ = fs::remove_file(&stderr_path);
+    let stderr = read_bounded_stderr(&mut stderr_file);
 
     let outcome = match status {
-        None => CheckerOutcome::Timeout,
-        Some(status) => match status.code() {
+        Err(()) => CheckerOutcome::ExecFailure,
+        Ok(None) => CheckerOutcome::Timeout,
+        Ok(Some(status)) => match status.code() {
             Some(0) => CheckerOutcome::Clean,
             Some(1) => CheckerOutcome::Pwned,
             Some(2) => CheckerOutcome::ConfigError,
@@ -411,6 +420,9 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
 fn configure_child_process(command: &mut Command) {
     let max_fd = open_max();
     unsafe {
+        // SAFETY: pre_exec runs after fork and before exec. Keep this closure limited
+        // to async-signal-safe libc calls and simple integer work; do not allocate,
+        // log, lock, or touch Rust-managed shared state here.
         command.pre_exec(move || {
             if setpgid(0, 0) != 0 {
                 return Err(io::Error::last_os_error());
@@ -469,33 +481,42 @@ fn terminate_child(child: &mut std::process::Child, _grace: Duration) {
 }
 
 #[cfg(unix)]
-fn exit_status_from_error() -> std::process::ExitStatus {
-    use std::os::unix::process::ExitStatusExt;
-    std::process::ExitStatus::from_raw(255 << 8)
+fn temp_stderr_file() -> io::Result<File> {
+    let stream = unsafe { tmpfile() };
+    if stream.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+
+    let original_fd = unsafe { fileno(stream) };
+    let owned_fd = if original_fd >= 0 {
+        unsafe { dup(original_fd) }
+    } else {
+        -1
+    };
+    let close_result = unsafe { fclose(stream) };
+
+    if original_fd < 0 || owned_fd < 0 || close_result != 0 {
+        if owned_fd >= 0 {
+            let _ = unsafe { close(owned_fd) };
+        }
+        return Err(io::Error::last_os_error());
+    }
+
+    Ok(unsafe { File::from_raw_fd(owned_fd) })
 }
 
 #[cfg(not(unix))]
-fn exit_status_from_error() -> std::process::ExitStatus {
-    panic!("unsupported non-Unix native PAM target")
-}
-
-fn temp_stderr_path() -> std::path::PathBuf {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_else(|_| Duration::from_secs(0))
-        .as_nanos();
-    std::env::temp_dir().join(format!(
-        "pam-pwned-check-stderr-{}-{nanos}",
-        std::process::id()
+fn temp_stderr_file() -> std::io::Result<File> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "native PAM checker runner requires Unix",
     ))
 }
 
-fn read_bounded_stderr(path: &std::path::Path) -> String {
-    let file = OpenOptions::new().read(true).open(path);
-    let mut file = match file {
-        Ok(file) => file,
-        Err(_) => return String::new(),
-    };
+fn read_bounded_stderr(file: &mut File) -> String {
+    if file.seek(SeekFrom::Start(0)).is_err() {
+        return String::new();
+    }
     let mut buffer = vec![0; CHECKER_STDERR_LIMIT + 1];
     let read = match file.read(&mut buffer) {
         Ok(read) => read,
@@ -593,6 +614,8 @@ fn emit_log_event(event: &str) {
     {
         if let Ok(c_event) = std::ffi::CString::new(event) {
             unsafe {
+                // SAFETY: SYSLOG_IDENT and SYSLOG_FORMAT are NUL-terminated static
+                // byte strings, so libc never observes a dangling ident or format pointer.
                 openlog(
                     SYSLOG_IDENT.as_ptr().cast::<c_char>(),
                     LOG_PID | LOG_NDELAY,
@@ -653,17 +676,20 @@ unsafe fn get_pam_item(pamh: *mut PamHandle, item_type: c_int) -> Result<*const 
 }
 
 #[cfg(target_os = "linux")]
-unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Vec<u8>, c_int> {
+unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int> {
     let item = unsafe { get_pam_item(pamh, PAM_AUTHTOK)? };
     if item.is_null() {
         return Err(PAM_AUTHTOK_ERR);
     }
     let token = unsafe { CStr::from_ptr(item.cast::<c_char>()) };
-    Ok(token.to_bytes().to_vec())
+    let token_bytes = token.to_bytes();
+    let mut candidate = Zeroizing::new(Vec::with_capacity(token_bytes.len()));
+    candidate.extend_from_slice(token_bytes);
+    Ok(candidate)
 }
 
 #[cfg(not(target_os = "linux"))]
-unsafe fn get_authtok(_pamh: *mut PamHandle) -> Result<Vec<u8>, c_int> {
+unsafe fn get_authtok(_pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int> {
     Err(PAM_IGNORE)
 }
 
@@ -767,7 +793,7 @@ pub extern "C" fn pam_sm_chauthtok(
         };
         emit_config(&config);
 
-        let mut candidate = match unsafe { get_authtok(pamh) } {
+        let candidate = match unsafe { get_authtok(pamh) } {
             Ok(candidate) if !candidate.is_empty() => candidate,
             _ => {
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
@@ -777,7 +803,6 @@ pub extern "C" fn pam_sm_chauthtok(
         };
 
         let checker = run_checker(&config, &candidate);
-        candidate.fill(0);
         let decision = map_checker_outcome(checker.outcome, config.dry_run);
         emit_result(checker.outcome, decision, &config);
 
@@ -800,6 +825,7 @@ mod tests {
     use std::ffi::CString;
     use std::io::Write;
     use std::sync::{Mutex, MutexGuard};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     static CHECKER_TEST_LOCK: Mutex<()> = Mutex::new(());
 

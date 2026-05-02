@@ -110,7 +110,7 @@ The FFI boundary must stay narrow:
 
 ### No Plaintext Disclosure
 
-The candidate password is retrieved from `PAM_AUTHTOK`, copied into module-owned memory, written to the checker stdin pipe, and then cleared from the module-owned buffer as soon as the write is complete.
+The candidate password is retrieved from `PAM_AUTHTOK`, copied once into module-owned zeroizing memory, and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
 
 The module must not mutate or zero PAM-owned memory returned by `pam_get_item`.
 
@@ -281,6 +281,8 @@ Arguments are parsed from `argv` in the PAM stack line. They are root-controlled
 | `min_count=<n>` | unset | Pass `--min-count <n>` to the checker. `n` must be at least `1`; when unset, the checker default of `1` preserves any-hit rejection. |
 
 If neither `fail_open` nor `fail_closed` is set, the module should use the checker's default provider-failure behavior and log that the policy was inherited.
+
+Native module timeouts are whole seconds in PAM configuration. The Go helper accepts duration strings such as `3s`; sub-second helper values are intentionally not exposed in the native PAM argument contract unless a later operator need justifies adding duration syntax.
 
 If both `fail_open` and `fail_closed` are set, the module must treat the configuration as invalid.
 

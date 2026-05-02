@@ -22,6 +22,8 @@ const (
 	maxConfigurableTokenBytes = 1 << 20
 )
 
+var Version = "0.1.0"
+
 type Helper struct {
 	Stdin  io.Reader
 	Stdout io.Writer
@@ -52,7 +54,7 @@ func (h Helper) Run(args []string) int {
 		return ExitUsage
 	}
 	if *versionMode {
-		fmt.Fprintln(stdout, "pwned-check-pam-helper 0.1.0")
+		fmt.Fprintf(stdout, "pwned-check-pam-helper %s\n", Version)
 		return ExitAllow
 	}
 	if *checker == "" {

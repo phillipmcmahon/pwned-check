@@ -4,7 +4,7 @@ BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
 NATIVE_PAM_BIN := dist/pam_pwned_check.so
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$(VERSION)
+LDFLAGS := -X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$(VERSION) -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$(VERSION)
 FUZZ_PACKAGE := ./internal/pwned
 FUZZ_TARGET := FuzzParseRangeResponse
 
@@ -35,7 +35,7 @@ staticcheck:
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/pwned-check
-	go build -o $(PAM_HELPER_BIN) ./cmd/pwned-check-pam-helper
+	go build -ldflags "$(LDFLAGS)" -o $(PAM_HELPER_BIN) ./cmd/pwned-check-pam-helper
 
 native-pam-fmt:
 	cargo fmt --check

@@ -113,6 +113,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   - validation
   - known limitations
 
+Draft release notes live under `docs/releases/`. Use the matching file as the annotated tag message, for example:
+
+```bash
+git tag -a v0.1.0 -F docs/releases/v0.1.0.md
+```
+
 ### 6. Close Tracking
 
 - Comment on the release-prep issue with validation and release links.

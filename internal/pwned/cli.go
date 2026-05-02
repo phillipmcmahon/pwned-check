@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "0.2.0"
+var Version = "0.1.0"
 
 const (
 	ExitClean        = 0

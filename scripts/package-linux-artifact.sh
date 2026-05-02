@@ -10,7 +10,7 @@ Build a Linux release tarball containing pwned-check, pwned-check-pam-helper,
 install.sh, README.md, LICENSE, and build metadata.
 
 Options:
-  --version <version>      Release version, for example 0.2.0 or dev-abcdef12
+  --version <version>      Release version, for example 0.1.0 or dev-abcdef12
   --goarch <arch>          Go architecture, usually amd64 or arm64
   --goos <os>              Go OS target (default: linux)
   --output-dir <path>      Output directory (default: dist/release)
@@ -94,7 +94,7 @@ BASENAME="pwned-check_${VERSION}_${GOOS_VALUE}_${GOARCH_VALUE}"
 PACKAGE_DIR="$WORK_DIR/$BASENAME"
 mkdir -p "$PACKAGE_DIR/metadata"
 
-LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION"
+LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION"
 GOAMD64_VALUE=""
 if [ "$GOARCH_VALUE" = "amd64" ]; then
   GOAMD64_VALUE="${GOAMD64:-v1}"
@@ -103,7 +103,7 @@ fi
 (
   cd "$ROOT"
   CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -trimpath -ldflags "$LDFLAGS" -o "$PACKAGE_DIR/pwned-check" ./cmd/pwned-check
-  CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -trimpath -o "$PACKAGE_DIR/pwned-check-pam-helper" ./cmd/pwned-check-pam-helper
+  CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -trimpath -ldflags "$LDFLAGS" -o "$PACKAGE_DIR/pwned-check-pam-helper" ./cmd/pwned-check-pam-helper
   cp README.md LICENSE "$PACKAGE_DIR/"
   go version -m "$PACKAGE_DIR/pwned-check" > "$PACKAGE_DIR/metadata/pwned-check-go-version.txt"
   go version -m "$PACKAGE_DIR/pwned-check-pam-helper" > "$PACKAGE_DIR/metadata/pwned-check-pam-helper-go-version.txt"

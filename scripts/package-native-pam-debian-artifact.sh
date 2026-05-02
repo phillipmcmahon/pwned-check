@@ -11,7 +11,7 @@ Linux architecture. The artifact includes pwned-check, pam_pwned_check.so,
 a pam-auth-update profile, install.sh, docs, and build metadata.
 
 Options:
-  --version <version>      Release version, for example 0.2.0 or dev-abcdef12
+  --version <version>      Release version, for example 0.1.0 or dev-abcdef12
   --output-dir <path>      Output directory (default: dist/release)
   --build-time <time>      RFC3339 build time (default: current UTC time)
   --pwned-check-bin <path> Use a prebuilt Linux pwned-check binary

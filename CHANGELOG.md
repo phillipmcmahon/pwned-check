@@ -6,6 +6,10 @@ The format is intentionally lightweight while the project is pre-production.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## v0.1.0 - 2026-05-02
+
 - Linux-first Go checker baseline.
 - Project board and roadmap structure.
 - Documentation skeleton for requirements, operations, security model, testing, and releases.

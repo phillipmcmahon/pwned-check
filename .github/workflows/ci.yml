@@ -127,8 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          go build -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA}" -o dist/pwned-check ./cmd/pwned-check
-          go build -o dist/pwned-check-pam-helper ./cmd/pwned-check-pam-helper
+          LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=${GITHUB_SHA} -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=${GITHUB_SHA}"
+          go build -ldflags "${LDFLAGS}" -o dist/pwned-check ./cmd/pwned-check
+          go build -ldflags "${LDFLAGS}" -o dist/pwned-check-pam-helper ./cmd/pwned-check-pam-helper
 
       - name: Run binary smoke
         run: go run ./scripts/smoke_binary.go dist/pwned-check

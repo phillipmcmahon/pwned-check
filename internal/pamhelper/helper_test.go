@@ -258,7 +258,7 @@ func TestHelperVersion(t *testing.T) {
 	if code != ExitAllow {
 		t.Fatalf("code = %d, want %d", code, ExitAllow)
 	}
-	if stdout.String() != "pwned-check-pam-helper 0.1.0\n" {
+	if stdout.String() != "pwned-check-pam-helper "+Version+"\n" {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
 }

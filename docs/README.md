@@ -7,6 +7,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Need | Start here |
 |---|---|
 | Try the checker locally | [Quickstart](quickstart.md): local CLI examples, fail-open/fail-closed checks, and binary smoke |
+| Understand checker stdin/exit behavior | [Checker contract](checker-contract.md): canonical stdin, `--min-count`, exit-code, and stderr contract |
 | Confirm platform and deployment assumptions | [Requirements](requirements.md): current Linux-first scope and integration constraints |
 | Configure live HIBP provider behavior | [Provider policy](provider-policy.md): live API use, timeout, request volume, and test-provider boundary |
 | Understand install, upgrade, and rollback shape | [Operations](operations.md): package layout, Ubuntu PAM walkthrough, rollback, and helper mapping |

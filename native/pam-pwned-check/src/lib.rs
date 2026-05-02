@@ -433,7 +433,8 @@ fn configure_child_process(command: &mut Command) {
     unsafe {
         // SAFETY: pre_exec runs after fork and before exec. Keep this closure limited
         // to async-signal-safe libc calls and simple integer work; do not allocate,
-        // log, lock, or touch Rust-managed shared state here.
+        // log, lock, or touch Rust-managed shared state here. The syscall call must
+        // remain the thin libc trampoline, not a wrapper that allocates or locks.
         command.pre_exec(move || {
             if setpgid(0, 0) != 0 {
                 return Err(io::Error::last_os_error());

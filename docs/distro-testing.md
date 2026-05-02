@@ -27,7 +27,7 @@ The first-wave distro set is:
 
 | Family | Primary target | Docker image | Persistent VM status |
 |---|---|---|---|
-| Debian | Debian stable | `debian:stable-slim` | Docker route is accepted; no dedicated VM required |
+| Debian | Debian stable | `debian:stable-slim` | `codex-vm-debian` (Debian 13) |
 | Ubuntu | Ubuntu 24.04 | `ubuntu:24.04` | `codex-vm-ubuntu` |
 | Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
 | RHEL-compatible | Rocky Linux 9 | `rockylinux:9` | Docker only for now |
@@ -212,9 +212,33 @@ The lower-level filesystem-layout artifact remains available for staging and ins
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make package-native-pam-debian-artifact'
 ```
 
+## Debian VM
+
+Install dependencies:
+
+```bash
+ssh codex-vm-debian 'sudo apt-get update && sudo apt-get install -y ca-certificates curl gcc libc6-dev libpam0g-dev make pkg-config golang-go cargo rustfmt file tar gzip xz-utils jq rsync'
+```
+
+Core native PAM gates:
+
+```bash
+ssh codex-vm-debian 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness'
+```
+
+Debian/Ubuntu package-layout and `.deb` smoke:
+
+```bash
+ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
+```
+
+On Debian 13, `pam-auth-update` is installed under `/usr/sbin`, which is not always in the non-root `codex` user's default PATH. Keep the explicit `PATH="/usr/sbin:$PATH"` prefix when running package smoke commands over SSH.
+
+The Debian VM validates the Debian/Ubuntu filesystem layout and native `.deb` package behavior on a real Debian host. The same script names retain `ubuntu` because the package path covers the shared Debian/Ubuntu `pam-auth-update` integration.
+
 ## Debian Docker Route
 
-Debian is covered through Docker rather than a dedicated VM. Run the Debian slices of the binary, helper PAM, and direct native PAM smoke tests:
+The Debian Docker route remains the cheap, disposable coverage path. Run the Debian slices of the binary, helper PAM, and direct native PAM smoke tests:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
@@ -222,7 +246,7 @@ Debian is covered through Docker rather than a dedicated VM. Run the Debian slic
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
 ```
 
-The Ubuntu persistent smoke container and Ubuntu host package smoke continue to cover the shared Debian/Ubuntu `pam-auth-update` artifact behavior. A Debian VM may be added later for extra confidence, but it is not a release-blocking requirement for the current native PAM delivery track.
+Use this route for quick regressions and CI parity. Use `codex-vm-debian` before release or whenever the Debian/Ubuntu package enablement, rollback, or `pam-auth-update` behavior changes.
 
 ## Fedora VM
 
@@ -407,6 +431,7 @@ Host-specific release gates remain manual because they depend on persistent VM s
 
 ```bash
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment'
+ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ```
@@ -418,10 +443,11 @@ The Fedora RPM and SELinux gates are not run on generic CI runners because the a
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
 - Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, package removal, and managed-file cleanup.
 - Ubuntu hardening assessment captures AppArmor state and validates disposable-service lockout recovery without editing `common-password`.
+- Debian 13 VM validation runs the native PAM unit/build/dependency/symbol/host harness gates plus the Debian/Ubuntu host package and `.deb` package smoke. On Debian, run package smoke commands with `PATH="/usr/sbin:$PATH"` so SSH sessions can find `pam-auth-update`.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/lib/security`.
 - Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual rollback, package removal, and managed-file cleanup through the Docker route.
 - Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/enable/rollback/removal.
-- Debian coverage is Docker-first: binary smoke, helper PAM package smoke, and direct native PAM loading run against `debian:stable-slim`; no dedicated Debian VM is currently required.
+- Debian Docker coverage remains available for binary smoke, helper PAM package smoke, and direct native PAM loading against `debian:stable-slim`.

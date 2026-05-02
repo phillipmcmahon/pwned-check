@@ -26,7 +26,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Understand the roadmap | [Roadmap](roadmap.md): epics, user stories, and current implementation notes |
 | Track issues and board workflow | [Project board workflow](project-board-workflow.md): issue fields, workflow statuses, and audit rules |
 | Validate code changes | [Testing](testing.md): local gate, coverage threshold, fuzz schedule, and CI expectations |
-| Validate Linux distro runtime and PAM package integration | [Docker smoke matrix](docker-smoke.md): distro image matrix and PAM package smoke behavior |
+| Validate Linux distro runtime and PAM package integration | [Distro testing runbook](distro-testing.md): Docker and persistent VM package smoke process; [Docker smoke matrix](docker-smoke.md): distro image matrix and PAM package smoke behavior |
 | Prepare a release | [Release playbook](release-playbook.md): release validation, Linux artifacts, and failure rule |
 
 ## Suggested First-Time Flow

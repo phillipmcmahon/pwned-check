@@ -189,4 +189,4 @@ Use a smaller native matrix while iterating:
 ./scripts/native-pam-distro-smoke.sh --images "fedora:latest rockylinux:9"
 ```
 
-For the full distro testing workflow, including persistent Ubuntu, Fedora, and Alpine VMs, see [distro-testing.md](distro-testing.md).
+For the full distro testing workflow, including persistent Ubuntu, Debian, Fedora, and Alpine VMs, see [distro-testing.md](distro-testing.md).

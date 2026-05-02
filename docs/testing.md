@@ -67,7 +67,7 @@ The first run builds a reusable Ubuntu 24.04 image with Rust and PAM development
 
 Each run copies the container test log, per-case PAM output, captured syslog, and selected `/tmp/native-pam-smoke-*` artifacts into an ignored timestamped directory such as `.test-output/native-pam-ubuntu-smoke/20260501T063620Z-native-pam-ubuntu-smoke`. These run directories sort chronologically by name, and `.test-output/native-pam-ubuntu-smoke/latest` points at the newest run. Each run also writes a combined `<timestamp>-native-pam-ubuntu-smoke.txt` file for quick double-click or Preview inspection. Set `NATIVE_PAM_UBUNTU_OUTPUT_DIR` to write those artifacts somewhere else.
 
-For distro-specific Docker and VM validation, use the runbook in [distro-testing.md](distro-testing.md). It defines the first-wave distro set, Docker matrices, persistent VM setup rules, and the current Ubuntu, Fedora, Alpine, Arch, and Docker-first Debian coverage paths.
+For distro-specific Docker and VM validation, use the runbook in [distro-testing.md](distro-testing.md). It defines the first-wave distro set, Docker matrices, persistent VM setup rules, and the current Ubuntu, Debian, Fedora, Alpine, Arch, and Docker coverage paths.
 
 ## Coverage Gate
 
@@ -143,7 +143,7 @@ The GitHub workflow is split into:
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
 
-The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine package smoke. Fedora RPM/SELinux host validation remains a documented release gate on the persistent Fedora VM because it depends on real `authselect` and SELinux host state.
+The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine package smoke. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine host dependency checks remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 Release-sensitive checks:
@@ -177,6 +177,8 @@ The repository currently has no branch protection enabled. Once branch protectio
 The native PAM Ubuntu smoke path proves the in-development module can be built on Ubuntu, installed where Linux PAM expects security modules, loaded by a real PAM stack, and exercised through `pam_chauthtok`. It uses a test-only PAM module to seed `PAM_AUTHTOK` before `pam_pwned_check.so`, then runs a fake checker to cover clean, pwned, provider fail-open, provider fail-closed, checker config, checker timeout, dry-run, `min_count` forwarding, invalid module argument, exported-symbol, and dependency-allowlist behavior without calling the live HIBP API. The smoke also installs the generated Debian/Ubuntu native PAM artifact, enables its `pam-auth-update` profile, verifies the generated `common-password` line, disables the profile, and restores the container PAM state for repeatable rollback testing. The smoke asserts the checker receives `--stdin` plus `--min-count <n>` only when configured, receives the candidate over stdin, receives the expected fail-closed environment without ambient caller variables, is not invoked for invalid module arguments, emits the exact approved PAM conversation messages, emits the expected syslog events through `/dev/log`, does not echo candidate tokens into PAM output or logs, and does not leave the timeout checker process alive.
 
 The host-level native PAM harness is the CI-oriented counterpart to the persistent smoke. It builds the module on the current Linux runner, compiles a tiny token-seeding PAM module and PAM client, creates a temporary service under `/etc/pam.d`, and loads `pam_pwned_check.so` by absolute path. It covers the same core allow/reject matrix plus checker exec failure and unexpected checker exit, while avoiding persistent Docker state.
+
+The Debian VM path validates the Debian/Ubuntu package behavior on a real Debian host. It runs native PAM unit/build/dependency/symbol gates, the host-level PAM harness, the Debian/Ubuntu host package-layout smoke, and the native `.deb` package smoke. On Debian 13, run package smoke commands with `PATH="/usr/sbin:$PATH"` because `pam-auth-update` is installed in `/usr/sbin` and may not be visible in a non-root SSH session.
 
 The native PAM distro smoke matrix is the portability counterpart. It uses throwaway containers for the first-wave distro set, installs each distro's Rust and Linux-PAM development packages, builds `pam_pwned_check.so` in that environment, installs it into the distro PAM module directory, and runs direct `pam_chauthtok` allow/reject cases. Use `NATIVE_PAM_DISTRO_SMOKE_IMAGES` or `--images` to run a smaller subset while iterating.
 

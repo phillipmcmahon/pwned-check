@@ -1,5 +1,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
+#[cfg(target_os = "linux")]
+use core::ffi::c_long;
 use core::ffi::{c_char, c_int, c_void};
 use std::ffi::CStr;
 use std::fs::File;
@@ -138,12 +140,14 @@ struct CFile {
 
 #[cfg(target_os = "linux")]
 #[link(name = "pam")]
+// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn pam_get_item(pamh: *const PamHandle, item_type: c_int, item: *mut *const c_void) -> c_int;
     fn free(ptr: *mut c_void);
 }
 
 #[cfg(unix)]
+// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn close(fd: c_int) -> c_int;
     fn dup(fd: c_int) -> c_int;
@@ -156,8 +160,10 @@ extern "C" {
 }
 
 #[cfg(target_os = "linux")]
+// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn openlog(ident: *const c_char, option: c_int, facility: c_int);
+    fn syscall(num: c_long, ...) -> c_long;
     fn syslog(priority: c_int, format: *const c_char, ...);
 }
 
@@ -167,6 +173,11 @@ const SIGTERM: c_int = 15;
 const SIGKILL: c_int = 9;
 #[cfg(unix)]
 const SC_OPEN_MAX: c_int = 5;
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
+const SYS_CLOSE_RANGE: c_long = 436;
 #[cfg(target_os = "linux")]
 const LOG_PID: c_int = 0x01;
 #[cfg(target_os = "linux")]
@@ -428,9 +439,7 @@ fn configure_child_process(command: &mut Command) {
                 return Err(io::Error::last_os_error());
             }
 
-            for fd in 3..max_fd {
-                let _ = close(fd);
-            }
+            close_inherited_fds(max_fd);
 
             Ok(())
         });
@@ -447,6 +456,33 @@ fn open_max() -> c_int {
         value as c_int
     } else {
         1024
+    }
+}
+
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
+fn close_inherited_fds(max_fd: c_int) {
+    if unsafe { syscall(SYS_CLOSE_RANGE, 3_u32, u32::MAX, 0_u32) } == 0 {
+        return;
+    }
+
+    close_inherited_fds_by_loop(max_fd);
+}
+
+#[cfg(not(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+)))]
+fn close_inherited_fds(max_fd: c_int) {
+    close_inherited_fds_by_loop(max_fd);
+}
+
+#[cfg(unix)]
+fn close_inherited_fds_by_loop(max_fd: c_int) {
+    for fd in 3..max_fd {
+        let _ = unsafe { close(fd) };
     }
 }
 
@@ -932,6 +968,22 @@ mod tests {
     }
 
     #[test]
+    fn parse_from_raw_argv_allows_zero_argc_with_null_argv() {
+        assert_eq!(
+            unsafe { parse_module_config_from_argv(0, core::ptr::null()) },
+            Ok(ModuleConfig::default())
+        );
+    }
+
+    #[test]
+    fn parse_from_raw_argv_rejects_null_argv_when_argc_positive() {
+        assert_eq!(
+            unsafe { parse_module_config_from_argv(1, core::ptr::null()) },
+            Err(ConfigError::NullArgument)
+        );
+    }
+
+    #[test]
     fn parse_from_raw_argv_rejects_null_argument() {
         let raw = [std::ptr::null()];
         assert_eq!(
@@ -1106,6 +1158,57 @@ exit 0
         let argv = std::fs::read_to_string(&argv_path).expect("read checker argv");
         assert_eq!(argv, "--stdin --min-count 42");
         let _ = std::fs::remove_file(argv_path);
+    }
+
+    #[test]
+    fn checker_runner_passes_min_count_with_fail_closed_policy() {
+        let _guard = checker_test_lock();
+        let argv_path = temp_path("argv");
+        let env_path = temp_path("env");
+        let checker = fake_checker(&format!(
+            "#!/bin/sh\nprintf '%s' \"$*\" > {}\nprintf '%s' \"${{PWNED_CHECK_FAIL_CLOSED:-}}\" > {}\n/bin/cat >/dev/null\nexit 0\n",
+            shell_quote(&argv_path),
+            shell_quote(&env_path)
+        ));
+        let config = ModuleConfig {
+            checker,
+            min_count: Some(42),
+            fail_policy: FailPolicy::FailClosed,
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"candidate").outcome,
+            CheckerOutcome::Clean
+        );
+        let argv = std::fs::read_to_string(&argv_path).expect("read checker argv");
+        let env = std::fs::read_to_string(&env_path).expect("read checker env");
+        assert_eq!(argv, "--stdin --min-count 42");
+        assert_eq!(env, "true");
+        let _ = std::fs::remove_file(argv_path);
+        let _ = std::fs::remove_file(env_path);
+    }
+
+    #[test]
+    fn checker_runner_passes_null_byte_candidate_over_stdin() {
+        let _guard = checker_test_lock();
+        let stdin_path = temp_path("stdin");
+        let checker = fake_checker(&format!(
+            "#!/bin/sh\n/bin/cat > {}\nexit 0\n",
+            shell_quote(&stdin_path)
+        ));
+        let config = ModuleConfig {
+            checker,
+            ..ModuleConfig::default()
+        };
+
+        assert_eq!(
+            run_checker(&config, b"prefix\0suffix").outcome,
+            CheckerOutcome::Clean
+        );
+        let stdin = std::fs::read(&stdin_path).expect("read checker stdin");
+        assert_eq!(stdin, b"prefix\0suffix");
+        let _ = std::fs::remove_file(stdin_path);
     }
 
     #[test]

@@ -36,21 +36,15 @@ PAM password stack
 - maps checker outcomes to PAM-compatible process exit codes
 - never logs the plaintext password
 
-Exit codes:
+For the canonical checker exit-code contract, see [Checker contract](checker-contract.md).
+
+Helper exit codes:
 
 - `0`: allow password change
 - `1`: reject password change
 - `2`: helper usage/configuration error
 
-Checker exit-code mapping:
-
-| Checker exit | Meaning | Helper exit |
-|---|---|---|
-| `0` | clean, or provider failure when checker fail-open is configured | `0` |
-| `1` | pwned password at the default threshold | `1` |
-| `2` | checker config/usage error | `1` |
-| `3` | checker provider/network error in fail-closed mode | `1` |
-| timeout | checker exceeded helper timeout | `1` |
+Checker mapping: canonical checker exit `0` maps to helper exit `0`; known-pwned results, checker config errors, fail-closed provider errors, timeouts, and unexpected checker exits map to helper exit `1`.
 
 ## Example PAM Config
 

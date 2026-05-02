@@ -381,15 +381,7 @@ PAM rollback instructions must include:
 
 ## PAM Helper Exit Mapping
 
-The PAM helper rejects password changes for more than only known-pwned passwords:
-
-| Checker exit | Meaning | Helper result |
-|---|---|---|
-| `0` | clean, or provider failure when checker fail-open is configured | allow |
-| `1` | pwned password | reject |
-| `2` | checker usage/configuration error | reject |
-| `3` | checker provider/network error in fail-closed mode | reject |
-| timeout | checker exceeded helper timeout | reject |
+The PAM helper maps the canonical [checker contract](checker-contract.md) to PAM allow/reject behavior. Checker exit `0` allows the stack to continue; known-pwned results, checker usage/configuration errors, fail-closed provider failures, timeouts, and unexpected checker exits reject.
 
 This means fail-closed provider outages and checker configuration mistakes are deliberately conservative at the PAM boundary.
 

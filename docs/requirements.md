@@ -46,26 +46,7 @@ Do not reduce host security posture to make early integration easier.
 
 ## Runtime Contract
 
-The stable checker contract is:
-
-```text
-candidate password over stdin -> pwned-check --stdin -> exit code
-```
-
-The optional count threshold contract is:
-
-```text
-candidate password over stdin -> pwned-check --stdin --min-count <n> -> exit code
-```
-
-`--min-count` defaults to `1`. The checker returns exit code `1` only when the provider breach count is greater than or equal to the threshold.
-
-Exit codes:
-
-- `0`: password accepted, or provider failure when fail-open is configured
-- `1`: password appears in the breach corpus at or above the configured threshold and should be rejected
-- `2`: usage or configuration error
-- `3`: provider/network error when fail-closed is configured
+The stable checker contract is documented in [Checker contract](checker-contract.md). In short, integrations pass the candidate password over stdin to `pwned-check --stdin`, optionally add `--min-count <n>`, and make policy decisions only from the documented exit code.
 
 ## Build Requirements
 

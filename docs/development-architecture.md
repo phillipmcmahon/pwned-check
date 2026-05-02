@@ -64,12 +64,7 @@ flowchart LR
 
 ## Exit-Code Contract
 
-- `0`: password accepted, or provider failure when fail-open is configured.
-- `1`: password found in the breach corpus at or above the configured threshold and should be rejected.
-- `2`: usage or configuration error.
-- `3`: provider/network error when fail-closed is configured.
-
-This contract is intentionally small. Changes to it should be treated as architecture decisions and documented before implementation.
+The canonical checker contract is [Checker contract](checker-contract.md). It is intentionally small. Changes to it should be treated as architecture decisions and documented before implementation.
 
 The project may change the contract before `v1.0.0` while the concept is still being shaped. At `v1.0.0`, the stdin input model, exit-code meanings, and safe log event shape should be treated as stable unless a future major version explicitly changes them.
 

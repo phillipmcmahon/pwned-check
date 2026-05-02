@@ -87,7 +87,7 @@ Provider checks remain inside the existing `pwned-check` binary, invoked with `-
 
 ### Stable Checker Contract
 
-The module is a caller of `pwned-check --stdin`, optionally with documented policy flags such as `--min-count <n>`.
+The module is a caller of `pwned-check --stdin`, optionally with documented policy flags such as `--min-count <n>`. The canonical exit-code contract is [Checker contract](checker-contract.md).
 
 It does not reach into checker internals. It does not depend on undocumented output. It may include a bounded diagnostic excerpt from checker stderr in module logs, but the module must not parse checker stderr for policy decisions.
 
@@ -202,6 +202,8 @@ The module reads `PAM_AUTHTOK` with `pam_get_item` and never modifies it. Downst
 
 This matches the existing PAM helper posture: config failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
 
+The checker's fail-open behavior can short-circuit `min_count`: if the provider cannot return a breach count and fail-open is configured, the checker exits `0`, so the module allows the stack to continue.
+
 `PAM_SUCCESS` from this module does not mean the password is accepted by the system. It means only that `pam_pwned_check.so` has no objection and the rest of the PAM `password` stack should continue. Length, complexity, history, account state, and final password storage remain the responsibility of downstream modules.
 
 ## Stack Placement And Composition
@@ -314,12 +316,12 @@ The checker stderr may be captured for bounded diagnostics, following the existi
 
 The first release uses fork and exec:
 
-1. The module creates pipes for checker stdin and stderr.
+1. The module creates a pipe for checker stdin and an unnamed temporary file for bounded checker stderr capture.
 2. The module sets close-on-exec on file descriptors that should not survive into the child.
 3. The module forks.
-4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture pipe, closes inherited file descriptors above stderr, and calls `execve` with the configured checker and the documented checker arguments.
+4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture file, closes inherited file descriptors above stderr with `close_range(2)` where available and an fd-walk fallback elsewhere, and calls `execve` with the configured checker and the documented checker arguments.
 5. The child receives a clean environment containing only documented checker/provider variables.
-6. The parent writes the candidate to the checker stdin pipe, closes the write end, and clears its module-owned candidate buffer.
+6. The parent writes the candidate to the checker stdin pipe, closes the write end, and relies on zeroizing module-owned memory when the candidate buffer is dropped.
 7. The parent waits with a hard timeout.
 8. On timeout, the parent sends `SIGTERM`, waits a short grace period, then sends `SIGKILL` if the checker has not exited.
 9. The parent reads the checker exit status, maps it to a PAM return value, and emits a safe event.
@@ -440,115 +442,18 @@ Tracked distro delivery matrix:
 | Arch Linux | Generic filesystem-layout artifact plus native pacman package from `PKGBUILD` | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Arch; Arch package smoke validates pacman install/removal and managed-file cleanup |
 | Alpine Linux | Generic filesystem-layout artifact plus native APK package from `APKBUILD` after Linux-PAM path validation | Manual PAM helper edits the target service in dry-run mode | Restore the timestamped PAM service backup recorded during enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM; Alpine package smoke validates APK install/removal and managed-file cleanup |
 
-### Debian And Ubuntu
+### Package Details
 
-Debian and Ubuntu packages should:
+Package installation places files on disk only. Enabling the module remains an explicit operator action, starts in `dry_run` mode, and must record enough state to roll back without editing generated PAM files by hand.
 
-- install the module at `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so`
-- install a `pam-auth-update` profile at `/usr/share/pam-configs/pwned-check`
-- call `pam-auth-update --package` from maintainer scripts only when this behavior is safe and documented
-- support `amd64` and `arm64`
-- build on the oldest supported Debian release in the support matrix to keep glibc requirements low
-- test profile enablement and rollback in the Ubuntu persistent smoke container or host smoke path before release; Debian-specific coverage runs through the Debian Docker smoke route unless a dedicated Debian VM is added later
+| Family | Module path | Package build | Package smoke | Enablement and rollback notes |
+|---|---|---|---|---|
+| Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` | `make package-native-pam-debian` | `make native-pam-ubuntu-deb-package-smoke` | Package `pwned-check-native-pam` installs a `pam-auth-update` profile at `/usr/share/pam-configs/pwned-check`; operators enable with `pam-auth-update --enable pwned-check --package` and disable with `pam-auth-update --disable pwned-check --package` before package removal. |
+| Fedora/RHEL/Rocky | `/lib64/security/pam_pwned_check.so` | `make package-native-pam-rpm` | `make native-pam-fedora-rpm-package-smoke` | Package `pwned-check-native-pam` installs authselect helpers under `/usr/share/pwned-check/authselect/`; enablement creates/selects `custom/pwned-check` and records an authselect backup for rollback. Run `make native-pam-fedora-selinux-assessment` before production release. |
+| Arch Linux | `/usr/lib/security/pam_pwned_check.so` | `make package-native-pam-arch` | `make native-pam-arch-package-smoke` | Package `pwned-check-native-pam` is built from `packaging/arch/PKGBUILD.in`; operators enable through `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`, which preserves a timestamped PAM service backup for rollback. |
+| Alpine Linux | `/lib/security/pam_pwned_check.so` for Linux-PAM deployments | `make package-native-pam-alpine` | `make native-pam-alpine-package-smoke` | Package `pwned-check-native-pam` is built from `packaging/alpine/APKBUILD.in`; native PAM integration is Linux-PAM-only, not BusyBox-only auth, and manual helper rollback restores the timestamped PAM service backup. |
 
-Build the native `.deb` package with:
-
-```bash
-make package-native-pam-debian
-```
-
-Validate package-manager behavior on an Ubuntu host with:
-
-```bash
-make native-pam-ubuntu-deb-package-smoke
-```
-
-The Debian package is named `pwned-check-native-pam`. Package installation places the module, checker, documentation, and `pam-auth-update` profile on disk, but does not enable the PAM module. Enablement remains an explicit operator action through `pam-auth-update --enable pwned-check --package`, and the smoke verifies that disablement restores `/etc/pam.d/common-password`.
-
-### Fedora And RHEL
-
-Fedora and RHEL packages should:
-
-- install the module at `/lib64/security/pam_pwned_check.so`
-- install authselect enable and rollback helpers under `/usr/share/pwned-check/authselect/`
-- create a custom authselect profile from the current profile during explicit enablement, not during package installation
-- support `x86_64` and `aarch64`
-- include a SELinux assessment before production release
-- test rollback from the selected `authselect` workflow before release
-
-Build the native RPM package with:
-
-```bash
-make package-native-pam-rpm
-```
-
-Validate package-manager behavior on a Fedora/RHEL-family host with:
-
-```bash
-make native-pam-fedora-rpm-package-smoke
-```
-
-The RPM package is named `pwned-check-native-pam`. Package installation places the module, checker, documentation, and authselect helpers on disk, but does not enable the PAM module. Enablement remains an explicit operator action through `/usr/share/pwned-check/authselect/enable-authselect.sh`, which inserts the module in `dry_run` mode and records an authselect backup for rollback.
-
-SELinux assessment is tracked by [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) and should be run with:
-
-```bash
-make native-pam-fedora-selinux-assessment
-```
-
-The assessment captures SELinux mode, authselect state, Fedora host package smoke output, audit AVCs, and a combined text report under `.test-output/native-pam-fedora-selinux-assessment/`. It fails if AVCs mention pwned-check, `pam_pwned_check`, or the Fedora host smoke service.
-
-The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. The native PAM module itself should only fork/exec the checker and should not contact the provider directly. If a deployment's local SELinux policy blocks the checker network path from password-change domains, the release should document the operator-managed exception rather than silently broadening policy in the package. A dedicated policy package can be added later if repeated production evidence shows the same minimum rule set is required across Fedora/RHEL deployments.
-
-### Arch Linux
-
-Arch Linux packages should:
-
-- install the module at `/lib/security/pam_pwned_check.so` for Alpine Linux-PAM
-- install the checker at a stable executable path such as `/usr/bin/pwned-check`
-- install manual PAM enable and rollback helpers under `/usr/share/pwned-check/manual-pam/`
-- document the exact PAM password-stack edit or package-managed include file used to enable the module
-- preserve a timestamped backup of any edited PAM file before enablement
-- test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
-
-Build the Arch package with:
-
-```bash
-make package-native-pam-arch
-```
-
-Validate package-manager behavior through the Docker route with:
-
-```bash
-make native-pam-arch-package-smoke
-```
-
-The package is built from `packaging/arch/PKGBUILD.in` and is named `pwned-check-native-pam`. Package installation places files on disk only. Operators must run `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh` explicitly to enable dry-run mode against the chosen PAM service.
-
-### Alpine Linux
-
-Alpine Linux packages should:
-
-- validate the target Linux-PAM module directory before release because Alpine deployments can vary between minimal and Linux-PAM-enabled images
-- install the checker at a stable executable path such as `/usr/bin/pwned-check`
-- install manual PAM enable and rollback helpers under `/usr/share/pwned-check/manual-pam/`
-- document that native PAM integration applies only to Linux-PAM deployments, not BusyBox-only authentication paths
-- preserve a timestamped backup of any edited PAM file before enablement
-- test rollback by restoring the backup, removing the module line, and verifying password changes still reach the normal stack
-
-Build the Alpine package with:
-
-```bash
-make package-native-pam-alpine
-```
-
-Validate package-manager behavior through the Docker route with:
-
-```bash
-make native-pam-alpine-package-smoke
-```
-
-The package is built from `packaging/alpine/APKBUILD.in` and is named `pwned-check-native-pam`. Native PAM integration remains Linux-PAM-only; BusyBox-only authentication paths are outside this package's supported behavior. Package installation places files on disk only, and operators must run `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh` explicitly to enable dry-run mode against the chosen PAM service.
+The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
 
 ### Signing And Provenance
 

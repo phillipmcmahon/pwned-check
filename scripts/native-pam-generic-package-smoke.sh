@@ -132,8 +132,12 @@ run_in_container() {
             printf '%s\n' \"\$securedir\"
             return
           fi
-          if command -v pacman >/dev/null 2>&1 || command -v apk >/dev/null 2>&1; then
+          if command -v pacman >/dev/null 2>&1; then
             printf '%s\n' /usr/lib/security
+            return
+          fi
+          if command -v apk >/dev/null 2>&1; then
+            printf '%s\n' /lib/security
             return
           fi
           printf '%s\n' /lib/security

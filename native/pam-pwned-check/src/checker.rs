@@ -31,8 +31,9 @@ pub struct CheckerRun {
     pub stderr: String,
 }
 
+// Rust 2021 extern syntax is intentional for all extern blocks in this file
+// until the distro MSRV/edition pin changes.
 #[cfg(unix)]
-// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn close(fd: c_int) -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
@@ -41,13 +42,11 @@ extern "C" {
 }
 
 #[cfg(all(unix, not(target_os = "linux")))]
-// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn pipe(fds: *mut c_int) -> c_int;
 }
 
 #[cfg(target_os = "linux")]
-// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn pipe2(fds: *mut c_int, flags: c_int) -> c_int;
 }
@@ -56,7 +55,6 @@ extern "C" {
     target_os = "linux",
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
-// Rust 2021 extern syntax is intentional until the distro MSRV/edition pin changes.
 extern "C" {
     fn syscall(num: c_long, ...) -> c_long;
 }

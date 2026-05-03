@@ -137,7 +137,11 @@ run_in_container() {
             return
           fi
           if command -v apk >/dev/null 2>&1; then
-            printf '%s\n' /lib/security
+            if [ -f /usr/lib/security/pam_permit.so ]; then
+              printf '%s\n' /usr/lib/security
+            else
+              printf '%s\n' /lib/security
+            fi
             return
           fi
           printf '%s\n' /lib/security

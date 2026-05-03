@@ -84,7 +84,7 @@ if [ -z "$BUILD_TIME" ]; then
     BUILD_TIME="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 fi
 
-PKGVER="$(printf '%s' "$VERSION" | sed 's/^v//; s/[^A-Za-z0-9.]/./g; s/\.\.\*/./g; s/^\.//; s/\.$//')"
+PKGVER="$(printf '%s' "$VERSION" | sed 's/^v//; s/-rc/_rc/g; s/[^A-Za-z0-9._]/./g; s/\.\.\*/./g; s/^\.//; s/\.$//')"
 [ -n "$PKGVER" ] || PKGVER=0
 case "$PKGVER" in
     [0-9]*) ;;
@@ -128,10 +128,16 @@ prepare_abuild_key() {
         openssl genrsa -out "$key_path" 2048 >/dev/null 2>&1
         openssl rsa -in "$key_path" -pubout -out "$key_path.pub" >/dev/null 2>&1
     fi
-    printf 'PACKAGER_PRIVKEY="%s"\n' "$key_path" > "$key_dir/abuild.conf"
+    {
+        printf 'PACKAGER_PRIVKEY="%s"\n' "$key_path"
+        printf 'REPODEST="%s/packages"\n' "$WORK_DIR"
+    } > "$key_dir/abuild.conf"
     if [ "$(id -u)" -eq 0 ]; then
         mkdir -p /etc/apk/keys
         cp "$key_path.pub" /etc/apk/keys/
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo mkdir -p /etc/apk/keys
+        sudo cp "$key_path.pub" /etc/apk/keys/
     fi
 }
 

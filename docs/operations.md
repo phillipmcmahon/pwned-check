@@ -181,7 +181,7 @@ apk info --contents --allow-untrusted dist/release/pwned-check-native-pam-<pkgve
 The staging artifact, native Arch package, and native Alpine package include:
 
 - `/usr/bin/pwned-check`
-- `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch and `/lib/security` for Alpine Linux-PAM
+- `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch. Alpine Linux-PAM packages install the module in both `/usr/lib/security` and `/lib/security` because supported Alpine releases differ in loader path.
 - `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`
 - `/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh`
 - `/usr/share/doc/pwned-check/`

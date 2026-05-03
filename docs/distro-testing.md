@@ -353,9 +353,13 @@ Build the Alpine generic artifact:
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && ./scripts/package-native-pam-generic-artifact.sh --version alpine-vm-smoke --family alpine --pwned-check-bin /tmp/pwned-check-alpine-prebuilt/pwned-check'
 ```
 
-Alpine Linux-PAM loads security modules from:
+Alpine Linux-PAM module placement varies by release. The persistent Alpine VM
+loads from `/usr/lib/security`, while the pinned `alpine:3.20` Docker image
+loads from `/lib/security`. The Alpine package installs `pam_pwned_check.so`
+in both locations for first-release compatibility:
 
 ```text
+/usr/lib/security
 /lib/security
 ```
 
@@ -447,7 +451,7 @@ The Fedora RPM and SELinux gates are not run on generic CI runners because the a
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
-- Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/lib/security`.
+- Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security` for the VM and `/lib/security` for the pinned Docker image.
 - Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual rollback, package removal, and managed-file cleanup through the Docker route.
 - Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/enable/rollback/removal.
 - Debian Docker coverage remains available for binary smoke, helper PAM package smoke, and direct native PAM loading against `debian:stable-slim`.

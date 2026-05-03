@@ -5,6 +5,8 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${NATIVE_PAM_ARCH_PACKAGE_SMOKE_PLATFORM:-linux/amd64}"
 IMAGE="${NATIVE_PAM_ARCH_PACKAGE_SMOKE_IMAGE:-archlinux:base-devel}"
+SMOKE_VERSION="${NATIVE_PAM_ARCH_PACKAGE_SMOKE_VERSION:-arch-package-smoke}"
+EXPORT_DIR="${NATIVE_PAM_ARCH_PACKAGE_SMOKE_EXPORT_DIR:-}"
 WORKDIR="/workspace/pwned-check"
 PREBUILT_CHECKER=""
 
@@ -68,7 +70,7 @@ build_package_checker() {
         cd "$ROOT"
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
             go build -trimpath \
-            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=arch-package-smoke" \
+            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$SMOKE_VERSION" \
             -o "$PREBUILT_CHECKER" ./cmd/pwned-check
     )
 }
@@ -119,7 +121,7 @@ docker exec "$cid" sh -lc "
     fi
     pacman -Sy --noconfirm --needed base-devel ca-certificates file gcc make pam pkgconf rust tar zstd
     cd '$WORKDIR'
-    pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version arch-package-smoke --pwned-check-bin /tmp/native-pam-arch-pwned-check)\"
+    pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version '$SMOKE_VERSION' --pwned-check-bin /tmp/native-pam-arch-pwned-check)\"
     pkg_path=\"dist/release/\$pkg_name\"
     test -f \"\$pkg_path\"
     pacman -U --noconfirm \"\$pkg_path\"
@@ -141,6 +143,11 @@ docker exec "$cid" sh -lc "
     done
     echo \"Native PAM Arch package smoke passed: \$pkg_name\"
 "
+
+if [ -n "$EXPORT_DIR" ]; then
+    mkdir -p "$EXPORT_DIR"
+    docker cp "$cid:$WORKDIR/dist/release/." "$EXPORT_DIR/"
+fi
 
 docker rm -f "$cid" >/dev/null
 trap - EXIT INT TERM

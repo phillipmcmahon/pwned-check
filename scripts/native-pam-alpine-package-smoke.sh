@@ -5,6 +5,7 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_PLATFORM:-linux/amd64}"
 IMAGE="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_IMAGE:-alpine:3.20}"
+SMOKE_VERSION="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION:-0.0.0}"
 WORKDIR="/workspace/pwned-check"
 PREBUILT_CHECKER=""
 
@@ -68,7 +69,7 @@ build_package_checker() {
         cd "$ROOT"
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
             go build -trimpath \
-            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=alpine-package-smoke" \
+            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$SMOKE_VERSION" \
             -o "$PREBUILT_CHECKER" ./cmd/pwned-check
     )
 }
@@ -116,11 +117,12 @@ docker exec "$cid" sh -lc "
     set -eu
     apk add --no-cache alpine-sdk ca-certificates cargo file gcc linux-pam linux-pam-dev make musl-dev openssl pkgconf rust sudo tar
     cd '$WORKDIR'
-    apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin /tmp/native-pam-alpine-pwned-check)\"
+    apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version '$SMOKE_VERSION' --pwned-check-bin /tmp/native-pam-alpine-pwned-check)\"
     apk_path=\"dist/release/\$apk_name\"
     test -f \"\$apk_path\"
     apk add --allow-untrusted \"\$apk_path\"
     apk info -e pwned-check-native-pam >/dev/null
+    apk info -L pwned-check-native-pam | grep -F 'usr/lib/security/pam_pwned_check.so' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'lib/security/pam_pwned_check.so' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/bin/pwned-check' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/share/pwned-check/manual-pam/enable-manual-pam.sh' >/dev/null
@@ -130,7 +132,7 @@ docker exec "$cid" sh -lc "
       echo 'Alpine package still installed after removal' >&2
       exit 1
     fi
-    for path in /usr/bin/pwned-check /lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
+    for path in /usr/bin/pwned-check /usr/lib/security/pam_pwned_check.so /lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
       if [ -e \"\$path\" ]; then
         echo \"Alpine package-managed path still exists after removal: \$path\" >&2
         exit 1

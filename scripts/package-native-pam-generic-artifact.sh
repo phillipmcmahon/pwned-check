@@ -105,12 +105,19 @@ case "$(uname -m)" in
 esac
 
 MODULE_DIR="$(pkg-config --variable=securedir pam 2>/dev/null || true)"
+if [ "$FAMILY" = "alpine" ]; then
+    MODULE_DIR="/usr/lib/security"
+fi
 if [ -z "$MODULE_DIR" ]; then
     case "$FAMILY" in
         arch) MODULE_DIR="/usr/lib/security" ;;
-        alpine) MODULE_DIR="/lib/security" ;;
+        alpine) MODULE_DIR="/usr/lib/security" ;;
         *) MODULE_DIR="/usr/lib/security" ;;
     esac
+fi
+EXTRA_MODULE_DIR=""
+if [ "$FAMILY" = "alpine" ] && [ "$MODULE_DIR" != "/lib/security" ]; then
+    EXTRA_MODULE_DIR="/lib/security"
 fi
 
 case "$MODULE_DIR" in
@@ -141,12 +148,18 @@ mkdir -p \
     "$ROOTFS/usr/bin" \
     "$ROOTFS_MODULE_DIR" \
     "$PACKAGE_DIR/metadata"
+if [ -n "$EXTRA_MODULE_DIR" ]; then
+    mkdir -p "$ROOTFS$EXTRA_MODULE_DIR"
+fi
 
 (
     cd "$ROOT"
     make native-pam-build >/dev/null
     [ -f dist/pam_pwned_check.so ] || fail "dist/pam_pwned_check.so was not produced"
     install -m 0755 dist/pam_pwned_check.so "$ROOTFS_MODULE_DIR/pam_pwned_check.so"
+    if [ -n "$EXTRA_MODULE_DIR" ]; then
+        install -m 0755 dist/pam_pwned_check.so "$ROOTFS$EXTRA_MODULE_DIR/pam_pwned_check.so"
+    fi
 
     if [ -n "$PWNED_CHECK_BIN" ]; then
         install -m 0755 "$PWNED_CHECK_BIN" "$ROOTFS/usr/bin/pwned-check"
@@ -266,6 +279,7 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "arch": "$ARTIFACT_ARCH",
   "goarch": "$GOARCH_VALUE",
   "module_path": "$MODULE_DIR/pam_pwned_check.so",
+  "extra_module_path": "$(if [ -n "$EXTRA_MODULE_DIR" ]; then printf '%s/pam_pwned_check.so' "$EXTRA_MODULE_DIR"; fi)",
   "pwned_check_source": "$(if [ -n "$PWNED_CHECK_BIN" ]; then printf prebuilt; else printf built; fi)",
   "build_time": "$BUILD_TIME",
   "manual_enable": "/usr/share/pwned-check/manual-pam/enable-manual-pam.sh",

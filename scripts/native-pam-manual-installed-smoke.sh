@@ -32,8 +32,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 MODULE_DIR="$(pkg-config --variable=securedir pam 2>/dev/null || true)"
-if [ -z "$MODULE_DIR" ] && [ -r /etc/os-release ] && grep -Eq '^ID=alpine$' /etc/os-release; then
-    MODULE_DIR="/lib/security"
+if [ -r /etc/os-release ] && grep -Eq '^ID=alpine$' /etc/os-release; then
+    if [ -f /usr/lib/security/pam_permit.so ]; then
+        MODULE_DIR="/usr/lib/security"
+    else
+        MODULE_DIR="/lib/security"
+    fi
 fi
 [ -n "$MODULE_DIR" ] || MODULE_DIR="/usr/lib/security"
 
@@ -61,7 +65,7 @@ cleanup() {
         "$ROLLBACK_HELPER" >/dev/null 2>&1
     as_root rm -f "$SERVICE_FILE"
     as_root rm -f "$AUTHTOK_MODULE_PATH"
-    rm -rf "$TMP"
+    as_root rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
 
@@ -247,5 +251,5 @@ fi
 trap - EXIT INT TERM
 as_root rm -f "$SERVICE_FILE"
 as_root rm -f "$AUTHTOK_MODULE_PATH"
-rm -rf "$TMP"
+as_root rm -rf "$TMP"
 echo "Native PAM manual installed smoke passed"

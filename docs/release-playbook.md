@@ -97,6 +97,8 @@ Native PAM package releases must additionally:
 - attach checksum, provenance, and signature files alongside native PAM packages
 - keep private signing keys outside the repository and outside test VMs
 
+GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
+
 Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish

@@ -474,6 +474,8 @@ make native-pam-release-provenance
 
 This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM artifacts. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
 
+GitHub Release assets are the first native package publication channel. Signed apt, dnf/yum, Arch, and Alpine repositories are tracked separately in [Package repositories](package-repositories.md).
+
 ## Testing Strategy
 
 The native module must not rely on the live HIBP API in automated tests.

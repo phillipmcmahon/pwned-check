@@ -11,6 +11,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Confirm platform and deployment assumptions | [Requirements](requirements.md): current Linux-first scope and integration constraints |
 | Configure live HIBP provider behavior | [Provider policy](provider-policy.md): live API use, timeout, request volume, and test-provider boundary |
 | Understand install, upgrade, and rollback shape | [Operations](operations.md): package layout, Ubuntu PAM walkthrough, rollback, and helper mapping |
+| Plan package repository distribution | [Package repositories](package-repositories.md): apt, dnf/yum, Arch, and Alpine repository publication plan |
 | Test Linux password-change integration | [Linux PAM PoC](linux-pam-poc.md): PAM helper contract and manual password-change test plan |
 | Plan native Linux PAM integration | [Native PAM module](native-pam-module.md): optional native module contract, Rust/FFI posture, packaging, and tests |
 | Understand secret-handling and privilege boundaries | [Security model](security-model.md): provider boundary, process exposure, env, argv, and non-goals |

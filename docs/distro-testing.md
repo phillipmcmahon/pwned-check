@@ -38,14 +38,15 @@ Do not check VM passwords, IP addresses, or generated private keys into the repo
 
 ## Docker Test Commands
 
-Run the broad helper-package and binary matrix before changing release packaging:
+Run Docker only for targets that do not have a persistent VM, or when you are
+intentionally reproducing CI behavior. For the current VM-first local path:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64
-./scripts/docker-pam-smoke.sh --platform linux/amd64
+./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
 ```
 
-The default matrix is:
+The full Docker matrix remains available for CI parity:
 
 ```text
 debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20
@@ -405,16 +406,16 @@ make native-pam-symbols
 Before changing packaging or distro paths:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64
-./scripts/docker-pam-smoke.sh --platform linux/amd64
-./scripts/native-pam-distro-smoke.sh --platform linux/amd64
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64
+./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
 Before claiming a distro package path is ready:
 
-- run the matching Docker path
 - run the matching persistent VM path when that distro uses a persistent VM in this runbook
+- run the matching Docker path only for targets without a persistent VM, or when reproducing CI-only behavior
 - verify install and rollback
 - inspect dynamic dependencies with `ldd pam_pwned_check.so`
 - record any new shared-library dependency in the allowlist and docs only after review
@@ -430,6 +431,10 @@ Automated in that workflow:
 - generic manual-PAM package smoke across Arch and Alpine Docker images
 - Arch `PKGBUILD` package smoke through Docker
 - Alpine `APKBUILD` package smoke through Docker
+
+For local and release validation, prefer persistent VMs whenever one exists for
+the distro. Docker remains useful for CI parity and for targets without a VM,
+currently Arch and Rocky/RHEL-family container coverage.
 
 Host-specific release gates remain manual because they depend on persistent VM state and real host PAM management tools:
 

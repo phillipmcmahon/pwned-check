@@ -25,6 +25,8 @@ fi
 
 cd "$ROOT"
 
+NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-rockylinux:9 archlinux:base-devel}"
+
 unformatted="$(gofmt -l .)"
 if [ -n "$unformatted" ]; then
     echo "Go files are not formatted. Run gofmt -w on these files:" >&2
@@ -74,11 +76,11 @@ make build
 echo "make smoke"
 make smoke
 
-echo "make docker-smoke"
-make docker-smoke
+echo "make docker-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
+DOCKER_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-smoke
 
-echo "make docker-pam-smoke"
-make docker-pam-smoke
+echo "make docker-pam-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
+DOCKER_PAM_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-pam-smoke
 
 echo "make package-linux"
 make package-linux

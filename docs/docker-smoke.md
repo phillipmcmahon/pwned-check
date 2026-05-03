@@ -72,6 +72,13 @@ Use `--images` for a one-off matrix:
 ./scripts/docker-smoke.sh --images "debian:stable-slim alpine:3.20"
 ```
 
+For local VM-first validation, run Docker only for targets without persistent
+VMs:
+
+```bash
+./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+```
+
 Or use the environment variable:
 
 ```bash
@@ -155,6 +162,13 @@ Equivalent command:
 
 ```bash
 ./scripts/docker-pam-smoke.sh --platform linux/amd64
+```
+
+For local VM-first validation, limit the Docker PAM package smoke to targets
+without persistent VMs:
+
+```bash
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
 ```
 
 The default distro list matches the binary Docker smoke matrix:

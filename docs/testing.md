@@ -44,8 +44,8 @@ go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
-./scripts/docker-smoke.sh --platform linux/amd64
-./scripts/docker-pam-smoke.sh --platform linux/amd64
+./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
 make package-linux
 ```
 

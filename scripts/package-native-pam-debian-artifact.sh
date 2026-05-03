@@ -210,7 +210,10 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run" <<'EOF'
 set -eu
 
 /usr/share/pwned-check/debian-pam/set-profile-mode.sh dry-run
-DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package
+if ! DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package; then
+    echo "pam-auth-update failed; PAM configuration unchanged" >&2
+    exit 1
+fi
 echo "pwned-check native PAM enabled in dry-run mode"
 EOF
 chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run"
@@ -220,7 +223,10 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce" <<'EOF'
 set -eu
 
 /usr/share/pwned-check/debian-pam/set-profile-mode.sh enforce
-DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package
+if ! DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package; then
+    echo "pam-auth-update failed; PAM configuration unchanged" >&2
+    exit 1
+fi
 echo "pwned-check native PAM enabled in enforcement mode"
 EOF
 chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce"
@@ -229,7 +235,10 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-disable" <<'EOF'
 #!/bin/sh
 set -eu
 
-DEBIAN_FRONTEND=noninteractive pam-auth-update --disable pwned-check --package
+if ! DEBIAN_FRONTEND=noninteractive pam-auth-update --disable pwned-check --package; then
+    echo "pam-auth-update failed; PAM configuration may still reference pwned-check" >&2
+    exit 1
+fi
 echo "pwned-check native PAM disabled"
 EOF
 chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-disable"

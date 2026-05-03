@@ -59,6 +59,17 @@ AUTHTOK_MODULE_PATH="$MODULE_DIR/pam_manual_authtok.so"
 [ -x "$ENABLE_ENFORCE_HELPER" ] || fail "manual PAM enforce wrapper is not installed at $ENABLE_ENFORCE_HELPER"
 [ -x "$DISABLE_HELPER" ] || fail "manual PAM disable wrapper is not installed at $DISABLE_HELPER"
 
+EXPECTED_HELPER_DIR="/usr/sbin"
+if [ -r /etc/os-release ] && grep -Eq '^ID=arch$' /etc/os-release; then
+    EXPECTED_HELPER_DIR="/usr/bin"
+fi
+for helper in "$ENABLE_DRY_RUN_HELPER" "$ENABLE_ENFORCE_HELPER" "$DISABLE_HELPER"; do
+    case "$helper" in
+        "$EXPECTED_HELPER_DIR"/*) ;;
+        *) fail "manual PAM wrapper resolved outside expected helper directory $EXPECTED_HELPER_DIR: $helper" ;;
+    esac
+done
+
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-manual-installed.XXXXXX")"
 STATE_FILE="$TMP/manual-pam-last-backup"
 BACKUP_DIR="$TMP/backups"

@@ -188,7 +188,10 @@ case "$base_profile" in
 esac
 
 if ! authselect list 2>/dev/null | grep -F "custom/$PROFILE_NAME" >/dev/null; then
-    authselect create-profile "$PROFILE_NAME" --base-on "$base_for_create"
+    if ! authselect create-profile "$PROFILE_NAME" --base-on "$base_for_create"; then
+        echo "authselect create-profile failed; active PAM configuration unchanged" >&2
+        exit 1
+    fi
 fi
 
 for stack in system-auth password-auth; do
@@ -233,13 +236,22 @@ done
 
 mkdir -p "$STATE_DIR"
 if [ "$current_profile" = "custom/$PROFILE_NAME" ]; then
-    authselect apply-changes
+    if ! authselect apply-changes; then
+        echo "authselect apply-changes failed; custom profile changes were not applied cleanly" >&2
+        exit 1
+    fi
 else
     printf '%s\n' "$BACKUP_NAME" > "$STATE_DIR/authselect-last-backup"
     # shellcheck disable=SC2086
-    authselect select "custom/$PROFILE_NAME" $features --backup="$BACKUP_NAME" --force
+    if ! authselect select "custom/$PROFILE_NAME" $features --backup="$BACKUP_NAME" --force; then
+        echo "authselect select failed; active PAM configuration may be unchanged" >&2
+        exit 1
+    fi
 fi
-authselect check
+if ! authselect check; then
+    echo "authselect check failed after enabling pwned-check" >&2
+    exit 1
+fi
 echo "Enabled pwned-check authselect profile: custom/$PROFILE_NAME ($PROFILE_MODE)"
 if [ -f "$STATE_DIR/authselect-last-backup" ]; then
     echo "Authselect backup: $(cat "$STATE_DIR/authselect-last-backup")"
@@ -287,7 +299,10 @@ fi
     exit 2
 }
 
-authselect backup-restore "$BACKUP_NAME"
+if ! authselect backup-restore "$BACKUP_NAME"; then
+    echo "authselect backup-restore failed; PAM configuration may still reference pwned-check" >&2
+    exit 1
+fi
 if ! authselect check; then
     echo "Warning: authselect backup was restored, but authselect check reports the restored state is not currently valid." >&2
 fi

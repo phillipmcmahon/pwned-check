@@ -43,6 +43,14 @@ jobs:
           go-version: "1.26"
           check-latest: true
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
+      - name: Install release verification dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends zstd
+
       - name: Run direct native PAM distro smoke
         run: ./scripts/native-pam-distro-smoke.sh --platform linux/amd64
 
@@ -54,3 +62,12 @@ jobs:
 
       - name: Run Alpine package smoke
         run: ./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64
+
+      - name: Run native PAM arm64 release asset smoke
+        run: |
+          scripts/build-native-pam-release-assets.sh \
+            --version 0.0.0 \
+            --output-dir dist/native-pam-arm64-smoke \
+            --build-time 2026-05-03T00:00:00Z \
+            --source-date-epoch 1777766400 \
+            --platform linux/arm64

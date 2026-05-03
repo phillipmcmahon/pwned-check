@@ -44,7 +44,7 @@ Helper exit codes:
 - `1`: reject password change
 - `2`: helper usage/configuration error
 
-Checker mapping: canonical checker exit `0` maps to helper exit `0`; checker exits `1`, `2`, `3`, timeout, and unexpected checker exits collapse to helper exit `1`.
+Checker mapping: the helper maps the accepted outcome from [Checker contract](checker-contract.md) to helper exit `0`. Pwned-password, checker configuration, fail-closed provider failure, timeout, and unexpected checker outcomes collapse to helper exit `1`.
 
 ## Example PAM Config
 

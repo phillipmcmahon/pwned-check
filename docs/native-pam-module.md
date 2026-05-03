@@ -161,7 +161,7 @@ If the module implements dump suppression, it must call `prctl(PR_SET_DUMPABLE, 
 
 The module must make failure behavior explicit.
 
-The module should pass fail-open or fail-closed configuration to the checker rather than trying to infer provider failure from checker logs. If the checker returns success, the module treats it as success. If provider failure should reject, the checker must be invoked in fail-closed mode so it returns the documented provider error exit.
+The module should pass fail-open or fail-closed configuration to the checker rather than trying to infer provider failure from checker logs. If the checker returns the accepted outcome from [Checker contract](checker-contract.md), the module treats it as success. If provider failure should reject, the checker must be invoked in fail-closed mode so it returns the documented provider-failure outcome.
 
 Configuration errors, timeouts, exec failures, and unexpected checker exits are conservative rejections outside dry-run mode.
 
@@ -189,22 +189,23 @@ Dry-run mode must be available before production enforcement so operators can ob
 
 The module reads `PAM_AUTHTOK` with `pam_get_item` and never modifies it. Downstream modules using `use_authtok` must see the same value the user supplied.
 
-### Return-Code Mapping
+### Return Mapping
 
-| Checker outcome | Module return | Meaning |
+The checker exit-code meanings are defined only in [Checker contract](checker-contract.md). The native module maps those outcomes to PAM as follows:
+
+| Outcome class | Module return | Meaning |
 |---|---|---|
-| `0` clean | `PAM_SUCCESS` | The module has no objection. The stack continues. |
-| `0` provider failure in checker fail-open mode | `PAM_SUCCESS` | The module has no objection because deployment policy is fail-open. The stack continues. |
-| `1` pwned at or above threshold | `PAM_AUTHTOK_ERR` | Password rejected. User-facing message is sent through PAM conversation. |
-| `2` configuration error | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as misconfiguration. |
-| `3` provider failure in checker fail-closed mode | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as provider failure. |
+| Accepted by checker, including provider failure when checker fail-open is configured | `PAM_SUCCESS` | The module has no objection. The stack continues. |
+| Pwned at or above threshold | `PAM_AUTHTOK_ERR` | Password rejected. User-facing message is sent through PAM conversation. |
+| Checker configuration error | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as misconfiguration. |
+| Provider failure when checker fail-closed is configured | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as provider failure. |
 | Timeout | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as timeout. |
 | Exec failure | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as exec failure. |
 | Unexpected checker exit | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged with the checker exit code. |
 
-This matches the existing PAM helper posture: config failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
+This matches the existing PAM helper posture: checker configuration failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
 
-The checker's fail-open behavior can short-circuit `min_count`: if the provider cannot return a breach count and fail-open is configured, the checker exits `0`, so the module allows the stack to continue.
+The checker's fail-open behavior can short-circuit `min_count`: if the provider cannot return a breach count and fail-open is configured, the canonical checker contract returns the accepted outcome, so the module allows the stack to continue.
 
 `PAM_SUCCESS` from this module does not mean the password is accepted by the system. It means only that `pam_pwned_check.so` has no objection and the rest of the PAM `password` stack should continue. Length, complexity, history, account state, and final password storage remain the responsibility of downstream modules.
 
@@ -292,7 +293,7 @@ If both `fail_open` and `fail_closed` are set, the module must treat the configu
 
 Unknown arguments must be treated as configuration errors. A typo such as `fail_clsoed` must not silently change security posture. In enforcement mode, invalid module configuration returns `PAM_AUTHTOK_ERR`; in dry-run mode, invalid runtime outcomes may allow, but invalid module configuration should still be visible and fail closed unless a later decision explicitly changes this.
 
-`min_count=<n>` is implemented by the checker contract rather than by parsing checker stderr: the module invokes `pwned-check --stdin --min-count <n>`, and the checker exits `1` only when the breach count is greater than or equal to `n`.
+`min_count=<n>` is implemented by the checker contract rather than by parsing checker stderr: the module invokes `pwned-check --stdin --min-count <n>`, and the checker returns the pwned-password outcome only when the breach count is greater than or equal to `n`.
 
 ### Checker Invocation
 

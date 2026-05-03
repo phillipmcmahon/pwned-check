@@ -99,6 +99,8 @@ Native PAM package releases must additionally:
 
 GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
 
+Native PAM release packages currently target `linux/amd64`. Containerising the Debian/Ubuntu native package builder is deferred until native PAM `arm64` artifacts are added to the release matrix; the build script carries the implementation marker for that expansion.
+
 Before the first package repository release, complete the repository-specific signing stories in [Package repositories](package-repositories.md):
 
 - publish public key fingerprints and operator trust-bootstrap commands

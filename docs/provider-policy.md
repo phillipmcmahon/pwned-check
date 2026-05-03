@@ -36,7 +36,7 @@ Fail-closed rejects provider failures:
 PWNED_CHECK_FAIL_CLOSED=true
 ```
 
-Provider failures exit with the checker provider-error code and are mapped by the PAM helper to password-change rejection.
+Provider failures return the provider-failure outcome defined in [Checker contract](checker-contract.md) and are mapped by PAM integrations to password-change rejection.
 
 Choose this setting before rollout and document the decision for each deployment.
 

@@ -108,6 +108,8 @@ The PAM package smoke matrix validates the Linux process-integration path rather
 
 The smoke test builds an amd64 Linux release package, copies it into each distro container, installs the package with its bundled `install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then drives that service through the distro-packaged `pamtester` client where available. Alpine, Arch Linux, and Rocky Linux do not package `pamtester` for the pinned/default image tags, so the runner compiles a tiny PAM client inside those throwaway containers.
 
+The runner prints the selected PAM client, `/etc/os-release` `PRETTY_NAME`, and generated PAM service before executing cases. Keep that context in bug reports, especially for rolling images such as Fedora and Arch where PAM or libc behavior can change between runs.
+
 The generated PAM service is intentionally isolated from the distro's real password-change files. It uses PAM's `auth` module type so the smoke client can supply a candidate token consistently across minimal containers while still exercising `pam_exec.so expose_authtok` and helper exit-code mapping through the real PAM module boundary:
 
 ```text

@@ -178,7 +178,7 @@ The native PAM Ubuntu smoke path proves the in-development module can be built o
 
 The host-level native PAM harness is the CI-oriented counterpart to the persistent smoke. It builds the module on the current Linux runner, compiles a tiny token-seeding PAM module and PAM client, creates a temporary service under `/etc/pam.d`, and loads `pam_pwned_check.so` by absolute path. It covers the same core allow/reject matrix plus checker exec failure and unexpected checker exit, while avoiding persistent Docker state.
 
-The Debian VM path validates the Debian/Ubuntu package behavior on a real Debian host. It runs native PAM unit/build/dependency/symbol gates, the host-level PAM harness, the Debian/Ubuntu host package-layout smoke, and the native `.deb` package smoke. On Debian 13, run package smoke commands with `PATH="/usr/sbin:$PATH"` because `pam-auth-update` is installed in `/usr/sbin` and may not be visible in a non-root SSH session.
+The Debian VM path validates the Debian/Ubuntu package behavior on a real Debian host. It runs native PAM unit/build/dependency/symbol gates, the host-level PAM harness, the Debian/Ubuntu host package-layout smoke, and the native `.deb` package smoke. On Debian 13, run package smoke commands with `PATH="/usr/sbin:$PATH"` because `pam-auth-update` is installed in `/usr/sbin` and may not be visible in a non-root SSH session. The 2026-05-03 Debian VM gate passed after the checker runner began mapping path-qualified missing or non-executable checkers to deterministic `ExecFailure` before `fork/exec`.
 
 The native PAM distro smoke matrix is the portability counterpart. It uses throwaway containers for the first-wave distro set, installs each distro's Rust and Linux-PAM development packages, builds `pam_pwned_check.so` in that environment, installs it into the distro PAM module directory, and runs direct `pam_chauthtok` allow/reject cases. Use `NATIVE_PAM_DISTRO_SMOKE_IMAGES` or `--images` to run a smaller subset while iterating.
 
@@ -193,7 +193,7 @@ The PAM package smoke path proves:
 - package installation creates stable binary and symlink paths
 - a dedicated `/etc/pam.d/pwned-check-smoke` service can pass the candidate token to the helper
 
-The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. The operator-facing password-change placement remains the Linux PAM PoC path and should be manually tested before enabling it on a host.
+The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. When `pamtester` is unavailable, the runner compiles a tiny fallback PAM client and now prints the selected client, distro identity, and generated PAM service before executing cases. This is intentionally verbose enough to make any future helper-path segfault actionable. The operator-facing password-change placement remains the Linux PAM PoC path and should be manually tested before enabling it on a host.
 
 ## Static Analysis
 

@@ -130,6 +130,17 @@ sudo passwd <test-user>
 
 The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
 
+For active enforcement rehearsals, the native module can be the first password module that needs the candidate token. A validated Ubuntu 24.04 stack without `pam_pwquality.so` is:
+
+```text
+password requisite pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open
+password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass yescrypt
+password requisite pam_deny.so
+password required pam_permit.so
+```
+
+In that layout, `pam_pwned_check.so` obtains the candidate through `pam_get_authtok`, rejects known pwned passwords before `pam_unix.so`, and leaves `pam_unix.so` to consume the same token through `use_authtok` for accepted passwords.
+
 For native Ubuntu host validation without touching the real password stack, use:
 
 ```bash

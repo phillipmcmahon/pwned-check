@@ -141,9 +141,9 @@ The GitHub workflow is split into:
 - `native-pam`: Rust format check, native PAM unit tests, Valgrind-backed native PAM memory check, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
 - `smoke`: built-binary smoke, Docker distro smoke, and Docker PAM package smoke against mocked HIBP-compatible endpoints
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
-- `release`: tagged release publishing with 60s parser fuzz before artifact publication
+- `release`: tagged release publishing with 60s parser fuzz before artifact publication, including native PAM package assets for `linux/amd64` and `linux/arm64` where a supported distro builder image exists
 
-The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine Docker fallback package smoke. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state.
+The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine Docker fallback package smoke. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state. Arch package automation remains `linux/amd64` until the project chooses an Arch Linux ARM builder image or persistent VM.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 Release-sensitive checks:

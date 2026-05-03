@@ -84,11 +84,12 @@ Each package contains:
 - `LICENSE`
 - build and dependency metadata under `metadata/`
 
-Native PAM packaging currently includes Debian/Ubuntu `.deb`, Fedora/RHEL `.rpm`, Arch pacman, and Alpine APK package paths.
+Native PAM packaging currently includes Debian/Ubuntu `.deb`, Fedora/RHEL `.rpm`, Arch pacman, and Alpine APK package paths. Release automation builds native PAM packages for `linux/amd64` and `linux/arm64` where the target distro publishes a suitable container builder.
 
 Native PAM package releases must additionally:
 
 - build the native package artifacts for Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine where supported
+- build native PAM `linux/amd64` and `linux/arm64` release artifacts; Arch is `linux/amd64` only until an Arch Linux ARM builder image or VM is selected
 - set `SOURCE_DATE_EPOCH` from the release tag timestamp before package builds
 - run `make native-pam-release-provenance` after native package artifacts are staged under `dist/release`
 - sign `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` with `PWNED_CHECK_RELEASE_SIGNING_KEY` when release signing keys are available
@@ -99,7 +100,7 @@ Native PAM package releases must additionally:
 
 GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
 
-Native PAM release packages currently target `linux/amd64`. Containerising the Debian/Ubuntu native package builder is deferred until native PAM `arm64` artifacts are added to the release matrix; the build script carries the implementation marker for that expansion.
+The Debian/Ubuntu native package builder runs in a pinned Rust Debian container for both release architectures so the release path does not depend on the host Cargo version.
 
 Before the first package repository release, complete the repository-specific signing stories in [Package repositories](package-repositories.md):
 

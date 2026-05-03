@@ -224,6 +224,11 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Install native PAM package dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpam0g-dev libpam-runtime dpkg-dev rpm zstd
 
@@ -244,11 +249,14 @@ jobs:
           find artifacts -type f -name '*.tar.gz.sha256' -exec cp {} release/ \;
           SOURCE_EPOCH="$(git log -1 --format=%ct "${GITHUB_REF_NAME}")"
           BUILD_TIME="$(git log -1 --format=%cI "${GITHUB_REF_NAME}")"
-          scripts/build-native-pam-release-assets.sh \
-            --version "${GITHUB_REF_NAME#v}" \
-            --output-dir release \
-            --source-date-epoch "${SOURCE_EPOCH}" \
-            --build-time "${BUILD_TIME}"
+          for platform in linux/amd64 linux/arm64; do
+            scripts/build-native-pam-release-assets.sh \
+              --version "${GITHUB_REF_NAME#v}" \
+              --output-dir release \
+              --source-date-epoch "${SOURCE_EPOCH}" \
+              --build-time "${BUILD_TIME}" \
+              --platform "${platform}"
+          done
           cd release
           sha256sum *.tar.gz > SHA256SUMS.txt
 

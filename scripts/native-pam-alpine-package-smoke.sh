@@ -19,7 +19,7 @@ with apk, exercise installed files through the manual PAM helper, remove the
 package, and verify managed-file cleanup.
 
 Options:
-  --platform <platform>   Docker platform, currently linux/amd64
+  --platform <platform>   Docker platform: linux/amd64 or linux/arm64
   --image <image>         Alpine Docker image (default: alpine:3.20)
   --help                  Show this help text
 EOF
@@ -57,7 +57,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$PLATFORM" in
-    linux/amd64) ;;
+    linux/amd64|linux/arm64|linux/arm64/v8) ;;
     *) fail "unsupported platform for native PAM Alpine package smoke: $PLATFORM" ;;
 esac
 
@@ -66,12 +66,32 @@ require_command docker
 build_package_checker() {
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-alpine-checker.XXXXXX")"
     PREBUILT_CHECKER="$tmp/pwned-check"
+    case "$PLATFORM" in
+        linux/amd64)
+            goarch=amd64
+            goamd64="${GOAMD64:-v1}"
+            ;;
+        linux/arm64|linux/arm64/v8)
+            goarch=arm64
+            goamd64=""
+            ;;
+        *)
+            fail "unsupported checker build platform: $PLATFORM"
+            ;;
+    esac
     (
         cd "$ROOT"
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
-            go build -trimpath \
-            -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$SMOKE_VERSION" \
-            -o "$PREBUILT_CHECKER" ./cmd/pwned-check
+        if [ "$goarch" = "amd64" ]; then
+            CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" GOAMD64="$goamd64" \
+                go build -trimpath \
+                -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$SMOKE_VERSION" \
+                -o "$PREBUILT_CHECKER" ./cmd/pwned-check
+        else
+            CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" \
+                go build -trimpath \
+                -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$SMOKE_VERSION" \
+                -o "$PREBUILT_CHECKER" ./cmd/pwned-check
+        fi
     )
 }
 

@@ -147,13 +147,25 @@ run_in_container() {
           printf '%s\n' /lib/security
         }
 
+        helper_dir() {
+          if command -v pacman >/dev/null 2>&1; then
+            printf '%s\n' /usr/bin
+            return
+          fi
+          printf '%s\n' /usr/sbin
+        }
+
         install_dependencies
         cd '$WORKDIR'
         artifact_name=\"\$(./scripts/package-native-pam-generic-artifact.sh --version generic-smoke --family '$family' --pwned-check-bin /tmp/native-pam-generic-pwned-check)\"
         artifact=\"dist/release/\$artifact_name.tar.gz\"
         test -f \"\$artifact\"
+        helper_dir=\"\$(helper_dir)\"
         tar -tzf \"\$artifact\" | grep -F \"/usr/share/pwned-check/manual-pam/enable-manual-pam.sh\" >/dev/null
         tar -tzf \"\$artifact\" | grep -F \"/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh\" >/dev/null
+        tar -tzf \"\$artifact\" | grep -F \"\$helper_dir/pwned-check-pam-enable-dry-run\" >/dev/null
+        tar -tzf \"\$artifact\" | grep -F \"\$helper_dir/pwned-check-pam-enable-enforce\" >/dev/null
+        tar -tzf \"\$artifact\" | grep -F \"\$helper_dir/pwned-check-pam-disable\" >/dev/null
         rm -rf /tmp/native-pam-generic-package
         mkdir -p /tmp/native-pam-generic-package
         tar -xzf \"\$artifact\" -C /tmp/native-pam-generic-package
@@ -165,6 +177,9 @@ run_in_container() {
         test -x \"\$module_dir/pam_pwned_check.so\"
         test -x /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
         test -x /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+        test -x \"\$helper_dir/pwned-check-pam-enable-dry-run\"
+        test -x \"\$helper_dir/pwned-check-pam-enable-enforce\"
+        test -x \"\$helper_dir/pwned-check-pam-disable\"
 
         cat > /tmp/native-pam-generic-authtok.c <<'AUTHTOK_EOF'
 #include <security/pam_appl.h>
@@ -291,6 +306,29 @@ CHECKER_EOF
           echo 'password required pam_smoke_authtok.so'
           echo 'password required pam_permit.so'
         } > '/etc/pam.d/$SERVICE'
+
+        PWNED_CHECK_PAM_SERVICE_PATH='/etc/pam.d/$SERVICE' \
+        PWNED_CHECK_INSERT_AFTER_PATTERN='pam_smoke_authtok.so' \
+            pwned-check-pam-enable-dry-run
+        grep -F 'pam_pwned_check.so' '/etc/pam.d/$SERVICE' >/dev/null
+        grep -F 'dry_run' '/etc/pam.d/$SERVICE' >/dev/null
+
+        PWNED_CHECK_PAM_SERVICE_PATH='/etc/pam.d/$SERVICE' \
+        PWNED_CHECK_INSERT_AFTER_PATTERN='pam_smoke_authtok.so' \
+            pwned-check-pam-enable-enforce
+        grep -F 'pam_pwned_check.so' '/etc/pam.d/$SERVICE' >/dev/null
+        if grep -F 'pam_pwned_check.so' '/etc/pam.d/$SERVICE' | grep -F 'dry_run' >/dev/null; then
+          cat '/etc/pam.d/$SERVICE' >&2
+          echo 'Native PAM generic package enforce wrapper left dry_run configured' >&2
+          exit 1
+        fi
+
+        PWNED_CHECK_PAM_SERVICE_PATH='/etc/pam.d/$SERVICE' pwned-check-pam-disable
+        if grep -F 'pam_pwned_check.so' '/etc/pam.d/$SERVICE' >/dev/null; then
+          cat '/etc/pam.d/$SERVICE' >&2
+          echo 'Native PAM generic package disable wrapper left module configured' >&2
+          exit 1
+        fi
 
         PWNED_CHECK_PAM_SERVICE_PATH='/etc/pam.d/$SERVICE' \
         PWNED_CHECK_MODULE_LINE='password requisite pam_pwned_check.so checker=/usr/local/bin/native-pam-generic-checker timeout=1 fail_open' \

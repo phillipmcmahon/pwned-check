@@ -105,6 +105,7 @@ AUTHSELECT_DIR="$ROOTFS/usr/share/pwned-check/authselect"
 mkdir -p \
     "$MODULE_DIR" \
     "$ROOTFS/usr/bin" \
+    "$ROOTFS/usr/sbin" \
     "$DOC_DIR" \
     "$AUTHSELECT_DIR" \
     "$PACKAGE_DIR/metadata"
@@ -143,7 +144,20 @@ set -eu
 PROFILE_NAME="${PWNED_CHECK_AUTHSELECT_PROFILE:-pwned-check}"
 BACKUP_NAME="${PWNED_CHECK_AUTHSELECT_BACKUP:-pwned-check-$(date -u '+%Y%m%dT%H%M%SZ')}"
 STATE_DIR="${PWNED_CHECK_STATE_DIR:-/var/lib/pwned-check}"
-PAM_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run'
+PROFILE_MODE="${PWNED_CHECK_PAM_MODE:-dry_run}"
+
+case "$PROFILE_MODE" in
+    dry_run)
+        PAM_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run'
+        ;;
+    enforce)
+        PAM_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open'
+        ;;
+    *)
+        echo "PWNED_CHECK_PAM_MODE must be dry_run or enforce" >&2
+        exit 2
+        ;;
+esac
 
 command -v authselect >/dev/null 2>&1 || {
     echo "authselect is required to enable the RPM-family native PAM module" >&2
@@ -151,14 +165,16 @@ command -v authselect >/dev/null 2>&1 || {
 }
 
 current_raw="$(authselect current -r 2>/dev/null || true)"
+current_profile=""
 case "$current_raw" in
     ""|No\ *)
         base_profile="sssd"
         features=""
         ;;
     *)
-    base_profile="${current_raw%% *}"
-    features="${current_raw#"$base_profile"}"
+        current_profile="${current_raw%% *}"
+        base_profile="$current_profile"
+        features="${current_raw#"$base_profile"}"
         ;;
 esac
 
@@ -181,7 +197,22 @@ for stack in system-auth password-auth; do
         echo "authselect custom profile is missing $stack: $path" >&2
         exit 1
     }
-    if ! grep -F 'pam_pwned_check.so' "$path" >/dev/null; then
+    if grep -F 'pam_pwned_check.so' "$path" >/dev/null; then
+        tmp="$(mktemp)"
+        awk -v line="$PAM_LINE" '
+          /pam_pwned_check\.so/ && !replaced {
+            print line
+            replaced = 1
+            next
+          }
+          /pam_pwned_check\.so/ {
+            next
+          }
+          { print }
+        ' "$path" > "$tmp"
+        cat "$tmp" > "$path"
+        rm -f "$tmp"
+    else
         tmp="$(mktemp)"
         awk -v line="$PAM_LINE" '
           !inserted && $1 == "password" {
@@ -201,14 +232,44 @@ for stack in system-auth password-auth; do
 done
 
 mkdir -p "$STATE_DIR"
-printf '%s\n' "$BACKUP_NAME" > "$STATE_DIR/authselect-last-backup"
-# shellcheck disable=SC2086
-authselect select "custom/$PROFILE_NAME" $features --backup="$BACKUP_NAME" --force
+if [ "$current_profile" = "custom/$PROFILE_NAME" ]; then
+    authselect apply-changes
+else
+    printf '%s\n' "$BACKUP_NAME" > "$STATE_DIR/authselect-last-backup"
+    # shellcheck disable=SC2086
+    authselect select "custom/$PROFILE_NAME" $features --backup="$BACKUP_NAME" --force
+fi
 authselect check
-echo "Enabled pwned-check authselect profile: custom/$PROFILE_NAME"
-echo "Authselect backup: $BACKUP_NAME"
+echo "Enabled pwned-check authselect profile: custom/$PROFILE_NAME ($PROFILE_MODE)"
+if [ -f "$STATE_DIR/authselect-last-backup" ]; then
+    echo "Authselect backup: $(cat "$STATE_DIR/authselect-last-backup")"
+fi
 EOF
 chmod 0755 "$AUTHSELECT_DIR/enable-authselect.sh"
+
+cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run" <<'EOF'
+#!/bin/sh
+set -eu
+
+PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/authselect/enable-authselect.sh
+EOF
+chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run"
+
+cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce" <<'EOF'
+#!/bin/sh
+set -eu
+
+PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/authselect/enable-authselect.sh
+EOF
+chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce"
+
+cat > "$ROOTFS/usr/sbin/pwned-check-pam-disable" <<'EOF'
+#!/bin/sh
+set -eu
+
+/usr/share/pwned-check/authselect/rollback-authselect.sh "$@"
+EOF
+chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-disable"
 
 cat > "$AUTHSELECT_DIR/rollback-authselect.sh" <<'EOF'
 #!/bin/sh
@@ -243,6 +304,9 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "build_time": "$BUILD_TIME",
   "authselect_enable": "/usr/share/pwned-check/authselect/enable-authselect.sh",
   "authselect_rollback": "/usr/share/pwned-check/authselect/rollback-authselect.sh",
+  "enable_dry_run_helper": "/usr/sbin/pwned-check-pam-enable-dry-run",
+  "enable_enforce_helper": "/usr/sbin/pwned-check-pam-enable-enforce",
+  "disable_helper": "/usr/sbin/pwned-check-pam-disable",
   "profile_mode": "dry_run"
 }
 EOF
@@ -259,6 +323,9 @@ Contents:
 - \`/lib64/security/pam_pwned_check.so\`
 - \`/usr/share/pwned-check/authselect/enable-authselect.sh\`
 - \`/usr/share/pwned-check/authselect/rollback-authselect.sh\`
+- \`/usr/sbin/pwned-check-pam-enable-dry-run\`
+- \`/usr/sbin/pwned-check-pam-enable-enforce\`
+- \`/usr/sbin/pwned-check-pam-disable\`
 - \`/usr/share/doc/pwned-check/\`
 
 The authselect helper creates a custom profile from the currently selected
@@ -276,13 +343,19 @@ sudo ./install.sh
 Enable:
 
 \`\`\`sh
-sudo /usr/share/pwned-check/authselect/enable-authselect.sh
+sudo pwned-check-pam-enable-dry-run
+\`\`\`
+
+Switch to enforcement after validating dry-run behavior and rollback:
+
+\`\`\`sh
+sudo pwned-check-pam-enable-enforce
 \`\`\`
 
 Rollback:
 
 \`\`\`sh
-sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
+sudo pwned-check-pam-disable
 \`\`\`
 EOF
 
@@ -304,7 +377,7 @@ copy_tree() {
         rel="${file#$src}"
         mode="0644"
         case "$rel" in
-            /usr/bin/pwned-check|/lib64/security/pam_pwned_check.so|/usr/share/pwned-check/authselect/*.sh)
+            /usr/bin/pwned-check|/usr/sbin/pwned-check-pam-*|/lib64/security/pam_pwned_check.so|/usr/share/pwned-check/authselect/*.sh)
                 mode="0755"
                 ;;
         esac
@@ -318,7 +391,8 @@ if [ -z "$DESTDIR" ]; then
     /usr/bin/pwned-check --version
     if command -v authselect >/dev/null 2>&1; then
         echo "Installed authselect helpers under /usr/share/pwned-check/authselect"
-        echo "Run 'sudo /usr/share/pwned-check/authselect/enable-authselect.sh' to enable dry-run mode."
+        echo "Run 'sudo pwned-check-pam-enable-dry-run' to enable dry-run mode."
+        echo "Run 'sudo pwned-check-pam-enable-enforce' after validating rollback."
     fi
 fi
 EOF

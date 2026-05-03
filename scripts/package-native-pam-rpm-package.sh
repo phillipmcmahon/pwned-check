@@ -151,6 +151,9 @@ cp -a rootfs/. %{buildroot}/
 
 %check
 test -x %{buildroot}/usr/bin/pwned-check
+test -x %{buildroot}/usr/sbin/pwned-check-pam-enable-dry-run
+test -x %{buildroot}/usr/sbin/pwned-check-pam-enable-enforce
+test -x %{buildroot}/usr/sbin/pwned-check-pam-disable
 test -x %{buildroot}/lib64/security/pam_pwned_check.so
 test -x %{buildroot}/usr/share/pwned-check/authselect/enable-authselect.sh
 test -x %{buildroot}/usr/share/pwned-check/authselect/rollback-authselect.sh
@@ -158,7 +161,7 @@ test -f %{buildroot}/usr/share/doc/pwned-check/native-pam-module.md
 
 %post
 if command -v authselect >/dev/null 2>&1; then
-    echo "pwned-check native PAM installed. Run /usr/share/pwned-check/authselect/enable-authselect.sh to enable dry-run mode."
+    echo "pwned-check native PAM installed. Run pwned-check-pam-enable-dry-run to enable dry-run mode."
 fi
 
 %files
@@ -168,6 +171,9 @@ fi
 %doc /usr/share/doc/pwned-check/logging-policy.md
 %doc /usr/share/doc/pwned-check/testing.md
 /usr/bin/pwned-check
+/usr/sbin/pwned-check-pam-enable-dry-run
+/usr/sbin/pwned-check-pam-enable-enforce
+/usr/sbin/pwned-check-pam-disable
 /lib64/security/pam_pwned_check.so
 %dir /usr/share/pwned-check
 %dir /usr/share/pwned-check/authselect

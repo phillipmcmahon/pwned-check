@@ -71,7 +71,7 @@ if rpm -q "$PACKAGE_NAME" >/dev/null 2>&1; then
     fail "$PACKAGE_NAME is already installed; remove it before running the smoke"
 fi
 
-for path in /usr/bin/pwned-check /lib64/security/pam_pwned_check.so /usr/share/pwned-check/authselect; do
+for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /lib64/security/pam_pwned_check.so /usr/share/pwned-check/authselect; do
     [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
 done
 
@@ -101,6 +101,9 @@ rpm -q "$PACKAGE_NAME" >/dev/null
 rpm -ql "$PACKAGE_NAME" | grep -F '/lib64/security/pam_pwned_check.so' >/dev/null || fail "RPM file list missing PAM module"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/bin/pwned-check' >/dev/null || fail "RPM file list missing checker"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/share/pwned-check/authselect/enable-authselect.sh' >/dev/null || fail "RPM file list missing authselect enable helper"
+rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-enable-dry-run' >/dev/null || fail "RPM file list missing dry-run helper"
+rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-enable-enforce' >/dev/null || fail "RPM file list missing enforce helper"
+rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-disable' >/dev/null || fail "RPM file list missing disable helper"
 
 PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED=1 \
 PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE="$PROFILE_NAME" \
@@ -111,7 +114,7 @@ as_root rpm -e "$PACKAGE_NAME"
 INSTALLED=""
 
 rpm -q "$PACKAGE_NAME" >/dev/null 2>&1 && fail "$PACKAGE_NAME is still installed after removal"
-for path in /usr/bin/pwned-check /lib64/security/pam_pwned_check.so /usr/share/pwned-check/authselect; do
+for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /lib64/security/pam_pwned_check.so /usr/share/pwned-check/authselect; do
     [ ! -e "$path" ] || fail "RPM managed path still exists after removal: $path"
 done
 

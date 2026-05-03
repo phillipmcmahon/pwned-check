@@ -127,6 +127,9 @@ docker exec "$cid" sh -lc "
     apk info -L pwned-check-native-pam | grep -F 'lib/security/pam_pwned_check.so' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/bin/pwned-check' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/share/pwned-check/manual-pam/enable-manual-pam.sh' >/dev/null
+    apk info -L pwned-check-native-pam | grep -F 'usr/sbin/pwned-check-pam-enable-dry-run' >/dev/null
+    apk info -L pwned-check-native-pam | grep -F 'usr/sbin/pwned-check-pam-enable-enforce' >/dev/null
+    apk info -L pwned-check-native-pam | grep -F 'usr/sbin/pwned-check-pam-disable' >/dev/null
     ./scripts/native-pam-manual-installed-smoke.sh
     apk del pwned-check-native-pam
     if apk info -e pwned-check-native-pam >/dev/null 2>&1; then

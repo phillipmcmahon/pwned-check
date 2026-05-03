@@ -85,11 +85,14 @@ fi
 MODULE_PATH="/lib64/security/pam_pwned_check.so"
 CHECKER_PATH="/usr/bin/pwned-check"
 AUTHSELECT_DIR="/usr/share/pwned-check/authselect"
+ENABLE_DRY_RUN_HELPER="/usr/sbin/pwned-check-pam-enable-dry-run"
+ENABLE_ENFORCE_HELPER="/usr/sbin/pwned-check-pam-enable-enforce"
+DISABLE_HELPER="/usr/sbin/pwned-check-pam-disable"
 DOC_DIR="/usr/share/doc/pwned-check"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
 CUSTOM_PROFILE="/etc/authselect/custom/$PROFILE_NAME"
 
-managed_paths="$CHECKER_PATH $MODULE_PATH $AUTHSELECT_DIR"
+managed_paths="$CHECKER_PATH $MODULE_PATH $AUTHSELECT_DIR $ENABLE_DRY_RUN_HELPER $ENABLE_ENFORCE_HELPER $DISABLE_HELPER"
 if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     for path in $managed_paths; do
         [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
@@ -136,9 +139,9 @@ cleanup() {
         as_root rm -rf "$CUSTOM_PROFILE"
     fi
     if [ -z "$USE_INSTALLED" ]; then
-        restore_or_remove "$CHECKER_PATH"
-        restore_or_remove "$MODULE_PATH"
-        restore_or_remove "$AUTHSELECT_DIR"
+        for path in $managed_paths; do
+            restore_or_remove "$path"
+        done
         if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
             as_root rm -rf "$DOC_DIR"
         fi
@@ -149,9 +152,9 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 if [ -z "$USE_INSTALLED" ]; then
-    backup_existing "$CHECKER_PATH"
-    backup_existing "$MODULE_PATH"
-    backup_existing "$AUTHSELECT_DIR"
+    for path in $managed_paths; do
+        backup_existing "$path"
+    done
     backup_existing "$DOC_DIR"
 
     cd "$ROOT"
@@ -173,6 +176,9 @@ fi
 [ -x "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
 [ -x "$AUTHSELECT_DIR/enable-authselect.sh" ] || fail "authselect enable helper was not installed"
 [ -x "$AUTHSELECT_DIR/rollback-authselect.sh" ] || fail "authselect rollback helper was not installed"
+[ -x "$ENABLE_DRY_RUN_HELPER" ] || fail "authselect dry-run wrapper was not installed"
+[ -x "$ENABLE_ENFORCE_HELPER" ] || fail "authselect enforce wrapper was not installed"
+[ -x "$DISABLE_HELPER" ] || fail "authselect disable wrapper was not installed"
 "$CHECKER_PATH" --version >/dev/null
 
 cat > "$TMP/native-pam-fedora-host-client.c" <<'EOF'
@@ -339,7 +345,7 @@ run_case "pwned rejected" pwned FedoraHostPackagePwned123 reject
 as_root env \
     PWNED_CHECK_AUTHSELECT_PROFILE="$PROFILE_NAME" \
     PWNED_CHECK_STATE_DIR="$STATE_DIR" \
-    "$AUTHSELECT_DIR/enable-authselect.sh"
+    "$ENABLE_DRY_RUN_HELPER"
 AUTHSELECT_ENABLED=1
 
 authselect current -r | grep -F "custom/$PROFILE_NAME" >/dev/null || fail "authselect did not select custom/$PROFILE_NAME"
@@ -349,7 +355,24 @@ for stack in system-auth password-auth; do
     grep -F 'pam_pwned_check.so' "/etc/pam.d/$stack" >/dev/null || fail "active PAM stack missing pam_pwned_check.so in $stack"
 done
 
-as_root env PWNED_CHECK_STATE_DIR="$STATE_DIR" "$AUTHSELECT_DIR/rollback-authselect.sh"
+as_root env \
+    PWNED_CHECK_AUTHSELECT_PROFILE="$PROFILE_NAME" \
+    PWNED_CHECK_STATE_DIR="$STATE_DIR" \
+    "$ENABLE_ENFORCE_HELPER"
+authselect current -r | grep -F "custom/$PROFILE_NAME" >/dev/null || fail "authselect did not keep custom/$PROFILE_NAME selected"
+for stack in system-auth password-auth; do
+    grep -F 'pam_pwned_check.so' "/etc/authselect/custom/$PROFILE_NAME/$stack" >/dev/null || fail "custom profile missing pam_pwned_check.so after enforce in $stack"
+    if grep -F 'pam_pwned_check.so' "/etc/authselect/custom/$PROFILE_NAME/$stack" | grep -F 'dry_run' >/dev/null; then
+        cat "/etc/authselect/custom/$PROFILE_NAME/$stack" >&2
+        fail "enforce wrapper left dry_run in custom profile $stack"
+    fi
+    if grep -F 'pam_pwned_check.so' "/etc/pam.d/$stack" | grep -F 'dry_run' >/dev/null; then
+        cat "/etc/pam.d/$stack" >&2
+        fail "enforce wrapper left dry_run in active PAM stack $stack"
+    fi
+done
+
+as_root env PWNED_CHECK_STATE_DIR="$STATE_DIR" "$DISABLE_HELPER"
 AUTHSELECT_ENABLED=""
 authselect current -r | grep -F "custom/$PROFILE_NAME" >/dev/null && fail "authselect still selects custom/$PROFILE_NAME after rollback"
 if grep -F 'pam_pwned_check.so' /etc/pam.d/system-auth /etc/pam.d/password-auth >/dev/null 2>&1; then
@@ -361,9 +384,9 @@ if [ -z "$CUSTOM_PROFILE_PREEXISTED" ]; then
     as_root rm -rf "$CUSTOM_PROFILE"
 fi
 if [ -z "$USE_INSTALLED" ]; then
-    restore_or_remove "$CHECKER_PATH"
-    restore_or_remove "$MODULE_PATH"
-    restore_or_remove "$AUTHSELECT_DIR"
+    for path in $managed_paths; do
+        restore_or_remove "$path"
+    done
     if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
         as_root rm -rf "$DOC_DIR"
     fi
@@ -375,6 +398,9 @@ if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     [ ! -e "$CHECKER_PATH" ] || fail "checker still installed after rollback: $CHECKER_PATH"
     [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
     [ ! -e "$AUTHSELECT_DIR" ] || fail "authselect helpers still installed after rollback: $AUTHSELECT_DIR"
+    [ ! -e "$ENABLE_DRY_RUN_HELPER" ] || fail "dry-run wrapper still installed after rollback: $ENABLE_DRY_RUN_HELPER"
+    [ ! -e "$ENABLE_ENFORCE_HELPER" ] || fail "enforce wrapper still installed after rollback: $ENABLE_ENFORCE_HELPER"
+    [ ! -e "$DISABLE_HELPER" ] || fail "disable wrapper still installed after rollback: $DISABLE_HELPER"
 fi
 
 trap - EXIT INT TERM

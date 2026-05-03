@@ -45,6 +45,9 @@ CHECKER_PATH="/usr/bin/pwned-check"
 MODULE_PATH="$MODULE_DIR/pam_pwned_check.so"
 ENABLE_HELPER="/usr/share/pwned-check/manual-pam/enable-manual-pam.sh"
 ROLLBACK_HELPER="/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh"
+ENABLE_DRY_RUN_HELPER="$(command -v pwned-check-pam-enable-dry-run || true)"
+ENABLE_ENFORCE_HELPER="$(command -v pwned-check-pam-enable-enforce || true)"
+DISABLE_HELPER="$(command -v pwned-check-pam-disable || true)"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
 AUTHTOK_MODULE_PATH="$MODULE_DIR/pam_manual_authtok.so"
 
@@ -52,6 +55,9 @@ AUTHTOK_MODULE_PATH="$MODULE_DIR/pam_manual_authtok.so"
 [ -x "$MODULE_PATH" ] || fail "module is not installed at $MODULE_PATH"
 [ -x "$ENABLE_HELPER" ] || fail "manual PAM enable helper is not installed at $ENABLE_HELPER"
 [ -x "$ROLLBACK_HELPER" ] || fail "manual PAM rollback helper is not installed at $ROLLBACK_HELPER"
+[ -x "$ENABLE_DRY_RUN_HELPER" ] || fail "manual PAM dry-run wrapper is not installed at $ENABLE_DRY_RUN_HELPER"
+[ -x "$ENABLE_ENFORCE_HELPER" ] || fail "manual PAM enforce wrapper is not installed at $ENABLE_ENFORCE_HELPER"
+[ -x "$DISABLE_HELPER" ] || fail "manual PAM disable wrapper is not installed at $DISABLE_HELPER"
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-manual-installed.XXXXXX")"
 STATE_FILE="$TMP/manual-pam-last-backup"
@@ -198,6 +204,36 @@ password required pam_manual_authtok.so
 password required pam_permit.so
 EOF
 as_root install -m 0644 "$TMP/service" "$SERVICE_FILE"
+
+as_root env \
+    PWNED_CHECK_PAM_SERVICE_PATH="$SERVICE_FILE" \
+    PWNED_CHECK_BACKUP_DIR="$BACKUP_DIR" \
+    PWNED_CHECK_STATE_FILE="$STATE_FILE" \
+    PWNED_CHECK_INSERT_AFTER_PATTERN="pam_manual_authtok.so" \
+    "$ENABLE_DRY_RUN_HELPER"
+grep -F 'pam_pwned_check.so' "$SERVICE_FILE" >/dev/null || fail "manual dry-run wrapper did not add pam_pwned_check"
+grep -F 'dry_run' "$SERVICE_FILE" >/dev/null || fail "manual dry-run wrapper did not enable dry_run"
+
+as_root env \
+    PWNED_CHECK_PAM_SERVICE_PATH="$SERVICE_FILE" \
+    PWNED_CHECK_BACKUP_DIR="$BACKUP_DIR" \
+    PWNED_CHECK_STATE_FILE="$STATE_FILE" \
+    PWNED_CHECK_INSERT_AFTER_PATTERN="pam_manual_authtok.so" \
+    "$ENABLE_ENFORCE_HELPER"
+grep -F 'pam_pwned_check.so' "$SERVICE_FILE" >/dev/null || fail "manual enforce wrapper removed pam_pwned_check"
+if grep -F 'pam_pwned_check.so' "$SERVICE_FILE" | grep -F 'dry_run' >/dev/null; then
+    cat "$SERVICE_FILE" >&2
+    fail "manual enforce wrapper left dry_run configured"
+fi
+
+as_root env \
+    PWNED_CHECK_PAM_SERVICE_PATH="$SERVICE_FILE" \
+    PWNED_CHECK_STATE_FILE="$STATE_FILE" \
+    "$DISABLE_HELPER"
+if grep -F 'pam_pwned_check.so' "$SERVICE_FILE" >/dev/null; then
+    cat "$SERVICE_FILE" >&2
+    fail "manual disable wrapper left pam_pwned_check configured"
+fi
 
 as_root env \
     PWNED_CHECK_PAM_SERVICE_PATH="$SERVICE_FILE" \

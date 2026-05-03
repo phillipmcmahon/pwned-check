@@ -129,13 +129,16 @@ docker exec "$cid" sh -lc "
     pacman -Ql pwned-check-native-pam | grep -F '/usr/lib/security/pam_pwned_check.so' >/dev/null
     pacman -Ql pwned-check-native-pam | grep -F '/usr/bin/pwned-check' >/dev/null
     pacman -Ql pwned-check-native-pam | grep -F '/usr/share/pwned-check/manual-pam/enable-manual-pam.sh' >/dev/null
+    pacman -Ql pwned-check-native-pam | grep -F '/usr/bin/pwned-check-pam-enable-dry-run' >/dev/null
+    pacman -Ql pwned-check-native-pam | grep -F '/usr/bin/pwned-check-pam-enable-enforce' >/dev/null
+    pacman -Ql pwned-check-native-pam | grep -F '/usr/bin/pwned-check-pam-disable' >/dev/null
     ./scripts/native-pam-manual-installed-smoke.sh
     pacman -R --noconfirm pwned-check-native-pam
     if pacman -Q pwned-check-native-pam >/dev/null 2>&1; then
       echo 'Arch package still installed after removal' >&2
       exit 1
     fi
-    for path in /usr/bin/pwned-check /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
+    for path in /usr/bin/pwned-check /usr/bin/pwned-check-pam-enable-dry-run /usr/bin/pwned-check-pam-enable-enforce /usr/bin/pwned-check-pam-disable /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
       if [ -e \"\$path\" ]; then
         echo \"Arch package-managed path still exists after removal: \$path\" >&2
         exit 1

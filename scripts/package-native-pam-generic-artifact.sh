@@ -119,6 +119,10 @@ EXTRA_MODULE_DIR=""
 if [ "$FAMILY" = "alpine" ] && [ "$MODULE_DIR" != "/lib/security" ]; then
     EXTRA_MODULE_DIR="/lib/security"
 fi
+case "$FAMILY" in
+    arch) HELPER_DIR="/usr/bin" ;;
+    *) HELPER_DIR="/usr/sbin" ;;
+esac
 
 case "$MODULE_DIR" in
     /*) ;;
@@ -146,6 +150,7 @@ mkdir -p \
     "$DOC_DIR" \
     "$MANUAL_DIR" \
     "$ROOTFS/usr/bin" \
+    "$ROOTFS$HELPER_DIR" \
     "$ROOTFS_MODULE_DIR" \
     "$PACKAGE_DIR/metadata"
 if [ -n "$EXTRA_MODULE_DIR" ]; then
@@ -189,8 +194,22 @@ set -eu
 SERVICE_PATH="${PWNED_CHECK_PAM_SERVICE_PATH:-/etc/pam.d/passwd}"
 BACKUP_DIR="${PWNED_CHECK_BACKUP_DIR:-/var/lib/pwned-check/pam-backups}"
 STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/manual-pam-last-backup}"
-MODULE_LINE="${PWNED_CHECK_MODULE_LINE:-password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run}"
 INSERT_AFTER_PATTERN="${PWNED_CHECK_INSERT_AFTER_PATTERN:-}"
+PROFILE_MODE="${PWNED_CHECK_PAM_MODE:-dry_run}"
+
+case "$PROFILE_MODE" in
+    dry_run)
+        DEFAULT_MODULE_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run'
+        ;;
+    enforce)
+        DEFAULT_MODULE_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open'
+        ;;
+    *)
+        echo "PWNED_CHECK_PAM_MODE must be dry_run or enforce" >&2
+        exit 2
+        ;;
+esac
+MODULE_LINE="${PWNED_CHECK_MODULE_LINE:-$DEFAULT_MODULE_LINE}"
 
 [ -f "$SERVICE_PATH" ] || {
     echo "PAM service file not found: $SERVICE_PATH" >&2
@@ -198,13 +217,27 @@ INSERT_AFTER_PATTERN="${PWNED_CHECK_INSERT_AFTER_PATTERN:-}"
 }
 
 mkdir -p "$BACKUP_DIR" "$(dirname "$STATE_FILE")"
-backup="$BACKUP_DIR/$(basename "$SERVICE_PATH").$(date -u '+%Y%m%dT%H%M%SZ')"
-cp "$SERVICE_PATH" "$backup"
-printf '%s\n' "$backup" > "$STATE_FILE"
+backup=""
+if ! grep -F 'pam_pwned_check.so' "$SERVICE_PATH" >/dev/null || [ ! -f "$STATE_FILE" ]; then
+    backup="$BACKUP_DIR/$(basename "$SERVICE_PATH").$(date -u '+%Y%m%dT%H%M%SZ')"
+    cp "$SERVICE_PATH" "$backup"
+    printf '%s\n' "$backup" > "$STATE_FILE"
+fi
 
 if grep -F 'pam_pwned_check.so' "$SERVICE_PATH" >/dev/null; then
-    echo "PAM service already contains pam_pwned_check.so: $SERVICE_PATH"
-    echo "Backup stored at: $backup"
+    tmp="$(mktemp)"
+    awk -v line="$MODULE_LINE" '
+      /pam_pwned_check\.so/ && !updated {
+        print line
+        updated = 1
+        next
+      }
+      { print }
+    ' "$SERVICE_PATH" > "$tmp"
+    cat "$tmp" > "$SERVICE_PATH"
+    rm -f "$tmp"
+    echo "Updated pwned-check in PAM service: $SERVICE_PATH"
+    echo "Backup stored at: $(cat "$STATE_FILE")"
     exit 0
 fi
 
@@ -240,9 +273,33 @@ cat "$tmp" > "$SERVICE_PATH"
 rm -f "$tmp"
 
 echo "Enabled pwned-check in PAM service: $SERVICE_PATH"
-echo "Backup stored at: $backup"
+echo "Backup stored at: $(cat "$STATE_FILE")"
 EOF
 chmod 0755 "$MANUAL_DIR/enable-manual-pam.sh"
+
+cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run" <<'EOF'
+#!/bin/sh
+set -eu
+
+PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+EOF
+chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run"
+
+cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce" <<'EOF'
+#!/bin/sh
+set -eu
+
+PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+EOF
+chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce"
+
+cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-disable" <<'EOF'
+#!/bin/sh
+set -eu
+
+/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh "$@"
+EOF
+chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-disable"
 
 cat > "$MANUAL_DIR/rollback-manual-pam.sh" <<'EOF'
 #!/bin/sh
@@ -284,6 +341,9 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "build_time": "$BUILD_TIME",
   "manual_enable": "/usr/share/pwned-check/manual-pam/enable-manual-pam.sh",
   "manual_rollback": "/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh",
+  "enable_dry_run_helper": "$HELPER_DIR/pwned-check-pam-enable-dry-run",
+  "enable_enforce_helper": "$HELPER_DIR/pwned-check-pam-enable-enforce",
+  "disable_helper": "$HELPER_DIR/pwned-check-pam-disable",
   "profile_mode": "dry_run"
 }
 EOF
@@ -300,6 +360,9 @@ Contents:
 - \`$MODULE_DIR/pam_pwned_check.so\`
 - \`/usr/share/pwned-check/manual-pam/enable-manual-pam.sh\`
 - \`/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh\`
+- \`$HELPER_DIR/pwned-check-pam-enable-dry-run\`
+- \`$HELPER_DIR/pwned-check-pam-enable-enforce\`
+- \`$HELPER_DIR/pwned-check-pam-disable\`
 - \`/usr/share/doc/pwned-check/\`
 
 The enable helper edits \`/etc/pam.d/passwd\` by default, creates a timestamped
@@ -315,13 +378,19 @@ sudo ./install.sh
 Enable:
 
 \`\`\`sh
-sudo /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+sudo pwned-check-pam-enable-dry-run
+\`\`\`
+
+Switch to enforcement after validating dry-run behavior and rollback:
+
+\`\`\`sh
+sudo pwned-check-pam-enable-enforce
 \`\`\`
 
 Rollback:
 
 \`\`\`sh
-sudo /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+sudo pwned-check-pam-disable
 \`\`\`
 EOF
 
@@ -343,7 +412,7 @@ copy_tree() {
         rel="${file#$src}"
         mode="0644"
         case "$rel" in
-            /usr/bin/pwned-check|*/security/pam_pwned_check.so|/usr/share/pwned-check/manual-pam/*.sh)
+            /usr/bin/pwned-check|*/pwned-check-pam-*|*/security/pam_pwned_check.so|/usr/share/pwned-check/manual-pam/*.sh)
                 mode="0755"
                 ;;
         esac
@@ -356,7 +425,8 @@ copy_tree ./rootfs "$DESTDIR"
 if [ -z "$DESTDIR" ]; then
     /usr/bin/pwned-check --version
     echo "Installed manual PAM helpers under /usr/share/pwned-check/manual-pam"
-    echo "Run 'sudo /usr/share/pwned-check/manual-pam/enable-manual-pam.sh' to enable dry-run mode."
+    echo "Run 'sudo pwned-check-pam-enable-dry-run' to enable dry-run mode."
+    echo "Run 'sudo pwned-check-pam-enable-enforce' after validating rollback."
 fi
 EOF
 chmod 0755 "$PACKAGE_DIR/install.sh"

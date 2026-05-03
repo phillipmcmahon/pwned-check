@@ -15,7 +15,7 @@ Usage: scripts/package-native-pam-debian-package.sh --version <version> [OPTIONS
 Build a native .deb package for Debian/Ubuntu systems. The package is built
 from the Debian-family filesystem-layout artifact and installs
 pam_pwned_check.so, pwned-check, a pam-auth-update profile, documentation, and
-package metadata.
+mode helpers, and package metadata.
 
 Options:
   --version <version>      Version label embedded in package metadata
@@ -135,9 +135,9 @@ Depends: libpam0g, libpam-runtime
 Description: Native Linux PAM module for pwned-check
  pwned-check native Linux PAM module package for Debian/Ubuntu systems.
  The package installs pam_pwned_check.so, the pwned-check CLI, a
- pam-auth-update profile, and operator documentation. Package installation
- does not enable the PAM module; enablement is an explicit operator action
- through pam-auth-update.
+ pam-auth-update profile, mode helpers, and operator documentation.
+ Package installation does not enable the PAM module; enablement is an
+ explicit operator action through the packaged mode helpers.
 EOF
 
 cat > "$PACKAGE_DIR/DEBIAN/postinst" <<'EOF'
@@ -145,7 +145,7 @@ cat > "$PACKAGE_DIR/DEBIAN/postinst" <<'EOF'
 set -e
 
 if [ "$1" = "configure" ] && command -v pam-auth-update >/dev/null 2>&1; then
-    echo "pwned-check native PAM installed. Run 'pam-auth-update --enable pwned-check --package' to enable dry-run mode."
+    echo "pwned-check native PAM installed. Run 'pwned-check-pam-enable-dry-run' to enable dry-run mode."
 fi
 EOF
 chmod 0755 "$PACKAGE_DIR/DEBIAN/postinst"

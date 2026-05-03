@@ -10,6 +10,7 @@ name = "pam_pwned_check"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+wait-timeout = "0.2"
 zeroize = "1.8"
 
 [dev-dependencies]

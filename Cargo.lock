@@ -195,6 +195,7 @@ name = "pam-pwned-check"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "wait-timeout",
  "zeroize",
 ]
 

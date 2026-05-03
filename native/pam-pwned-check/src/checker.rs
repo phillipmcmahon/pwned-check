@@ -10,7 +10,8 @@ use std::os::unix::{io::FromRawFd, process::CommandExt};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use wait_timeout::ChildExt;
 
 use crate::config::{FailPolicy, ModuleConfig};
 
@@ -147,22 +148,16 @@ pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
         }
     }
 
-    let deadline = Instant::now() + Duration::from_secs(config.timeout_seconds);
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break Ok(Some(status)),
-            Ok(None) => {
-                if Instant::now() >= deadline {
-                    terminate_child(&mut child, CHECKER_TIMEOUT_GRACE);
-                    break Ok(None);
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            Err(_) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break Err(());
-            }
+    let status = match child.wait_timeout(Duration::from_secs(config.timeout_seconds)) {
+        Ok(Some(status)) => Ok(Some(status)),
+        Ok(None) => {
+            terminate_child(&mut child, CHECKER_TIMEOUT_GRACE);
+            Ok(None)
+        }
+        Err(_) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            Err(())
         }
     };
 
@@ -275,18 +270,8 @@ fn terminate_child(child: &mut std::process::Child, grace: Duration) {
     let process_group = -pid;
     let _ = unsafe { kill(process_group, SIGTERM) };
 
-    let deadline = Instant::now() + grace;
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => return,
-            Ok(None) => {
-                if Instant::now() >= deadline {
-                    break;
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            Err(_) => return,
-        }
+    if matches!(child.wait_timeout(grace), Ok(Some(_))) {
+        return;
     }
 
     let _ = unsafe { kill(process_group, SIGKILL) };

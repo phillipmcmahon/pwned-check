@@ -118,9 +118,12 @@ docker exec "$cid" sh -lc "
     set -eu
     apk add --no-cache alpine-sdk ca-certificates cargo file gcc linux-pam linux-pam-dev make musl-dev openssl pkgconf rust sudo tar
     cd '$WORKDIR'
+    echo '::group::[build:alpine] packaging'
     apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version '$SMOKE_VERSION' --pwned-check-bin /tmp/native-pam-alpine-pwned-check)\"
     apk_path=\"dist/release/\$apk_name\"
     test -f \"\$apk_path\"
+    echo '::endgroup::'
+    echo '::group::[smoke:alpine] validating'
     apk add --allow-untrusted \"\$apk_path\"
     apk info -e pwned-check-native-pam >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/lib/security/pam_pwned_check.so' >/dev/null
@@ -143,6 +146,7 @@ docker exec "$cid" sh -lc "
       fi
     done
     echo \"Native PAM Alpine package smoke passed: \$apk_name\"
+    echo '::endgroup::'
 "
 
 if [ -n "$EXPORT_DIR" ]; then

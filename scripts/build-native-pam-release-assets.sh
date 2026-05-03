@@ -82,6 +82,10 @@ esac
 
 require_command docker
 require_command go
+require_command dpkg-deb
+require_command rpm
+require_command tar
+require_command zstd
 
 if [ "$(uname -s)" != "Linux" ]; then
     fail "Debian/Ubuntu native PAM package build requires a Linux host"
@@ -109,6 +113,53 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
     -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION" \
     -o "$PREBUILT_CHECKER" "$ROOT/cmd/pwned-check"
 
+verify_version() {
+    file="$1"
+    expected="$2"
+    actual=""
+
+    case "$file" in
+        *.deb)
+            actual="$(dpkg-deb -f "$file" Version)"
+            ;;
+        *.rpm)
+            actual="$(rpm -qp --qf '%{VERSION}' "$file" 2>/dev/null)"
+            ;;
+        *.apk)
+            expected="${expected}-r0"
+            actual="$(tar -xzOf "$file" .PKGINFO | awk -F' *= *' '/^pkgver/ {print $2; exit}')"
+            ;;
+        *.pkg.tar.zst)
+            expected="${expected}-1"
+            actual="$(zstd -dc "$file" | tar -xO .PKGINFO | awk -F' *= *' '/^pkgver/ {print $2; exit}')"
+            ;;
+        *)
+            fail "unsupported package artifact for version verification: $file"
+            ;;
+    esac
+
+    if [ "$actual" != "$expected" ]; then
+        fail "version mismatch: $file has $actual, expected $expected"
+    fi
+}
+
+verify_package_versions() {
+    found=0
+    for file in \
+        "$OUTPUT_DIR"/*.deb \
+        "$OUTPUT_DIR"/*.rpm \
+        "$OUTPUT_DIR"/*.apk \
+        "$OUTPUT_DIR"/*.pkg.tar.zst
+    do
+        [ -e "$file" ] || continue
+        verify_version "$file" "$VERSION"
+        found=$((found + 1))
+    done
+
+    [ "$found" -gt 0 ] || fail "no native package artifacts found for version verification"
+    echo "Verified native package metadata versions for $found artifacts"
+}
+
 sync_repo_to_container() {
     cid="$1"
     dest="$2"
@@ -124,14 +175,15 @@ sync_repo_to_container() {
         | docker exec -i "$cid" tar -C "$dest" -xf -
 }
 
-echo "Building Debian/Ubuntu native PAM package"
+echo "::group::[build:debian] packaging"
 SOURCE_DATE_EPOCH="$SOURCE_EPOCH" "$ROOT/scripts/package-native-pam-debian-package.sh" \
     --version "$VERSION" \
     --output-dir "$OUTPUT_DIR" \
     --build-time "$BUILD_TIME" \
     --pwned-check-bin "$PREBUILT_CHECKER"
+echo "::endgroup::"
 
-echo "Building Fedora/RPM native PAM package"
+echo "::group::[build:rpm] packaging"
 FEDORA_CID="$(docker create --platform "$PLATFORM" fedora:latest sleep infinity)"
 cleanup_fedora() {
     docker rm -f "$FEDORA_CID" >/dev/null 2>&1 || true
@@ -154,16 +206,23 @@ docker exec "$FEDORA_CID" sh -lc "
 docker cp "$FEDORA_CID:/workspace/pwned-check/dist/release/." "$OUTPUT_DIR/"
 cleanup_fedora
 trap cleanup EXIT INT TERM
+echo "::endgroup::"
 
-echo "Building and smoking Arch native PAM package"
+echo "::group::[build+smoke:arch] package smoke"
 NATIVE_PAM_ARCH_PACKAGE_SMOKE_VERSION="$VERSION" \
 NATIVE_PAM_ARCH_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
     "$ROOT/scripts/native-pam-arch-package-smoke.sh" --platform "$PLATFORM"
+echo "::endgroup::"
 
-echo "Building and smoking Alpine native PAM package"
+echo "::group::[build+smoke:alpine] package smoke"
 NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION="$VERSION" \
 NATIVE_PAM_ALPINE_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
     "$ROOT/scripts/native-pam-alpine-package-smoke.sh" --platform "$PLATFORM"
+echo "::endgroup::"
+
+echo "::group::[verify] package metadata versions"
+verify_package_versions
+echo "::endgroup::"
 
 PWNED_CHECK_RELEASE_ARTIFACT_DIR="$OUTPUT_DIR" \
 PWNED_CHECK_RELEASE_PROVENANCE_DIR="$OUTPUT_DIR" \

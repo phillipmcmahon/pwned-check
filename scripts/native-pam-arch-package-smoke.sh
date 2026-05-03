@@ -121,9 +121,12 @@ docker exec "$cid" sh -lc "
     fi
     pacman -Sy --noconfirm --needed base-devel ca-certificates file gcc make pam pkgconf rust tar zstd
     cd '$WORKDIR'
+    echo '::group::[build:arch] packaging'
     pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version '$SMOKE_VERSION' --pwned-check-bin /tmp/native-pam-arch-pwned-check)\"
     pkg_path=\"dist/release/\$pkg_name\"
     test -f \"\$pkg_path\"
+    echo '::endgroup::'
+    echo '::group::[smoke:arch] validating'
     pacman -U --noconfirm \"\$pkg_path\"
     pacman -Q pwned-check-native-pam >/dev/null
     pacman -Ql pwned-check-native-pam | grep -F '/usr/lib/security/pam_pwned_check.so' >/dev/null
@@ -145,6 +148,7 @@ docker exec "$cid" sh -lc "
       fi
     done
     echo \"Native PAM Arch package smoke passed: \$pkg_name\"
+    echo '::endgroup::'
 "
 
 if [ -n "$EXPORT_DIR" ]; then

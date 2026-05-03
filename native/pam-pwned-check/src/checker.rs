@@ -186,6 +186,9 @@ fn checker_is_obviously_unavailable(checker: &str) -> bool {
         return false;
     }
 
+    // Best-effort preflight to disambiguate ExecFailure from UnexpectedExit(255).
+    // execve performs the authoritative check; a swap between metadata and execve
+    // is benign because a caller with that capability already controls the host.
     match std::fs::metadata(path) {
         Ok(metadata) => !metadata.is_file() || metadata.permissions().mode() & 0o111 == 0,
         Err(_) => true,

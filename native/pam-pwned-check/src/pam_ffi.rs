@@ -81,6 +81,8 @@ pub fn pam_return_for_decision(decision: ModuleDecision) -> c_int {
 #[cfg(target_os = "linux")]
 unsafe fn get_pam_item(pamh: *mut PamHandle, item_type: c_int) -> Result<*const c_void, c_int> {
     let mut item: *const c_void = std::ptr::null();
+    // SAFETY: `pamh` is provided by Linux PAM for the current module call, and
+    // `item` points to writable storage for PAM to fill with a borrowed pointer.
     let rc = unsafe { pam_get_item(pamh, item_type, &mut item) };
     if rc != PAM_SUCCESS {
         return Err(rc);
@@ -90,8 +92,12 @@ unsafe fn get_pam_item(pamh: *mut PamHandle, item_type: c_int) -> Result<*const 
 
 #[cfg(target_os = "linux")]
 unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int> {
+    // SAFETY: `pamh` is the active PAM handle and `PAM_AUTHTOK` requests the
+    // current borrowed token pointer without taking ownership of PAM memory.
     let mut item = unsafe { get_pam_item(pamh, PAM_AUTHTOK)? }.cast::<c_char>();
     if item.is_null() {
+        // SAFETY: PAM owns the returned token pointer; `item` is valid writable
+        // storage for the borrowed pointer and a null prompt selects PAM's default.
         let rc =
             unsafe { pam_get_authtok(pamh, PAM_AUTHTOK, &mut item, std::ptr::null::<c_char>()) };
         if rc != PAM_SUCCESS {
@@ -101,6 +107,8 @@ unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int>
     if item.is_null() {
         return Err(PAM_AUTHTOK_ERR);
     }
+    // SAFETY: Linux PAM returns a NUL-terminated token pointer that remains
+    // valid for this PAM transaction. We copy it immediately into owned memory.
     let token = unsafe { CStr::from_ptr(item) };
     let token_bytes = token.to_bytes();
     let mut candidate = Zeroizing::new(Vec::with_capacity(token_bytes.len()));
@@ -115,10 +123,14 @@ unsafe fn get_authtok(_pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int
 
 #[cfg(target_os = "linux")]
 unsafe fn send_pam_error(pamh: *mut PamHandle, message: &str) {
+    // SAFETY: `pamh` is the active PAM handle and `PAM_CONV` requests the
+    // borrowed conversation struct pointer owned by PAM/application state.
     let conv_item = match unsafe { get_pam_item(pamh, PAM_CONV) } {
         Ok(item) if !item.is_null() => item,
         _ => return,
     };
+    // SAFETY: PAM_CONV returns a pointer to a `pam_conv` ABI-compatible struct
+    // for the duration of this call; it is only borrowed here.
     let conv = unsafe { &*(conv_item.cast::<PamConv>()) };
     let Some(callback) = conv.conv else {
         return;
@@ -132,8 +144,13 @@ unsafe fn send_pam_error(pamh: *mut PamHandle, message: &str) {
     };
     let mut message_ptr: *const PamMessage = &pam_message;
     let mut response_ptr: *mut PamResponse = std::ptr::null_mut();
+    // SAFETY: The message pointer references stack data that lives until the
+    // callback returns; PAM conversation responses are returned through
+    // `response_ptr` and freed with libc `free` below when present.
     let _ = unsafe { callback(1, &mut message_ptr, &mut response_ptr, conv.appdata_ptr) };
     if !response_ptr.is_null() {
+        // SAFETY: PAM conversation responses are allocated by the application
+        // conversation function using the libc allocator contract.
         unsafe { free(response_ptr.cast::<c_void>()) };
     }
 }
@@ -203,9 +220,13 @@ pub extern "C" fn pam_sm_chauthtok(
     }
 
     if flags & PAM_UPDATE_AUTHTOK != 0 {
+        // SAFETY: `argc`/`argv` are the raw PAM module arguments for this call;
+        // the parser validates null pointers before converting C strings.
         let config = match unsafe { parse_module_config_from_argv(argc, argv) } {
             Ok(config) => config,
             Err(_) => {
+                // SAFETY: `pamh` is the active PAM handle; failure to send a
+                // conversation message is intentionally ignored.
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
                 emit_log_event("event=pam_module_failure reason=module_config");
                 return PAM_AUTHTOK_ERR;
@@ -213,9 +234,13 @@ pub extern "C" fn pam_sm_chauthtok(
         };
         emit_config(&config);
 
+        // SAFETY: `pamh` is the active PAM handle; get_authtok copies PAM's
+        // borrowed token into module-owned zeroizing memory.
         let candidate = match unsafe { get_authtok(pamh) } {
             Ok(candidate) if !candidate.is_empty() => candidate,
             _ => {
+                // SAFETY: `pamh` is the active PAM handle; failure to send a
+                // conversation message is intentionally ignored.
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
                 emit_log_event("event=pam_module_failure reason=missing_authtok");
                 return PAM_AUTHTOK_ERR;
@@ -227,6 +252,8 @@ pub extern "C" fn pam_sm_chauthtok(
         emit_result(checker.outcome, decision, &config);
 
         if let ModuleDecision::Reject { reason } = decision {
+            // SAFETY: `pamh` is the active PAM handle; failure to send a
+            // conversation message is intentionally ignored.
             unsafe { send_pam_error(pamh, rejection_message(reason)) };
         }
 

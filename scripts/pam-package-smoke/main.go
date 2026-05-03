@@ -42,6 +42,7 @@ func main() {
 	if _, err := exec.LookPath("pamtester"); err != nil {
 		pamClient = buildPAMClient(workspace)
 	}
+	printSmokeContext(pamClient)
 	serverURL, stopServer := startHIBPMock()
 	defer stopServer()
 
@@ -208,6 +209,26 @@ func writePAMService() {
 		if !strings.Contains(text, want) {
 			fail("PAM service %s is missing %q:\n%s", path, want, text)
 		}
+	}
+}
+
+func printSmokeContext(pamClient string) {
+	client := "pamtester"
+	if pamClient != "" {
+		client = "compiled fallback PAM client"
+	}
+
+	fmt.Printf("PAM package smoke environment: client=%s\n", client)
+	if osRelease, err := os.ReadFile("/etc/os-release"); err == nil {
+		for _, line := range strings.Split(string(osRelease), "\n") {
+			if strings.HasPrefix(line, "PRETTY_NAME=") {
+				fmt.Printf("PAM package smoke environment: %s\n", line)
+				break
+			}
+		}
+	}
+	if data, err := os.ReadFile("/etc/pam.d/" + serviceName); err == nil {
+		fmt.Printf("PAM package smoke service:\n%s", data)
 	}
 }
 

@@ -8,6 +8,15 @@ The format is intentionally lightweight while the project is pre-production.
 
 - No unreleased changes yet.
 
+## v0.1.1 - 2026-05-03
+
+- Native PAM module now falls back to Linux PAM's `pam_get_authtok` helper when `PAM_AUTHTOK` is not already populated, allowing Debian/Ubuntu deployments to enable `pam_pwned_check.so` without requiring `pam_pwquality` solely for token collection.
+- Native checker runner now preflights path-qualified missing or non-executable checkers and maps them to deterministic exec failures before fork/exec.
+- Alpine native PAM packaging now handles observed Linux-PAM module directory differences across the persistent Alpine VM and the pinned Alpine Docker image.
+- Native PAM package smoke output now prints the selected PAM client, distro identity, and generated PAM service for easier failure triage.
+- Release validation records exact `0.1.0-rc1` native package smoke results across Debian, Fedora, Arch, Alpine, and helper-package Docker paths.
+- Local pre-push Docker validation now runs only targets without persistent VMs, while Debian, Ubuntu, Fedora, and Alpine release validation remains VM-first.
+
 ## v0.1.0 - 2026-05-02
 
 - Linux-first Go checker baseline.

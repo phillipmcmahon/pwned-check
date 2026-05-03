@@ -85,6 +85,69 @@ sudo passwd <test-user>
 
 If normal sudo access is already affected, boot single-user mode or a rescue image, mount the root filesystem, and remove the `pam_pwned_check.so` line from the affected PAM service. For Fedora/RHEL/Rocky, prefer restoring the recorded authselect backup rather than editing generated `/etc/pam.d/system-auth` or `/etc/pam.d/password-auth` directly.
 
+## Install Native PAM From GitHub Releases
+
+Native PAM packages are attached to GitHub Releases. Package installation places files on disk only; it does not enable PAM enforcement. Enablement is a separate operator action, starts in `dry_run` mode, and should be tested with a dedicated non-production user before removing `dry_run`.
+
+Download the package, matching `.sha256`, and matching `.build-metadata.json` from the release page:
+
+```bash
+VERSION=0.1.2
+BASE_URL="https://github.com/phillipmcmahon/pwned-check/releases/download/v${VERSION}"
+```
+
+Debian/Ubuntu:
+
+```bash
+curl -LO "${BASE_URL}/pwned-check-native-pam_${VERSION}_amd64.deb"
+curl -LO "${BASE_URL}/pwned-check-native-pam_${VERSION}_amd64.deb.sha256"
+sha256sum -c "pwned-check-native-pam_${VERSION}_amd64.deb.sha256"
+sudo apt install "./pwned-check-native-pam_${VERSION}_amd64.deb"
+sudo pam-auth-update --enable pwned-check --package
+grep pam_pwned_check.so /etc/pam.d/common-password
+```
+
+Fedora/RHEL/Rocky:
+
+```bash
+RPM_ASSET="pwned-check-native-pam-${VERSION}-1.fc44.x86_64.rpm"
+curl -LO "${BASE_URL}/${RPM_ASSET}"
+curl -LO "${BASE_URL}/${RPM_ASSET}.sha256"
+sha256sum -c "${RPM_ASSET}.sha256"
+sudo dnf install "./${RPM_ASSET}"
+sudo /usr/share/pwned-check/authselect/enable-authselect.sh
+authselect current
+grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+```
+
+Arch Linux:
+
+```bash
+curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst"
+curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst.sha256"
+sha256sum -c "pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst.sha256"
+sudo pacman -U "./pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst"
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+grep pam_pwned_check.so /etc/pam.d/passwd
+```
+
+Alpine Linux-PAM:
+
+```bash
+curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-r0.apk"
+curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-r0.apk.sha256"
+sha256sum -c "pwned-check-native-pam-${VERSION}-r0.apk.sha256"
+sudo apk add --allow-untrusted "./pwned-check-native-pam-${VERSION}-r0.apk"
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+grep pam_pwned_check.so /etc/pam.d/passwd
+```
+
+RPM filenames include the distro tag used by the release build. Confirm the exact `RPM_ASSET` value on the release page before running the Fedora/RHEL/Rocky commands.
+
+Native package assets are unsigned until repository signing is configured. Treat the SHA256 and provenance files as integrity checks for the downloaded release assets, not as a replacement for signed package repositories.
+
 ## Debian/Ubuntu Native PAM Artifact
 
 The native PAM module has a Debian/Ubuntu filesystem-layout artifact for the current Linux architecture:

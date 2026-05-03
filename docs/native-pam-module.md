@@ -417,32 +417,9 @@ Packaging order:
 3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
 4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
 
-### Completed Delivery Sequence
+### Delivery History
 
-Epic 6 finished in the order below. The order remains documented so future maintenance can understand why platform hardening came before production package formats, package formats came before CI/release gates, and release gates came before operator-facing release readiness.
-
-| Story ID | Story | Depends on | Exit criteria |
-|---|---|---|---|
-| [EP6-S1](https://github.com/phillipmcmahon/pwned-check/issues/15) | Fedora/RHEL SELinux assessment and policy decision | Current Fedora host smoke | `make native-pam-fedora-selinux-assessment` passes in enforcing mode or records a bounded exception, AVCs are captured, and the project records whether policy ships in-tree, separately, or as operator-managed docs |
-| [EP6-S2](https://github.com/phillipmcmahon/pwned-check/issues/16) | RPM-native package delivery | EP6-S1 | `make package-native-pam-rpm` builds a native RPM, and `make native-pam-fedora-rpm-package-smoke` verifies package install, installed-file PAM behavior, authselect rollback, removal, and managed-file cleanup |
-| [EP6-S3](https://github.com/phillipmcmahon/pwned-check/issues/17) | Debian/Ubuntu `.deb` package delivery | Current Ubuntu host smoke | `make package-native-pam-debian` builds a native `.deb`, and `make native-pam-ubuntu-deb-package-smoke` verifies package install, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, removal, and managed-file cleanup |
-| [EP6-S4](https://github.com/phillipmcmahon/pwned-check/issues/18) | Arch `PKGBUILD` package delivery | Current Arch Docker generic package smoke | `make package-native-pam-arch` builds a pacman package from `packaging/arch/PKGBUILD.in`, and `make native-pam-arch-package-smoke` verifies package install, installed-file PAM behavior, manual rollback, removal, and managed-file cleanup |
-| [EP6-S5](https://github.com/phillipmcmahon/pwned-check/issues/19) | Alpine `APKBUILD` package delivery | Current Alpine VM and Docker generic package smoke | `make package-native-pam-alpine` builds an Alpine package from `packaging/alpine/APKBUILD.in`, and `make native-pam-alpine-package-smoke` verifies package install, installed-file PAM behavior, manual rollback, removal, and managed-file cleanup |
-| [EP6-S6](https://github.com/phillipmcmahon/pwned-check/issues/20) | CI distro and dependency gates | EP6-S2 through EP6-S5 package paths | `Native PAM Package Gates` runs Docker-capable package gates and Ubuntu `.deb` smoke in GitHub Actions; Fedora RPM/SELinux and persistent VM gates are documented release gates |
-| [EP6-S7](https://github.com/phillipmcmahon/pwned-check/issues/21) | Native PAM release provenance | EP6-S6 | Signed package artifacts, provenance attestations, pinned toolchains, deterministic build settings, and dependency reports are produced for release candidates |
-| [EP6-S8](https://github.com/phillipmcmahon/pwned-check/issues/22) | Operator rollout and recovery release docs | EP6-S7 | Install, dry-run, enforcement, rollback, rescue, and emergency recovery docs are package-specific and validated against the test runbook |
-| [EP6-S9](https://github.com/phillipmcmahon/pwned-check/issues/23) | Final native PAM hardening closeout | EP6-S8 | Remaining fuzzing, sanitizer or memory-check, no-secret-output, lockout-safety, SELinux/AppArmor, and open-question decisions are complete or explicitly deferred |
-
-Board stories used these IDs in their titles or descriptions so commits and validation notes can be tied back to this sequence.
-
-Tracked distro delivery matrix:
-
-| Distro family | Package shape | Enable path | Rollback path | Automated coverage |
-|---|---|---|---|---|
-| Debian/Ubuntu | Native filesystem-layout artifact plus native `pwned-check-native-pam` `.deb` | `pwned-check-pam-enable-dry-run`, then `pwned-check-pam-enable-enforce` after validation | `pwned-check-pam-disable` plus package removal | Persistent Ubuntu smoke installs the artifact and verifies enable/disable rollback; Debian VM smoke validates the shared package path on a real Debian host; distro smoke builds and loads the module directly; `.deb` smoke validates package install, dry-run/enforce profile switching, disable, removal, and managed-file cleanup. Ubuntu active enforcement was also validated without `pam_pwquality.so`, relying on the module's `pam_get_authtok` path. |
-| Fedora/RHEL/Rocky | RPM-family filesystem-layout artifact plus native `pwned-check-native-pam` RPM | `pwned-check-pam-enable-dry-run`, then `pwned-check-pam-enable-enforce` after validation | `pwned-check-pam-disable` restores the authselect backup recorded during first enablement, then remove the RPM when uninstalling | Distro smoke builds and loads the module directly; host smoke validates filesystem-layout behavior; RPM smoke validates package install, authselect dry-run/enforce switching, rollback, removal, and managed-file cleanup; SELinux assessment passes on Fedora 44 enforcing mode |
-| Arch Linux | Generic filesystem-layout artifact plus native pacman package from `PKGBUILD` | `pwned-check-pam-enable-dry-run`, then `pwned-check-pam-enable-enforce` after validation | `pwned-check-pam-disable` restores the timestamped PAM service backup recorded during first enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Arch; Arch package smoke validates pacman install/removal and managed-file cleanup |
-| Alpine Linux | Generic filesystem-layout artifact plus native APK package from `APKBUILD` after Linux-PAM path validation | `pwned-check-pam-enable-dry-run`, then `pwned-check-pam-enable-enforce` after validation | `pwned-check-pam-disable` restores the timestamped PAM service backup recorded during first enablement, then remove the package when uninstalling | Distro smoke builds and loads the module directly; generic package smoke installs, enables, exercises, and rolls back on Alpine Linux-PAM from both supported module directories; Alpine VM package smoke validates APK install/removal and managed-file cleanup |
+The completed Epic 6 story order and historical distro delivery matrix are recorded in [Native PAM delivery history](native-pam-delivery-history.md). This document keeps the current contract, package behavior, rollout posture, and test strategy in one place.
 
 ### Package Details
 

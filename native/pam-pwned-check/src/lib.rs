@@ -640,6 +640,15 @@ exit 0
             ),
             PAM_AUTHTOK_ERR
         );
+        assert_eq!(
+            pam_sm_chauthtok(
+                core::ptr::null_mut(),
+                PAM_UPDATE_AUTHTOK,
+                1,
+                core::ptr::null()
+            ),
+            PAM_AUTHTOK_ERR
+        );
     }
 
     fn fake_checker(script: &str) -> String {

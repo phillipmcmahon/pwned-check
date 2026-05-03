@@ -102,10 +102,27 @@ mkdir -p "$OUTPUT_DIR"
 OUTPUT_DIR="$(CDPATH= cd -- "$OUTPUT_DIR" && pwd)"
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-release.XXXXXX")"
-cleanup() {
+CLEANUP_HANDLERS=""
+
+register_cleanup() {
+    CLEANUP_HANDLERS="$1${CLEANUP_HANDLERS:+ $CLEANUP_HANDLERS}"
+}
+
+run_cleanups() {
+    status=$?
+    trap - EXIT INT TERM
+    for handler in $CLEANUP_HANDLERS; do
+        "$handler"
+    done
+    exit "$status"
+}
+
+cleanup_work_dir() {
     rm -rf "$WORK_DIR"
 }
-trap cleanup EXIT INT TERM
+
+register_cleanup cleanup_work_dir
+trap run_cleanups EXIT INT TERM
 
 PREBUILT_CHECKER="$WORK_DIR/pwned-check"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
@@ -134,17 +151,22 @@ verify_version() {
             actual="$(zstd -dc "$file" | tar -xO .PKGINFO | awk -F' *= *' '/^pkgver/ {print $2; exit}')"
             ;;
         *)
-            fail "unsupported package artifact for version verification: $file"
+            echo "unsupported package artifact for version verification: $file" >&2
+            return 1
             ;;
     esac
 
     if [ "$actual" != "$expected" ]; then
-        fail "version mismatch: $file has $actual, expected $expected"
+        echo "version mismatch: $file has $actual, expected $expected" >&2
+        return 1
     fi
+
+    return 0
 }
 
 verify_package_versions() {
     found=0
+    failures=0
     for file in \
         "$OUTPUT_DIR"/*.deb \
         "$OUTPUT_DIR"/*.rpm \
@@ -152,11 +174,14 @@ verify_package_versions() {
         "$OUTPUT_DIR"/*.pkg.tar.zst
     do
         [ -e "$file" ] || continue
-        verify_version "$file" "$VERSION"
+        if ! verify_version "$file" "$VERSION"; then
+            failures=$((failures + 1))
+        fi
         found=$((found + 1))
     done
 
     [ "$found" -gt 0 ] || fail "no native package artifacts found for version verification"
+    [ "$failures" -eq 0 ] || fail "$failures package artifact(s) failed version verification"
     echo "Verified native package metadata versions for $found artifacts"
 }
 
@@ -176,6 +201,8 @@ sync_repo_to_container() {
 }
 
 echo "::group::[build:debian] packaging"
+# TODO(arm64): build Debian/Ubuntu artifacts in a pinned Debian container when
+# the native PAM release matrix grows beyond linux/amd64.
 SOURCE_DATE_EPOCH="$SOURCE_EPOCH" "$ROOT/scripts/package-native-pam-debian-package.sh" \
     --version "$VERSION" \
     --output-dir "$OUTPUT_DIR" \
@@ -186,9 +213,11 @@ echo "::endgroup::"
 echo "::group::[build:rpm] packaging"
 FEDORA_CID="$(docker create --platform "$PLATFORM" fedora:latest sleep infinity)"
 cleanup_fedora() {
+    [ -n "${FEDORA_CID:-}" ] || return 0
     docker rm -f "$FEDORA_CID" >/dev/null 2>&1 || true
+    FEDORA_CID=""
 }
-trap 'cleanup_fedora; cleanup' EXIT INT TERM
+register_cleanup cleanup_fedora
 docker start "$FEDORA_CID" >/dev/null
 sync_repo_to_container "$FEDORA_CID" /workspace/pwned-check
 docker cp "$PREBUILT_CHECKER" "$FEDORA_CID:/tmp/pwned-check-release"
@@ -205,7 +234,6 @@ docker exec "$FEDORA_CID" sh -lc "
 "
 docker cp "$FEDORA_CID:/workspace/pwned-check/dist/release/." "$OUTPUT_DIR/"
 cleanup_fedora
-trap cleanup EXIT INT TERM
 echo "::endgroup::"
 
 echo "::group::[build+smoke:arch] package smoke"

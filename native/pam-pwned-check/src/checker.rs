@@ -74,6 +74,11 @@ const O_CLOEXEC: c_int = 0o2000000;
     target_os = "linux",
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
+const CLOSE_RANGE_UNSHARE: u32 = 1 << 1;
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 const SYS_CLOSE_RANGE: c_long = 436;
 
 pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
@@ -238,6 +243,10 @@ fn open_max() -> c_int {
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
 fn close_inherited_fds(max_fd: c_int) {
+    if unsafe { syscall(SYS_CLOSE_RANGE, 3_u32, u32::MAX, CLOSE_RANGE_UNSHARE) } == 0 {
+        return;
+    }
+
     if unsafe { syscall(SYS_CLOSE_RANGE, 3_u32, u32::MAX, 0_u32) } == 0 {
         return;
     }

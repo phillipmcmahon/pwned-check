@@ -29,6 +29,7 @@ pub(crate) use pam_ffi::{
 mod tests {
     use super::*;
     use core::ffi::c_int;
+    use proptest::prelude::*;
     use std::ffi::CString;
     use std::io::Write;
     use std::sync::{Mutex, MutexGuard};
@@ -210,6 +211,16 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(128))]
+
+        #[test]
+        fn parse_module_config_generated_args_do_not_panic(args in prop::collection::vec(any::<String>(), 0..8)) {
+            let refs = args.iter().map(String::as_str).collect::<Vec<_>>();
+            let _ = parse_module_config(&refs);
         }
     }
 

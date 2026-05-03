@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_PLATFORM:-linux/amd64}"
 IMAGE="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_IMAGE:-alpine:3.20}"
 SMOKE_VERSION="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION:-0.0.0}"
+EXPORT_DIR="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_EXPORT_DIR:-}"
 WORKDIR="/workspace/pwned-check"
 PREBUILT_CHECKER=""
 
@@ -140,6 +141,11 @@ docker exec "$cid" sh -lc "
     done
     echo \"Native PAM Alpine package smoke passed: \$apk_name\"
 "
+
+if [ -n "$EXPORT_DIR" ]; then
+    mkdir -p "$EXPORT_DIR"
+    docker cp "$cid:$WORKDIR/dist/release/." "$EXPORT_DIR/"
+fi
 
 docker rm -f "$cid" >/dev/null
 trap - EXIT INT TERM

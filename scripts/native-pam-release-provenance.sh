@@ -44,13 +44,10 @@ mkdir -p "$OUTPUT_DIR"
 CHECKSUMS="$OUTPUT_DIR/native-pam-SHA256SUMS.txt"
 PROVENANCE="$OUTPUT_DIR/native-pam-provenance.json"
 
-find "$ARTIFACT_DIR" -maxdepth 1 -type f \( \
-    -name 'pwned-check-native-pam*.tar.gz' -o \
-    -name 'pwned-check-native-pam*.deb' -o \
-    -name 'pwned-check-native-pam*.rpm' -o \
-    -name 'pwned-check-native-pam*.pkg.tar.*' -o \
-    -name 'pwned-check-native-pam*.apk' \
-  \) -print | sort > "$OUTPUT_DIR/native-pam-artifacts.list"
+find "$ARTIFACT_DIR" -maxdepth 1 -type f \
+    -name 'pwned-check-native-pam*' \
+    ! -name '*.asc' \
+    -print | sort > "$OUTPUT_DIR/native-pam-artifacts.list"
 
 [ -s "$OUTPUT_DIR/native-pam-artifacts.list" ] || fail "no native PAM release artifacts found in $ARTIFACT_DIR"
 

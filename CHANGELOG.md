@@ -8,6 +8,13 @@ The format is intentionally lightweight while the project is pre-production.
 
 - No unreleased changes yet.
 
+## v0.1.2 - 2026-05-03
+
+- GitHub release workflow now builds and publishes native Linux PAM package assets at release creation time, which is required because published releases are immutable.
+- Native PAM release assets now include Debian/Ubuntu `.deb`, Fedora/RPM `.rpm`, Arch package, Alpine APK, per-package checksums, build metadata, aggregate native checksums, and native package provenance.
+- Native package provenance now consistently includes every `pwned-check-native-pam*` release file instead of partially including only some package metadata by filename shape.
+- Alpine native package smoke can export package artifacts for release assembly, matching the existing Arch export path.
+
 ## v0.1.1 - 2026-05-03
 
 - Native PAM module now falls back to Linux PAM's `pam_get_authtok` helper when `PAM_AUTHTOK` is not already populated, allowing Debian/Ubuntu deployments to enable `pam_pwned_check.so` without requiring `pam_pwquality` solely for token collection.

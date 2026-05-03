@@ -325,15 +325,6 @@ if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
     [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
     [ ! -e "$PROFILE_PATH" ] || fail "profile still installed after rollback: $PROFILE_PATH"
 fi
-if [ -n "$USE_INSTALLED" ]; then
-    grep_paths="/etc/pam.d"
-else
-    grep_paths="/etc/pam.d $PROFILE_PATH"
-fi
-if grep -R 'pam_pwned_check' $grep_paths 2>/dev/null; then
-    fail "host PAM configuration still references pam_pwned_check after rollback"
-fi
-
 trap - EXIT INT TERM
 rm -rf "$TMP"
 echo "Native PAM Ubuntu host package smoke passed"

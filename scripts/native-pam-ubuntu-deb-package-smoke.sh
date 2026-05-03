@@ -13,7 +13,8 @@ Usage: ./scripts/native-pam-ubuntu-deb-package-smoke.sh
 
 Build the native PAM .deb package, install it through dpkg, exercise the
 installed files with the Ubuntu host package smoke, enable and disable the
-pam-auth-update profile, remove the package, and verify cleanup.
+PAM profile through the packaged mode helpers, remove the package, and verify
+cleanup.
 
 Environment:
   NATIVE_PAM_UBUNTU_DEB_SMOKE_VERSION    Version label for the .deb package
@@ -73,13 +74,17 @@ MULTIARCH="$(gcc -print-multiarch)"
 MODULE_PATH="/lib/$MULTIARCH/security/pam_pwned_check.so"
 CHECKER_PATH="/usr/bin/pwned-check"
 PROFILE_PATH="/usr/share/pam-configs/pwned-check"
+MODE_HELPER_DIR="/usr/share/pwned-check/debian-pam"
+ENABLE_DRY_RUN_HELPER="/usr/sbin/pwned-check-pam-enable-dry-run"
+ENABLE_ENFORCE_HELPER="/usr/sbin/pwned-check-pam-enable-enforce"
+DISABLE_HELPER="/usr/sbin/pwned-check-pam-disable"
 COMMON_PASSWORD="/etc/pam.d/common-password"
 
 if dpkg -s "$PACKAGE_NAME" >/dev/null 2>&1; then
     fail "$PACKAGE_NAME is already installed; remove it before running the smoke"
 fi
 
-for path in "$CHECKER_PATH" "$MODULE_PATH" "$PROFILE_PATH"; do
+for path in "$CHECKER_PATH" "$MODULE_PATH" "$PROFILE_PATH" "$MODE_HELPER_DIR" "$ENABLE_DRY_RUN_HELPER" "$ENABLE_ENFORCE_HELPER" "$DISABLE_HELPER"; do
     [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
 done
 
@@ -117,25 +122,38 @@ dpkg -s "$PACKAGE_NAME" >/dev/null
 dpkg -L "$PACKAGE_NAME" | grep -F "$MODULE_PATH" >/dev/null || fail "package file list missing PAM module"
 dpkg -L "$PACKAGE_NAME" | grep -F "$CHECKER_PATH" >/dev/null || fail "package file list missing checker"
 dpkg -L "$PACKAGE_NAME" | grep -F "$PROFILE_PATH" >/dev/null || fail "package file list missing pam-auth-update profile"
+dpkg -L "$PACKAGE_NAME" | grep -F "$ENABLE_DRY_RUN_HELPER" >/dev/null || fail "package file list missing dry-run helper"
+dpkg -L "$PACKAGE_NAME" | grep -F "$ENABLE_ENFORCE_HELPER" >/dev/null || fail "package file list missing enforce helper"
+dpkg -L "$PACKAGE_NAME" | grep -F "$DISABLE_HELPER" >/dev/null || fail "package file list missing disable helper"
 
 PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED=1 \
     ./scripts/native-pam-ubuntu-host-package-smoke.sh
 
-as_root env DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package
-grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "pam-auth-update enable did not update common-password"
-grep -F 'dry_run' "$COMMON_PASSWORD" >/dev/null || fail "pam-auth-update enabled line missing dry_run"
+as_root "$ENABLE_DRY_RUN_HELPER"
+grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "dry-run helper did not update common-password"
+grep -F 'dry_run' "$PROFILE_PATH" >/dev/null || fail "dry-run helper did not keep dry_run in profile"
+grep -F 'dry_run' "$COMMON_PASSWORD" >/dev/null || fail "dry-run helper enabled line missing dry_run"
 
-as_root env DEBIAN_FRONTEND=noninteractive pam-auth-update --disable pwned-check --package
-if grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null; then
-    fail "pam-auth-update disable left pam_pwned_check in common-password"
+as_root "$ENABLE_ENFORCE_HELPER"
+grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "enforce helper removed pam_pwned_check from common-password"
+if grep -F 'dry_run' "$PROFILE_PATH" >/dev/null; then
+    fail "enforce helper left dry_run in profile"
 fi
-cmp -s "$COMMON_PASSWORD" "$COMMON_PASSWORD_BACKUP" || fail "common-password was not restored after pam-auth-update disable"
+if grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" | grep -F 'dry_run' >/dev/null; then
+    fail "enforce helper left dry_run in common-password"
+fi
+
+as_root "$DISABLE_HELPER"
+if grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null; then
+    fail "disable helper left pam_pwned_check in common-password"
+fi
+cmp -s "$COMMON_PASSWORD" "$COMMON_PASSWORD_BACKUP" || fail "common-password was not restored after helper disable"
 
 as_root dpkg -r "$PACKAGE_NAME"
 INSTALLED=""
 
 dpkg -s "$PACKAGE_NAME" >/dev/null 2>&1 && fail "$PACKAGE_NAME is still installed after removal"
-for path in "$CHECKER_PATH" "$MODULE_PATH" "$PROFILE_PATH"; do
+for path in "$CHECKER_PATH" "$MODULE_PATH" "$PROFILE_PATH" "$MODE_HELPER_DIR" "$ENABLE_DRY_RUN_HELPER" "$ENABLE_ENFORCE_HELPER" "$DISABLE_HELPER"; do
     [ ! -e "$path" ] || fail "package-managed path still exists after removal: $path"
 done
 cmp -s "$COMMON_PASSWORD" "$COMMON_PASSWORD_BACKUP" || fail "common-password changed after package removal"

@@ -354,6 +354,17 @@ Build the Alpine generic artifact:
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && ./scripts/package-native-pam-generic-artifact.sh --version alpine-vm-smoke --family alpine --pwned-check-bin /tmp/pwned-check-alpine-prebuilt/pwned-check'
 ```
 
+Build and smoke the native APK package on the VM:
+
+```bash
+ssh codex-vm-alpine 'cd /home/codex/pwned-check &&
+  if apk info -e pwned-check-native-pam >/dev/null 2>&1; then sudo apk del pwned-check-native-pam; fi &&
+  apk_name="$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin /tmp/pwned-check-alpine-prebuilt/pwned-check)" &&
+  sudo apk add --allow-untrusted "dist/release/$apk_name" &&
+  ./scripts/native-pam-manual-installed-smoke.sh &&
+  sudo apk del pwned-check-native-pam'
+```
+
 Alpine Linux-PAM module placement varies by release. The persistent Alpine VM
 loads from `/usr/lib/security`, while the pinned `alpine:3.20` Docker image
 loads from `/lib/security`. The Alpine package installs `pam_pwned_check.so`
@@ -370,13 +381,13 @@ The dependency allowlist must accept musl's libc name:
 libc.musl-*.so.*
 ```
 
-Alpine package smoke can run through Docker until the VM package path is needed:
+Alpine package smoke should run on `codex-vm-alpine` for release validation. Use the Docker route only as fallback coverage when the VM is unavailable:
 
 ```bash
 ./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64
 ```
 
-The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises the installed files through the manual PAM helper, removes the package, and verifies package-managed files are gone.
+The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises dry-run/enforce/disable through the manual PAM helper wrappers, removes the package, and verifies package-managed files are gone.
 
 ## Arch Docker Until VM Exists
 
@@ -445,18 +456,18 @@ ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinu
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ```
 
-The Fedora RPM and SELinux gates are not run on generic CI runners because the acceptance path validates real `authselect` selection, backup restoration, SELinux enforcing mode, and host rollback. Record their output in `.test-output/` or the release validation notes before release.
+The Fedora RPM and SELinux gates are not run on generic CI runners because the acceptance path validates real `authselect` selection, backup restoration, SELinux enforcing mode, and host rollback. Record their output in `.test-output/` or the release validation notes before release. Fedora package smokes must prove both `pwned-check-pam-enable-dry-run` and `pwned-check-pam-enable-enforce` before `pwned-check-pam-disable` restores the first-enable authselect backup.
 
 ## Current Observations
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
-- Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pam-auth-update` enable/disable, `common-password` restoration, package removal, and managed-file cleanup.
+- Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, `pwned-check-pam-disable`, `common-password` restoration, package removal, and managed-file cleanup.
 - Ubuntu hardening assessment captures AppArmor state and validates disposable-service lockout recovery without editing `common-password`.
 - Debian 13 VM validation runs the native PAM unit/build/dependency/symbol/host harness gates plus the Debian/Ubuntu host package and `.deb` package smoke. On Debian, run package smoke commands with `PATH="/usr/sbin:$PATH"` so SSH sessions can find `pam-auth-update`.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
-- Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect enable/rollback, package removal, and managed-file cleanup.
+- Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect dry-run/enforce switching, package rollback, removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security` for the VM and `/lib/security` for the pinned Docker image.
-- Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual rollback, package removal, and managed-file cleanup through the Docker route.
-- Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/enable/rollback/removal.
+- Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
+- Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
 - Debian Docker coverage remains available for binary smoke, helper PAM package smoke, and direct native PAM loading against `debian:stable-slim`.

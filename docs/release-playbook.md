@@ -99,6 +99,14 @@ Native PAM package releases must additionally:
 
 GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
 
+Before the first package repository release, complete the repository-specific signing stories in [Package repositories](package-repositories.md):
+
+- publish public key fingerprints and operator trust-bootstrap commands
+- generate repository metadata from the validated release package set
+- sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
+- run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch Docker until an Arch VM exists
+- verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
+
 Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish

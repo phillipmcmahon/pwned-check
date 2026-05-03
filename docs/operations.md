@@ -61,7 +61,7 @@ Before enabling `pam_pwned_check.so`, keep an existing privileged shell open and
 Debian/Ubuntu:
 
 ```bash
-sudo pam-auth-update --disable pwned-check --package
+sudo pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/common-password
 sudo passwd <test-user>
 ```
@@ -69,7 +69,7 @@ sudo passwd <test-user>
 Fedora/RHEL/Rocky:
 
 ```bash
-sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
+sudo pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
 sudo passwd <test-user>
 ```
@@ -78,7 +78,7 @@ Arch and Alpine Linux-PAM:
 
 ```bash
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
-  /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+  pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/passwd
 sudo passwd <test-user>
 ```
@@ -103,7 +103,7 @@ curl -LO "${BASE_URL}/pwned-check-native-pam_${VERSION}_amd64.deb"
 curl -LO "${BASE_URL}/pwned-check-native-pam_${VERSION}_amd64.deb.sha256"
 sha256sum -c "pwned-check-native-pam_${VERSION}_amd64.deb.sha256"
 sudo apt install "./pwned-check-native-pam_${VERSION}_amd64.deb"
-sudo pam-auth-update --enable pwned-check --package
+sudo pwned-check-pam-enable-dry-run
 grep pam_pwned_check.so /etc/pam.d/common-password
 ```
 
@@ -115,7 +115,7 @@ curl -LO "${BASE_URL}/${RPM_ASSET}"
 curl -LO "${BASE_URL}/${RPM_ASSET}.sha256"
 sha256sum -c "${RPM_ASSET}.sha256"
 sudo dnf install "./${RPM_ASSET}"
-sudo /usr/share/pwned-check/authselect/enable-authselect.sh
+sudo pwned-check-pam-enable-dry-run
 authselect current
 grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
 ```
@@ -128,7 +128,7 @@ curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst.sha
 sha256sum -c "pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst.sha256"
 sudo pacman -U "./pwned-check-native-pam-${VERSION}-1-x86_64.pkg.tar.zst"
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
-  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+  pwned-check-pam-enable-dry-run
 grep pam_pwned_check.so /etc/pam.d/passwd
 ```
 
@@ -140,7 +140,7 @@ curl -LO "${BASE_URL}/pwned-check-native-pam-${VERSION}-r0.apk.sha256"
 sha256sum -c "pwned-check-native-pam-${VERSION}-r0.apk.sha256"
 sudo apk add --allow-untrusted "./pwned-check-native-pam-${VERSION}-r0.apk"
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
-  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+  pwned-check-pam-enable-dry-run
 grep pam_pwned_check.so /etc/pam.d/passwd
 ```
 
@@ -167,31 +167,40 @@ dpkg-deb --info dist/release/pwned-check-native-pam_<debian-version>_<arch>.deb
 Both the staging artifact and the native `.deb` include:
 
 - `/usr/bin/pwned-check`
+- `/usr/sbin/pwned-check-pam-enable-dry-run`
+- `/usr/sbin/pwned-check-pam-enable-enforce`
+- `/usr/sbin/pwned-check-pam-disable`
 - `/lib/<multiarch>/security/pam_pwned_check.so`
 - `/usr/share/pam-configs/pwned-check`
 - `/usr/share/doc/pwned-check/`
 
 The `pam-auth-update` profile is disabled by default and ships with `dry_run` enabled. Package installation should not silently enable enforcement. The native module obtains the candidate password through existing `PAM_AUTHTOK` state when present, or through Linux PAM's `pam_get_authtok` helper when it is the first password module to need the token; it does not require `pam_pwquality` or another quality module solely to collect the password.
 
-Installing the native `pwned-check-native-pam` `.deb` follows the same rule: package installation places files on disk only. Operators must run `pam-auth-update --enable pwned-check --package` explicitly to enable dry-run mode.
+Installing the native `pwned-check-native-pam` `.deb` follows the same rule: package installation places files on disk only. Operators must run `pwned-check-pam-enable-dry-run` explicitly to enable dry-run mode.
 
 Enable the native profile only after installing on a disposable host or VM and keeping a recovery shell open:
 
 ```bash
 sudo ./install.sh
-sudo pam-auth-update --enable pwned-check --package
+sudo pwned-check-pam-enable-dry-run
 grep pam_pwned_check.so /etc/pam.d/common-password
+```
+
+Switch to enforcement only after dry-run logs and rollback have been verified:
+
+```bash
+sudo pwned-check-pam-enable-enforce
 ```
 
 Rollback should be tested before enforcement rollout:
 
 ```bash
-sudo pam-auth-update --disable pwned-check --package
+sudo pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/common-password
 sudo passwd <test-user>
 ```
 
-The persistent Ubuntu native PAM smoke test installs this artifact, enables the profile through `pam-auth-update`, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
+The persistent Ubuntu native PAM smoke test installs this artifact, enables dry-run and enforcement through the package helpers, asserts the generated password stack, disables the profile again, and restores the container's PAM state between runs.
 
 For active enforcement rehearsals, the native module can be the first password module that needs the candidate token. A validated Ubuntu 24.04 stack without `pam_pwquality.so` is:
 
@@ -247,6 +256,7 @@ The staging artifact, native Arch package, and native Alpine package include:
 - `pam_pwned_check.so` in the distro Linux-PAM security module directory, currently `/usr/lib/security` for Arch. Alpine Linux-PAM packages install the module in both `/usr/lib/security` and `/lib/security` because supported Alpine releases differ in loader path.
 - `/usr/share/pwned-check/manual-pam/enable-manual-pam.sh`
 - `/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh`
+- `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, and `pwned-check-pam-disable` on the distro administrator path. Arch installs these commands under `/usr/bin`; Alpine and generic artifacts install them under `/usr/sbin`.
 - `/usr/share/doc/pwned-check/`
 
 Package installation should not silently enable enforcement. The manual helper edits `/etc/pam.d/passwd` by default, stores a timestamped backup under `/var/lib/pwned-check/pam-backups/`, records the latest backup path, and inserts the module in `dry_run` mode.
@@ -258,15 +268,22 @@ Enable only after reviewing the target PAM service path:
 ```bash
 sudo ./install.sh
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
-  /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+  pwned-check-pam-enable-dry-run
 grep pam_pwned_check.so /etc/pam.d/passwd
+```
+
+Switch to enforcement only after dry-run logs and rollback have been verified:
+
+```bash
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  pwned-check-pam-enable-enforce
 ```
 
 Rollback should be tested before enforcement rollout:
 
 ```bash
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
-  /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
+  pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/passwd
 sudo passwd <test-user>
 ```
@@ -290,6 +307,9 @@ rpm -qpi dist/release/pwned-check-native-pam-<rpm-version>-1*.rpm
 Both the staging artifact and the native RPM include:
 
 - `/usr/bin/pwned-check`
+- `/usr/sbin/pwned-check-pam-enable-dry-run`
+- `/usr/sbin/pwned-check-pam-enable-enforce`
+- `/usr/sbin/pwned-check-pam-disable`
 - `/lib64/security/pam_pwned_check.so`
 - `/usr/share/pwned-check/authselect/enable-authselect.sh`
 - `/usr/share/pwned-check/authselect/rollback-authselect.sh`
@@ -303,15 +323,21 @@ Enable only after installing on a disposable host or VM and keeping a recovery s
 
 ```bash
 sudo ./install.sh
-sudo /usr/share/pwned-check/authselect/enable-authselect.sh
+sudo pwned-check-pam-enable-dry-run
 authselect current
 grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+```
+
+Switch to enforcement only after dry-run logs and rollback have been verified:
+
+```bash
+sudo pwned-check-pam-enable-enforce
 ```
 
 Rollback should be tested before enforcement rollout:
 
 ```bash
-sudo /usr/share/pwned-check/authselect/rollback-authselect.sh
+sudo pwned-check-pam-disable
 ! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
 sudo passwd <test-user>
 ```

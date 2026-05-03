@@ -113,16 +113,16 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `native/pam-pwned-check` | Native PAM module argument parsing, deterministic argv parser corpus coverage, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-host-package-smoke.sh` | Ubuntu host package-layout smoke that installs the Debian/Ubuntu artifact, exercises the installed module through a disposable PAM service, and rolls back host files without enabling `pam-auth-update` |
-| `scripts/native-pam-ubuntu-deb-package-smoke.sh` | Ubuntu/Debian-family `.deb` smoke that builds the native package, installs it through `dpkg`, exercises installed files, verifies `pam-auth-update` enable/disable, removes the package, and checks managed-file cleanup |
+| `scripts/native-pam-ubuntu-deb-package-smoke.sh` | Ubuntu/Debian-family `.deb` smoke that builds the native package, installs it through `dpkg`, exercises installed files, verifies `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, `pwned-check-pam-disable`, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-ubuntu-hardening-assessment.sh` | Ubuntu/Debian-family hardening assessment that wraps the `.deb` package smoke, captures AppArmor state, and proves a deliberately broken disposable PAM service can be restored |
 | `scripts/native-pam-memory-check.sh` | Linux Valgrind memory-check path for the native PAM Rust argv parser tests |
-| `scripts/native-pam-fedora-host-package-smoke.sh` | Fedora/RHEL-family host package-layout smoke that installs the RPM-family artifact, exercises the installed module through a disposable PAM service, enables and verifies a temporary authselect profile, and rolls back host files and authselect state |
-| `scripts/native-pam-fedora-rpm-package-smoke.sh` | Fedora/RHEL-family RPM smoke that builds the native RPM, installs it through package tooling, exercises installed files, verifies authselect rollback, removes the package, and checks managed-file cleanup |
+| `scripts/native-pam-fedora-host-package-smoke.sh` | Fedora/RHEL-family host package-layout smoke that installs the RPM-family artifact, exercises the installed module through a disposable PAM service, verifies authselect dry-run/enforce switching, and rolls back host files and authselect state |
+| `scripts/native-pam-fedora-rpm-package-smoke.sh` | Fedora/RHEL-family RPM smoke that builds the native RPM, installs it through package tooling, exercises installed files, verifies authselect dry-run/enforce switching and rollback, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-fedora-selinux-assessment.sh` | Fedora/RHEL-family SELinux assessment that wraps the host package smoke, captures SELinux/authselect/audit state, and fails on pwned-check-related AVCs |
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
-| `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven enablement, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
-| `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises clean/reject behavior and rollback through installed manual helpers |
+| `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven dry-run/enforce switching, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
+| `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises dry-run/enforce switching, clean/reject behavior, and rollback through installed manual helpers |
 | `scripts/native-pam-arch-package-smoke.sh` | Arch Docker smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-alpine-package-smoke.sh` | Alpine Docker smoke that builds the `APKBUILD` package, installs it with `apk`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
@@ -143,7 +143,7 @@ The GitHub workflow is split into:
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication
 
-The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine package smoke. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine host dependency checks remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state.
+The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, and Alpine Docker fallback package smoke. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 Release-sensitive checks:

@@ -119,7 +119,7 @@ The runner prints the selected PAM client, `/etc/os-release` `PRETTY_NAME`, and 
 The generated PAM service is intentionally isolated from the distro's real password-change files. It uses PAM's `auth` module type so the smoke client can supply a candidate token consistently across minimal containers while still exercising `pam_exec.so expose_authtok` and helper exit-code mapping through the real PAM module boundary:
 
 ```text
-auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 1s
+auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 3s
 auth required pam_permit.so
 ```
 

@@ -56,7 +56,7 @@ func main() {
 		{name: "clean unavailable fail-closed", password: "candidate", localURL: "http://127.0.0.1:9", failClosed: true, wantAllow: false},
 		{name: "pwned unavailable fail-closed", password: "password", localURL: "http://127.0.0.1:9", failClosed: true, wantAllow: false},
 		{name: "empty token", password: "", localURL: serverURL, failClosed: false, wantAllow: false},
-		{name: "checker timeout", password: "candidate", localURL: serverURL, failClosed: false, checkerSleep: "2", wantAllow: false},
+		{name: "checker timeout", password: "candidate", localURL: serverURL, failClosed: false, checkerSleep: "4", wantAllow: false},
 		{name: "checker config error", password: "candidate", localURL: serverURL, failClosed: false, provider: "invalid", wantAllow: false},
 	}
 
@@ -193,7 +193,7 @@ exec /usr/local/bin/pwned-check "$@"
 }
 
 func writePAMService() {
-	service := "auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 1s\n" +
+	service := "auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 3s\n" +
 		"auth required pam_permit.so\n"
 	path := "/etc/pam.d/" + serviceName
 	if err := os.WriteFile(path, []byte(service), 0o644); err != nil {

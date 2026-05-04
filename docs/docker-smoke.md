@@ -96,9 +96,14 @@ GitHub Actions runs:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64
+./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
 ```
 
-This keeps CI aligned with the canonical Linux release architecture. Local arm64 validation is still available with `--platform linux/arm64`, but the full default matrix may not be available because `archlinux:base-devel` does not currently publish an arm64 image.
+The `linux/amd64` CI run keeps the full distro matrix available, including
+Arch Linux. The `linux/arm64` CI run covers the public images that publish that
+architecture: Debian, Ubuntu, Fedora, and Alpine. Arch Linux is omitted from
+arm64 smoke because `archlinux:base-devel` does not currently publish an arm64
+image.
 
 ## Stability Rules
 

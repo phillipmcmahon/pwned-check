@@ -513,10 +513,22 @@ Automated in that workflow:
 - generic manual-PAM package smoke across Arch and Alpine Docker images
 - Arch `PKGBUILD` package smoke through Docker
 - Alpine `APKBUILD` package smoke through Docker
+- arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs
 
 For local and release validation, prefer persistent VMs whenever one exists for
 the distro. Docker remains useful for CI parity and for targets without a VM,
 currently Arch container coverage.
+
+Smoke architecture coverage is split by runner capability:
+
+| Distro | Local Default | Local Architecture | GitHub CI Docker | GitHub Package Gates |
+|---|---|---|---|---|
+| Debian | `codex-vm-debian` over SSH | VM is `linux/amd64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64`; binary Docker smoke on `linux/arm64` | arm64 Debian native PAM package asset smoke |
+| Ubuntu | `codex-vm-ubuntu` over SSH | VM is `linux/amd64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64`; binary Docker smoke on `linux/arm64`; `.deb` smoke on `ubuntu-24.04` runner | Covered by Debian-family package asset path |
+| Fedora | `codex-vm-fedora` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64`; binary Docker smoke on `linux/arm64` | arm64 Fedora native PAM package asset smoke |
+| Rocky | `codex-vm-rocky` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Not in Docker CI; Rocky acceptance is VM-first | Covered by Fedora/RHEL-family package scripts, but no separate arm64 Rocky smoke |
+| Alpine | `codex-vm-alpine` over SSH | VM is `linux/amd64`; APK smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64`; binary Docker smoke on `linux/arm64` | arm64 Alpine native PAM package asset smoke |
+| Arch | Docker only | `linux/amd64` only | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | No arm64 Arch smoke until an Arch Linux ARM image or VM is selected |
 
 The pre-push hook runs the VM package smoke stage over SSH against the default
 persistent VM set:

@@ -8,6 +8,14 @@ The format is intentionally lightweight while the project is pre-production.
 
 - No unreleased changes yet.
 
+## v0.1.5 - 2026-05-04
+
+- Local pre-push validation now runs native PAM package smoke tests against clean package installs on the persistent Ubuntu, Debian, Fedora, Rocky, and Alpine VMs.
+- Rocky Linux package validation now uses the persistent Rocky VM instead of Docker.
+- GitHub CI now runs Docker PAM package smoke coverage for both `linux/amd64` and `linux/arm64` across Debian, Ubuntu, Fedora, and Alpine images.
+- Docker PAM smoke tooling now maps the requested platform to the matching Go architecture so arm64 package installs exercise arm64 binaries.
+- Native PAM release documentation now records the remaining Arch arm64 coverage gap until an Arch Linux ARM builder image or VM is selected.
+
 ## v0.1.2 - 2026-05-03
 
 - GitHub release workflow now builds and publishes native Linux PAM package assets at release creation time, which is required because published releases are immutable.

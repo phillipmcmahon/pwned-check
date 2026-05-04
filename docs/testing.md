@@ -164,7 +164,7 @@ Current smoke architecture coverage:
 | Docker binary smoke, `linux/amd64` | Arch only by default, because VM-backed distros run over SSH | Debian, Ubuntu, Fedora, Arch, Alpine |
 | Docker binary smoke, `linux/arm64` | Available manually with `./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"` | Debian, Ubuntu, Fedora, Alpine |
 | Docker PAM package smoke, `linux/amd64` | Arch only by default | Debian, Ubuntu, Fedora, Arch, Alpine |
-| Docker PAM package smoke, `linux/arm64` | Not supported by `scripts/docker-pam-smoke.sh` yet | Not covered |
+| Docker PAM package smoke, `linux/arm64` | Available manually with `./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"` | Debian, Ubuntu, Fedora, Alpine |
 | Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine on persistent VMs; Arch in Docker | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
 | Native PAM release assets, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release asset preparation |
 | Native PAM release assets, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 assets |
@@ -185,7 +185,7 @@ Release-sensitive checks:
 - 85% minimum coverage for included product logic packages
 - binary smoke test
 - Docker binary smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, and Alpine on `linux/arm64`
-- Docker PAM package smoke across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`
+- Docker PAM package smoke across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, and Alpine on `linux/arm64`
 - Rocky/RHEL-compatible host validation on the persistent Rocky VM
 - Linux package build for `amd64` and `arm64` with SHA256 files
 

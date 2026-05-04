@@ -117,7 +117,13 @@ image.
 
 The PAM package smoke matrix validates the Linux process-integration path rather than only binary execution.
 
-The smoke test builds an amd64 Linux release package, copies it into each distro container, installs the package with its bundled `install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then drives that service through the distro-packaged `pamtester` client where available. Alpine, Arch Linux, and Rocky Linux do not package `pamtester` for the pinned/default image tags, so the runner compiles a tiny PAM client inside those throwaway containers.
+The smoke test builds a Linux release package for the selected Docker platform,
+copies it into each distro container, installs the package with its bundled
+`install.sh`, writes a dedicated `/etc/pam.d/pwned-check-smoke` service, then
+drives that service through the distro-packaged `pamtester` client where
+available. Alpine, Arch Linux, and Rocky Linux do not package `pamtester` for
+the pinned/default image tags, so the runner compiles a tiny PAM client inside
+those throwaway containers.
 
 The runner prints the selected PAM client, `/etc/os-release` `PRETTY_NAME`, and generated PAM service before executing cases. Keep that context in bug reports, especially for rolling images such as Fedora and Arch where PAM or libc behavior can change between runs.
 
@@ -168,6 +174,12 @@ Equivalent command:
 ./scripts/docker-pam-smoke.sh --platform linux/amd64
 ```
 
+Run the arm64 PAM package smoke for images that publish arm64 variants:
+
+```bash
+./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
+```
+
 For local VM-first validation, limit the Docker PAM package smoke to targets
 without persistent VMs:
 
@@ -180,6 +192,9 @@ The default distro list matches the binary Docker smoke matrix:
 ```text
 debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20
 ```
+
+For `linux/arm64`, the default list omits `archlinux:base-devel` because that
+image does not currently publish arm64.
 
 Use a smaller matrix while iterating:
 

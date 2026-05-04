@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${DOCKER_PAM_SMOKE_PLATFORM:-linux/amd64}"
-IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20}"
+IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-}"
 VERSION="${DOCKER_PAM_SMOKE_VERSION:-pam-smoke}"
 
 usage() {
@@ -15,7 +15,7 @@ Build a Linux package and validate package installation plus PAM wiring inside
 minimal distro containers.
 
 Options:
-  --platform <platform>   Docker platform, currently linux/amd64
+  --platform <platform>   Docker platform: linux/amd64 or linux/arm64
   --images "<images>"     Space-separated image list override
   --help                  Show this help text
 
@@ -65,11 +65,19 @@ case "$PLATFORM" in
     linux/amd64)
         GOARCH_VALUE="amd64"
         GOAMD64_VALUE="${GOAMD64:-v1}"
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20"
+        ;;
+    linux/arm64|linux/arm64/v8)
+        PLATFORM="linux/arm64"
+        GOARCH_VALUE="arm64"
+        GOAMD64_VALUE=""
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
         ;;
     *)
         fail "unsupported platform for PAM smoke: $PLATFORM"
         ;;
 esac
+[ -n "$IMAGES" ] || IMAGES="$DEFAULT_IMAGES"
 
 cd "$ROOT"
 
@@ -92,7 +100,11 @@ PACKAGE_BASENAME="$(scripts/package-linux-artifact.sh --version "$VERSION" --goa
 PACKAGE_PATH="$PACKAGE_DIR/$PACKAGE_BASENAME.tar.gz"
 
 echo "Building PAM package smoke runner for $PLATFORM"
-CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -o "$SMOKE_DIR/pam-package-smoke" ./scripts/pam-package-smoke
+if [ "$GOARCH_VALUE" = "amd64" ]; then
+    CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -o "$SMOKE_DIR/pam-package-smoke" ./scripts/pam-package-smoke
+else
+    CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH_VALUE" go build -o "$SMOKE_DIR/pam-package-smoke" ./scripts/pam-package-smoke
+fi
 
 cat > "$SMOKE_DIR/setup-and-run.sh" <<'EOF'
 #!/bin/sh

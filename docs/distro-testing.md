@@ -525,6 +525,10 @@ persistent VM set:
 PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
 ```
 
+Before running each package smoke, the hook disables and removes any existing
+`pwned-check-native-pam` package on that VM. This keeps Ubuntu, Debian, Fedora,
+Rocky, and Alpine on the same clean package-install validation path.
+
 Use the host-specific commands below to rerun a single VM manually, to capture
 release evidence, or to run gates that are intentionally not part of the default
 pre-push VM stage, such as hardening and SELinux assessments:

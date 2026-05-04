@@ -60,7 +60,9 @@ VM package smoke by default. `scripts/validate-before-push.sh` syncs the current
 checkout to every host listed in `PWNED_CHECK_VM_SMOKE_HOSTS`, copies a locally
 built static Linux `pwned-check` binary for package smokes, and executes the
 distro's native PAM smoke over SSH. If a native package is already installed on
-a VM, the hook runs the installed-file smoke instead of reinstalling over it.
+a VM, the hook disables and removes that package first so the full package
+install, enablement, rollback, removal, and cleanup smoke runs from a clean
+package state.
 Use `PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh` to exercise
 just the SSH VM stage, and use `PWNED_CHECK_SKIP_VM_SMOKE=1` only for deliberate
 offline work where VM validation will be run separately before pushing.

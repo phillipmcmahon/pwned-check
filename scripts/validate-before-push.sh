@@ -41,6 +41,9 @@ VM_PREBUILT_BIN="$VM_PREBUILT_DIR/pwned-check"
 VM_CHECKOUT="/home/codex/pwned-check"
 VERSION="$(git describe --tags --dirty --always 2>/dev/null || printf 'dev')"
 LDFLAGS_VALUE="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION"
+REMOVE_DEB_PACKAGE="if dpkg -s pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo env DEBIAN_FRONTEND=noninteractive dpkg -r pwned-check-native-pam; fi"
+REMOVE_RPM_PACKAGE="if rpm -q pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo rpm -e pwned-check-native-pam; fi"
+REMOVE_APK_PACKAGE="if apk info -e pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo apk del pwned-check-native-pam; fi"
 
 run_vm() {
     host="$1"
@@ -69,23 +72,23 @@ run_vm_smoke() {
     case "$host" in
         codex-vm-ubuntu)
             sync_vm_checkout "$host"
-            run_vm "$host" "cd '$VM_CHECKOUT' && PATH=\"\$HOME/.cargo/bin:\$PATH\" make native-pam-test native-pam-build native-pam-deps native-pam-symbols && if dpkg -s pwned-check-native-pam >/dev/null 2>&1; then PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED=1 make native-pam-ubuntu-host-package-smoke; else PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-ubuntu-deb-package-smoke; fi"
+            run_vm "$host" "cd '$VM_CHECKOUT' && export PATH=\"\$HOME/.cargo/bin:/usr/sbin:/sbin:\$PATH\" && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness && $REMOVE_DEB_PACKAGE && PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-ubuntu-deb-package-smoke"
             ;;
         codex-vm-debian)
             sync_vm_checkout "$host"
-            run_vm "$host" "cd '$VM_CHECKOUT' && export PATH=\"/usr/sbin:/sbin:\$PATH\" && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness && if dpkg -s pwned-check-native-pam >/dev/null 2>&1; then PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED=1 make native-pam-ubuntu-host-package-smoke; else PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-ubuntu-deb-package-smoke; fi"
+            run_vm "$host" "cd '$VM_CHECKOUT' && export PATH=\"/usr/sbin:/sbin:\$PATH\" && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness && $REMOVE_DEB_PACKAGE && PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-ubuntu-deb-package-smoke"
             ;;
         codex-vm-fedora)
             sync_vm_checkout "$host"
-            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && if rpm -q pwned-check-native-pam >/dev/null 2>&1; then PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED=1 make native-pam-fedora-host-package-smoke; else PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke; fi"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_RPM_PACKAGE && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke"
             ;;
         codex-vm-rocky)
             sync_vm_checkout "$host"
-            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && if rpm -q pwned-check-native-pam >/dev/null 2>&1; then PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED=1 make native-pam-fedora-host-package-smoke; else PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke; fi"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_RPM_PACKAGE && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke"
             ;;
         codex-vm-alpine)
             sync_vm_checkout "$host"
-            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && if apk info -e pwned-check-native-pam >/dev/null 2>&1; then ./scripts/native-pam-manual-installed-smoke.sh; else apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo apk del pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo apk add --allow-untrusted \"dist/release/\$apk_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo apk del pwned-check-native-pam && trap - EXIT INT TERM; fi"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_APK_PACKAGE && apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo apk del pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo apk add --allow-untrusted \"dist/release/\$apk_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo apk del pwned-check-native-pam && trap - EXIT INT TERM"
             ;;
         *)
             fail "unknown VM smoke host: $host"

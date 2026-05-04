@@ -518,7 +518,16 @@ For local and release validation, prefer persistent VMs whenever one exists for
 the distro. Docker remains useful for CI parity and for targets without a VM,
 currently Arch container coverage.
 
-Host-specific release gates remain manual because they depend on persistent VM state and real host PAM management tools:
+The pre-push hook runs the VM package smoke stage over SSH against the default
+persistent VM set:
+
+```bash
+PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
+```
+
+Use the host-specific commands below to rerun a single VM manually, to capture
+release evidence, or to run gates that are intentionally not part of the default
+pre-push VM stage, such as hardening and SELinux assessments:
 
 ```bash
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment'

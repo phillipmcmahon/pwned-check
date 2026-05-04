@@ -64,9 +64,18 @@ if [ -r /etc/os-release ] && grep -Eq '^ID=arch$' /etc/os-release; then
     EXPECTED_HELPER_DIR="/usr/bin"
 fi
 for helper in "$ENABLE_DRY_RUN_HELPER" "$ENABLE_ENFORCE_HELPER" "$DISABLE_HELPER"; do
+    canonical_helper="$helper"
+    if command -v readlink >/dev/null 2>&1; then
+        canonical_helper="$(readlink -f "$helper" 2>/dev/null || printf '%s\n' "$helper")"
+    fi
     case "$helper" in
         "$EXPECTED_HELPER_DIR"/*) ;;
-        *) fail "manual PAM wrapper resolved outside expected helper directory $EXPECTED_HELPER_DIR: $helper" ;;
+        *)
+            case "$canonical_helper" in
+                "$EXPECTED_HELPER_DIR"/*) ;;
+                *) fail "manual PAM wrapper resolved outside expected helper directory $EXPECTED_HELPER_DIR: $helper" ;;
+            esac
+            ;;
     esac
 done
 

@@ -30,11 +30,10 @@ The default matrix is:
 | Debian | `debian:stable-slim` |
 | Ubuntu | `ubuntu:24.04` |
 | Fedora | `fedora:latest` |
-| Rocky Linux | `rockylinux:9` |
 | Arch Linux | `archlinux:base-devel` |
 | Alpine | `alpine:3.20` |
 
-The Debian, Ubuntu, Rocky Linux, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images.
+The Debian, Ubuntu, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images. Rocky Linux coverage runs on `codex-vm-rocky`; do not use the `rockylinux` Docker image for local Rocky validation.
 
 ## Run Locally
 
@@ -76,7 +75,7 @@ For local VM-first validation, run Docker only for targets without persistent
 VMs:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
 Or use the environment variable:
@@ -168,13 +167,13 @@ For local VM-first validation, limit the Docker PAM package smoke to targets
 without persistent VMs:
 
 ```bash
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
 The default distro list matches the binary Docker smoke matrix:
 
 ```text
-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20
+debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20
 ```
 
 Use a smaller matrix while iterating:
@@ -202,7 +201,7 @@ Equivalent command:
 Use a smaller native matrix while iterating:
 
 ```bash
-./scripts/native-pam-distro-smoke.sh --images "fedora:latest rockylinux:9"
+./scripts/native-pam-distro-smoke.sh --images "fedora:latest archlinux:base-devel"
 ```
 
-For the full distro testing workflow, including persistent Ubuntu, Debian, Fedora, and Alpine VMs, see [distro-testing.md](distro-testing.md).
+For the full distro testing workflow, including persistent Ubuntu, Debian, Fedora, Rocky, and Alpine VMs, see [distro-testing.md](distro-testing.md).

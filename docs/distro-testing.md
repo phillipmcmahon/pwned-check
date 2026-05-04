@@ -7,6 +7,12 @@ This runbook covers Linux distro validation for both supported integration paths
 
 Keep Git and GitHub operations in the main development environment. Persistent VMs are test execution targets only.
 
+Operator access is limited to the `codex-vm-*` hosts that have been explicitly
+provided for testing. Do not log in to, inspect, modify, or recover through the
+hypervisor or any other infrastructure host. If a VM becomes unreachable or its
+privileged access is broken, stop and ask for the VM to be repaired, recreated,
+or made available again through the normal `codex-vm-*` SSH path.
+
 ## Coverage Layers
 
 Use the cheapest layer that can prove the behavior under test, then move outward when packaging or host integration is involved.
@@ -30,7 +36,7 @@ The first-wave distro set is:
 | Debian | Debian stable | `debian:stable-slim` | `codex-vm-debian` (Debian 13) |
 | Ubuntu | Ubuntu 24.04 | `ubuntu:24.04` | `codex-vm-ubuntu` |
 | Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
-| RHEL-compatible | Rocky Linux 9 | `rockylinux:9` | Docker only for now |
+| RHEL-compatible | Rocky Linux 10 | Not used for local Rocky testing | `codex-vm-rocky` |
 | Arch Linux | Rolling | `archlinux:base-devel` | Docker only for now |
 | Alpine Linux | Alpine with Linux-PAM | `alpine:3.20` | `codex-vm-alpine` |
 
@@ -42,15 +48,18 @@ Run Docker only for targets that do not have a persistent VM, or when you are
 intentionally reproducing CI behavior. For the current VM-first local path:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
-The full Docker matrix remains available for CI parity:
+The Docker matrix used for non-VM targets is:
 
 ```text
-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20
+debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20
 ```
+
+Rocky Linux testing is performed on `codex-vm-rocky`; do not use the
+`rockylinux` Docker image for local Rocky validation.
 
 Run the direct native PAM module matrix when changing `native/pam-pwned-check`, shared-library dependency policy, or PAM module placement:
 
@@ -105,6 +114,9 @@ Each persistent VM should be prepared once, then reused for host package smoke t
 Setup rules:
 
 - user is `codex`
+- connect only to explicitly provided `codex-vm-*` SSH hosts
+- do not access the hypervisor, host console, storage backend, or VM management plane
+- if VM recovery requires hypervisor, console, rescue, or disk access, stop and hand the recovery back to the operator
 - install a dedicated SSH key for the VM
 - rotate the bootstrap password after key login works
 - configure passwordless sudo for `codex`
@@ -322,6 +334,65 @@ libeconf.so.*
 
 Unexpected `ldd dist/pam_pwned_check.so` additions should fail the dependency gate until reviewed.
 
+## Rocky VM
+
+Rocky testing runs on `codex-vm-rocky`. Do not substitute the `rockylinux`
+Docker image for Rocky validation when the VM is available.
+
+Install dependencies:
+
+```bash
+ssh codex-vm-rocky 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
+```
+
+Core native PAM and RPM-family package gates:
+
+```bash
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
+```
+
+Host package and authselect smoke:
+
+```bash
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-host-package-smoke'
+```
+
+RPM package smoke:
+
+```bash
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-package-smoke'
+```
+
+SELinux assessment:
+
+```bash
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment'
+```
+
+Rocky packages may lag the repository's Go version. If Rocky cannot build the
+`pwned-check` helper because its packaged Go is too old, build a static Linux
+helper in the main development environment and copy it in:
+
+```bash
+mkdir -p /tmp/pwned-check-rocky-prebuilt
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+  -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=rocky-vm-smoke" \
+  -o /tmp/pwned-check-rocky-prebuilt/pwned-check ./cmd/pwned-check
+ssh codex-vm-rocky 'mkdir -p /tmp/pwned-check-rocky-prebuilt'
+scp /tmp/pwned-check-rocky-prebuilt/pwned-check codex-vm-rocky:/tmp/pwned-check-rocky-prebuilt/pwned-check
+ssh codex-vm-rocky 'chmod 0755 /tmp/pwned-check-rocky-prebuilt/pwned-check'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && ./scripts/package-native-pam-rpm-package.sh --version rocky-vm-smoke --pwned-check-bin /tmp/pwned-check-rocky-prebuilt/pwned-check'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check ./scripts/native-pam-fedora-host-package-smoke.sh'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check ./scripts/native-pam-fedora-rpm-package-smoke.sh'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check make native-pam-fedora-selinux-assessment'
+```
+
+The Rocky VM validates the RHEL-compatible package path against a real host:
+`authselect` profile creation, dry-run and enforce helper switching, rollback,
+package removal, dependency drift, and SELinux/audit behavior. The scripts keep
+their `fedora` names because they cover the shared Fedora/RHEL/Rocky package
+family.
+
 ## Alpine VM
 
 Install dependencies:
@@ -417,9 +488,9 @@ make native-pam-symbols
 Before changing packaging or distro paths:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
-./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
@@ -445,7 +516,7 @@ Automated in that workflow:
 
 For local and release validation, prefer persistent VMs whenever one exists for
 the distro. Docker remains useful for CI parity and for targets without a VM,
-currently Arch and Rocky/RHEL-family container coverage.
+currently Arch container coverage.
 
 Host-specific release gates remain manual because they depend on persistent VM state and real host PAM management tools:
 
@@ -453,6 +524,7 @@ Host-specific release gates remain manual because they depend on persistent VM s
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment'
 ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ```
 

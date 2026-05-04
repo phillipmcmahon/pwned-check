@@ -7,6 +7,7 @@ SMOKE_VERSION="${NATIVE_PAM_FEDORA_RPM_SMOKE_VERSION:-fedora-rpm-smoke}"
 PACKAGE_NAME="pwned-check-native-pam"
 PROFILE_NAME="${PWNED_CHECK_FEDORA_RPM_SMOKE_PROFILE:-pwned-check-rpm-smoke}"
 STATE_DIR="${PWNED_CHECK_FEDORA_RPM_SMOKE_STATE_DIR:-/var/lib/pwned-check-rpm-smoke}"
+PWNED_CHECK_BIN="${PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN:-}"
 
 usage() {
     cat <<'EOF'
@@ -20,6 +21,8 @@ Environment:
   NATIVE_PAM_FEDORA_RPM_SMOKE_VERSION    Version label for the RPM package
   PWNED_CHECK_FEDORA_RPM_SMOKE_PROFILE   Custom authselect profile name
   PWNED_CHECK_FEDORA_RPM_SMOKE_STATE_DIR State directory for authselect backup name
+  PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN
+                                         Existing Linux pwned-check binary
 EOF
 }
 
@@ -63,6 +66,7 @@ fi
 require_command rpm
 require_command rpmbuild
 require_command make
+[ -z "$PWNED_CHECK_BIN" ] || [ -x "$PWNED_CHECK_BIN" ] || fail "prebuilt pwned-check binary is not executable: $PWNED_CHECK_BIN"
 if [ "$(id -u)" -ne 0 ]; then
     require_command sudo
 fi
@@ -86,7 +90,11 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cd "$ROOT"
-rpm_name="$(./scripts/package-native-pam-rpm-package.sh --version "$SMOKE_VERSION")"
+if [ -n "$PWNED_CHECK_BIN" ]; then
+    rpm_name="$(./scripts/package-native-pam-rpm-package.sh --version "$SMOKE_VERSION" --pwned-check-bin "$PWNED_CHECK_BIN")"
+else
+    rpm_name="$(./scripts/package-native-pam-rpm-package.sh --version "$SMOKE_VERSION")"
+fi
 rpm_path="$ROOT/dist/release/$rpm_name"
 [ -f "$rpm_path" ] || fail "RPM package was not produced: $rpm_path"
 

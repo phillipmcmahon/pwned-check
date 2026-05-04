@@ -44,8 +44,8 @@ go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
-./scripts/docker-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "rockylinux:9 archlinux:base-devel"
+./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 make package-linux
 ```
 
@@ -160,8 +160,9 @@ Release-sensitive checks:
 - bounded parser fuzz coverage, including a 60s release gate
 - 85% minimum coverage for included product logic packages
 - binary smoke test
-- Docker smoke matrix across Debian, Ubuntu, Fedora, Rocky or another RHEL-compatible image, Arch Linux, and Alpine
-- Docker PAM package smoke across Debian, Ubuntu, Fedora, Rocky or another RHEL-compatible image, Arch Linux, and Alpine
+- Docker smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine
+- Docker PAM package smoke across Debian, Ubuntu, Fedora, Arch Linux, and Alpine
+- Rocky/RHEL-compatible host validation on the persistent Rocky VM
 - Linux package build for `amd64` and `arm64` with SHA256 files
 
 CI intentionally produces only Linux `amd64` and `arm64` distributable artifacts while Linux remains the active integration target. macOS and Windows artifacts should be reintroduced together, with both x64 and arm64 coverage, when those roadmap tracks include their signing requirements.

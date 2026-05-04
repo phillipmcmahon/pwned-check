@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${DOCKER_PAM_SMOKE_PLATFORM:-linux/amd64}"
-IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux:9 archlinux:base-devel alpine:3.20}"
+IMAGES="${DOCKER_PAM_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20}"
 VERSION="${DOCKER_PAM_SMOKE_VERSION:-pam-smoke}"
 
 usage() {

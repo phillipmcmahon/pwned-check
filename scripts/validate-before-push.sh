@@ -25,7 +25,7 @@ fi
 
 cd "$ROOT"
 
-NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-rockylinux:9 archlinux:base-devel}"
+NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-archlinux:base-devel}"
 
 unformatted="$(gofmt -l .)"
 if [ -n "$unformatted" ]; then

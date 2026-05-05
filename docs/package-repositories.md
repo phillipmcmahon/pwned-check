@@ -6,8 +6,9 @@ Repository-backed releases must satisfy the [Production release gate](production
 
 ## Implementation Status
 
-Epic 8 has repository-generation and repo-only smoke coverage for each target
-family. The production hosting and key model has been selected for
+Epic 8 has repository-generation, production GitHub Pages hosting, and
+repo-only smoke coverage for each target family. The production hosting and key
+model is tracked in
 [#39](https://github.com/phillipmcmahon/pwned-check/issues/39):
 
 - host the first production repositories on GitHub Pages under
@@ -16,18 +17,18 @@ family. The production hosting and key model has been selected for
 - use one maintainer-owned Alpine RSA production key for the APK repository
 - keep private keys outside the repository, GitHub Pages branch, and distro VMs
 
-Until those repositories are published with production keys and smoke-tested
-from the published endpoints, GitHub Release assets remain the bootstrap
-channel.
+Repository metadata is generated from immutable GitHub Release assets and signed
+with the production keys. GitHub Release assets remain the immutable release
+artifact source and bootstrap fallback.
 
-| Family | Repository generation | Repo-only smoke | Current limitation |
+| Family | Repository generation | Published repo smoke | Current limitation |
 |---|---|---|---|
-| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh` | Requires production OpenPGP key and hosted apt endpoint |
-| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh` | Requires production RPM key and hosted dnf/yum endpoint |
+| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`; `arm64` package metadata is published and awaits an arm64 VM smoke |
+| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`; `aarch64` package metadata is published and awaits an aarch64 VM smoke |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only until an Arch Linux ARM builder image or VM is selected |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine` with `scripts/native-pam-alpine-repo-smoke.sh` | Requires production RSA key and hosted APK endpoint |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `aarch64` Docker smoke against `https://phillipmcmahon.github.io/pwned-check/alpine` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; the persistent Alpine VM is `x86_64` and cannot install this package |
 
-Planned GitHub Pages endpoints:
+GitHub Pages endpoints:
 
 | Family | Endpoint |
 |---|---|
@@ -207,15 +208,16 @@ and scope trust to the pwned-check source list:
 
 ```bash
 sudo install -d -m 0755 /etc/apt/keyrings
-curl -fsSL https://example.invalid/pwned-check-native-pam.asc |
+curl -fsSL https://phillipmcmahon.github.io/pwned-check/pwned-check-openpgp-production.asc |
   sudo tee /etc/apt/keyrings/pwned-check-native-pam.asc >/dev/null
-echo "deb [signed-by=/etc/apt/keyrings/pwned-check-native-pam.asc] https://example.invalid/apt stable main" |
+echo "deb [signed-by=/etc/apt/keyrings/pwned-check-native-pam.asc] https://phillipmcmahon.github.io/pwned-check/apt stable main" |
   sudo tee /etc/apt/sources.list.d/pwned-check-native-pam.list >/dev/null
 sudo apt update
 sudo apt install pwned-check-native-pam
 ```
 
-Replace `https://example.invalid/apt` with the published repository endpoint.
+Before enabling the repository, verify the OpenPGP fingerprint is
+`BDF6 F4DD 343E 9F10 EA9D  B510 FDDA 2848 A95A D641`.
 Package installation still only places files. Enablement remains explicit:
 
 ```bash
@@ -258,7 +260,7 @@ package and metadata signature checks:
 ```ini
 [pwned-check-native-pam]
 name=pwned-check native PAM repository
-baseurl=https://example.invalid/rpm
+baseurl=https://phillipmcmahon.github.io/pwned-check/rpm
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
@@ -269,13 +271,14 @@ Install the public key and package through normal dnf/yum operations:
 
 ```bash
 sudo install -d -m 0755 /etc/pki/rpm-gpg
-curl -fsSL https://example.invalid/RPM-GPG-KEY-pwned-check-native-pam.asc |
+curl -fsSL https://phillipmcmahon.github.io/pwned-check/rpm/RPM-GPG-KEY-pwned-check-native-pam.asc |
   sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam >/dev/null
 sudo rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam
 sudo dnf install pwned-check-native-pam
 ```
 
-Replace `https://example.invalid/rpm` with the published repository endpoint.
+Before enabling the repository, verify the OpenPGP fingerprint is
+`BDF6 F4DD 343E 9F10 EA9D  B510 FDDA 2848 A95A D641`.
 Package installation still only places files. Enablement remains explicit:
 
 ```bash
@@ -320,21 +323,21 @@ Operator trust bootstrap should import the public key, locally sign it in the
 pacman keyring, and add the custom repository:
 
 ```bash
-curl -fsSL https://example.invalid/pwned-check-native-pam.asc \
+curl -fsSL https://phillipmcmahon.github.io/pwned-check/pwned-check-openpgp-production.asc \
   -o /tmp/pwned-check-native-pam.asc
 sudo pacman-key --add /tmp/pwned-check-native-pam.asc
-sudo pacman-key --lsign-key <release-key-fingerprint>
+sudo pacman-key --lsign-key BDF6F4DD343E9F10EA9DB510FDDA2848A95AD641
 sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
 
 [pwned-check]
 SigLevel = Required DatabaseRequired
-Server = https://example.invalid/arch/$arch
+Server = https://phillipmcmahon.github.io/pwned-check/arch/$arch
 EOF
 sudo pacman -Sy pwned-check-native-pam
 ```
 
-Replace `https://example.invalid/arch` and `<release-key-fingerprint>` with the
-published repository endpoint and release signing key fingerprint. Do not use
+Before locally signing the key, verify the OpenPGP fingerprint is
+`BDF6 F4DD 343E 9F10 EA9D  B510 FDDA 2848 A95A D641`. Do not use
 `SigLevel = Never` or `pacman -U` for repository-backed production validation.
 
 Package installation still only places files. Enablement remains explicit:
@@ -381,18 +384,20 @@ bootstrap should install the public RSA key under `/etc/apk/keys` and add the
 published repository root to `/etc/apk/repositories`:
 
 ```bash
-curl -fsSL https://example.invalid/pwned-check-native-pam.rsa.pub |
+curl -fsSL https://phillipmcmahon.github.io/pwned-check/alpine/pwned-check-alpine-production.rsa.pub |
   sudo tee /etc/apk/keys/pwned-check-native-pam.rsa.pub >/dev/null
-echo "https://example.invalid/alpine" |
+echo "https://phillipmcmahon.github.io/pwned-check/alpine" |
   sudo tee -a /etc/apk/repositories >/dev/null
 sudo apk update
 sudo apk add pwned-check-native-pam
 ```
 
-Replace `https://example.invalid/alpine` with the published repository endpoint.
-Do not use `--allow-untrusted` for repository-backed production validation.
-Alpine deployments require Linux-PAM; BusyBox-only password tooling is outside
-the native PAM package scope.
+Before enabling the repository, verify the Alpine RSA public key SHA256
+fingerprint is
+`8CC2BD76F364D3734C8A265B152FCEFFA6F3B90FC2857DB92D40BED4808F214F`. Do not
+use `--allow-untrusted` for repository-backed production validation. Alpine
+deployments require Linux-PAM; BusyBox-only password tooling is outside the
+native PAM package scope.
 
 Package installation still only places files. Enablement remains explicit:
 

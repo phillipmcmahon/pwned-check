@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OUTPUT_ROOT="${PWNED_CHECK_TEST_OUTPUT_DIR:-$ROOT/.test-output/native-pam-rpm-repo-smoke}"
 HOST=""
 REPO_DIR="$ROOT/dist/rpm-repository"
+REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/RPM-GPG-KEY-pwned-check-native-pam.asc"
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
@@ -45,6 +46,8 @@ Options:
   --host <ssh-host>       SSH host, for example codex-vm-fedora
   --repo-dir <path>      Local RPM repository directory
                           (default: dist/rpm-repository)
+  --repo-url <url>       Published RPM repository URL. When set, the VM
+                          installs from this URL instead of a copied repo.
   --public-key <path>    Local ASCII-armored RPM public key
                           (default: <repo-dir>/RPM-GPG-KEY-pwned-check-native-pam.asc)
   --remote-dir <path>    Remote temporary directory
@@ -77,6 +80,11 @@ while [ "$#" -gt 0 ]; do
             REPO_DIR="$2"
             shift 2
             ;;
+        --repo-url)
+            [ "$#" -ge 2 ] || fail "--repo-url requires a value"
+            REPO_URL="$2"
+            shift 2
+            ;;
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
@@ -98,9 +106,11 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$HOST" ] || fail "--host is required"
-[ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
-[ -f "$REPO_DIR/repodata/repomd.xml" ] || fail "repository missing repomd.xml"
-[ -f "$REPO_DIR/repodata/repomd.xml.asc" ] || fail "repository missing signed repomd.xml.asc"
+if [ -z "$REPO_URL" ]; then
+    [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+    [ -f "$REPO_DIR/repodata/repomd.xml" ] || fail "repository missing repomd.xml"
+    [ -f "$REPO_DIR/repodata/repomd.xml.asc" ] || fail "repository missing signed repomd.xml.asc"
+fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 
 require_command ssh
@@ -111,10 +121,12 @@ if [ -z "$REMOTE_DIR" ]; then
 fi
 
 ssh "$HOST" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+if [ -z "$REPO_URL" ]; then
+    scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+fi
 scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/RPM-GPG-KEY-pwned-check-native-pam.asc"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -185,11 +197,15 @@ as_root install -d -m 0755 /etc/pki/rpm-gpg
 as_root install -m 0644 "$REMOTE_DIR/RPM-GPG-KEY-pwned-check-native-pam.asc" /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam
 as_root rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam
 
-repo_path="$REMOTE_DIR/repo"
+if [ -n "$REPO_URL" ]; then
+    repo_source="$REPO_URL"
+else
+    repo_source="file://$REMOTE_DIR/repo"
+fi
 as_root sh -c "cat > /etc/yum.repos.d/pwned-check-native-pam.repo" <<REPO
 [pwned-check-native-pam]
 name=pwned-check native PAM repository
-baseurl=file://$repo_path
+baseurl=$repo_source
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1

@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OUTPUT_ROOT="${PWNED_CHECK_TEST_OUTPUT_DIR:-$ROOT/.test-output/native-pam-alpine-repo-smoke}"
 HOST="codex-vm-alpine"
 REPO_DIR="$ROOT/dist/alpine-repository"
+REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-native-pam.rsa.pub"
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
@@ -45,6 +46,8 @@ Options:
   --host <ssh-host>       SSH host (default: codex-vm-alpine)
   --repo-dir <path>      Local Alpine repository directory
                           (default: dist/alpine-repository)
+  --repo-url <url>       Published Alpine repository URL. When set, the VM
+                          installs from this URL instead of a copied repo.
   --public-key <path>    Local RSA public key
                           (default: <repo-dir>/pwned-check-native-pam.rsa.pub)
   --remote-dir <path>    Remote temporary directory
@@ -77,6 +80,11 @@ while [ "$#" -gt 0 ]; do
             REPO_DIR="$2"
             shift 2
             ;;
+        --repo-url)
+            [ "$#" -ge 2 ] || fail "--repo-url requires a value"
+            REPO_URL="$2"
+            shift 2
+            ;;
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
@@ -97,7 +105,9 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-[ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+if [ -z "$REPO_URL" ]; then
+    [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 
 require_command ssh
@@ -108,10 +118,12 @@ if [ -z "$REMOTE_DIR" ]; then
 fi
 
 ssh "$HOST" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+if [ -z "$REPO_URL" ]; then
+    scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+fi
 scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/pwned-check-native-pam.rsa.pub"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -153,7 +165,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 arch="$(apk --print-arch)"
-[ -f "$REMOTE_DIR/repo/$arch/APKINDEX.tar.gz" ] || fail "repository missing APKINDEX for target arch: $arch"
+if [ -z "$REPO_URL" ]; then
+    [ -f "$REMOTE_DIR/repo/$arch/APKINDEX.tar.gz" ] || fail "repository missing APKINDEX for target arch: $arch"
+fi
 
 as_root pwned-check-pam-disable >/dev/null 2>&1 || true
 as_root apk del "$PACKAGE_NAME" >/dev/null 2>&1 || true
@@ -162,7 +176,12 @@ as_root install -m 0644 "$REMOTE_DIR/pwned-check-native-pam.rsa.pub" /etc/apk/ke
 
 REPOSITORIES_BACKUP="$(mktemp)"
 as_root cp /etc/apk/repositories "$REPOSITORIES_BACKUP"
-as_root sh -c "printf '%s\n' 'file://$REMOTE_DIR/repo' >> /etc/apk/repositories"
+if [ -n "$REPO_URL" ]; then
+    repo_source="$REPO_URL"
+else
+    repo_source="file://$REMOTE_DIR/repo"
+fi
+as_root sh -c "printf '%s\n' '$repo_source' >> /etc/apk/repositories"
 
 as_root apk update
 as_root apk add "$PACKAGE_NAME"

@@ -8,6 +8,7 @@ OUTPUT_DIR="$ROOT/dist/arch-repository"
 REPO_NAME="pwned-check"
 SIGNING_KEY="${PWNED_CHECK_ARCH_SIGNING_KEY:-}"
 PUBLIC_KEY_OUTPUT=""
+GPG_PASSPHRASE_FILE="${PWNED_CHECK_GPG_PASSPHRASE_FILE:-}"
 
 usage() {
     cat <<'EOF'
@@ -27,6 +28,10 @@ Options:
                               (or PWNED_CHECK_ARCH_SIGNING_KEY)
   --public-key-output <path>  Export the public key to this path
   --help                      Show this help text
+
+Environment:
+  PWNED_CHECK_GPG_PASSPHRASE_FILE  Optional passphrase file for protected
+                                   OpenPGP signing keys
 EOF
 }
 
@@ -37,6 +42,20 @@ fail() {
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+gpg_base_args() {
+    if [ -n "$GPG_PASSPHRASE_FILE" ]; then
+        printf '%s\n' --pinentry-mode loopback --passphrase-file "$GPG_PASSPHRASE_FILE"
+    fi
+}
+
+prime_gpg_agent() {
+    [ -n "$GPG_PASSPHRASE_FILE" ] || return 0
+    prime_file="$WORK_DIR/gpg-agent-prime.txt"
+    printf 'pwned-check arch signing\n' > "$prime_file"
+    gpg --batch --yes $(gpg_base_args) --local-user "$SIGNING_KEY" \
+        --armor --detach-sign --output "$prime_file.asc" "$prime_file" >/dev/null
 }
 
 while [ "$#" -gt 0 ]; do
@@ -92,6 +111,7 @@ trap cleanup EXIT INT TERM
 
 repo_dir="$WORK_DIR/repo"
 mkdir -p "$repo_dir"
+prime_gpg_agent
 
 found=0
 for pkg_file in "$INPUT_DIR"/pwned-check-native-pam-*.pkg.tar.zst; do
@@ -103,7 +123,7 @@ for pkg_file in "$INPUT_DIR"/pwned-check-native-pam-*.pkg.tar.zst; do
     [ -n "$arch" ] || fail "could not determine Arch package architecture for $pkg_file"
     mkdir -p "$repo_dir/$arch"
     cp "$pkg_file" "$repo_dir/$arch/"
-    gpg --batch --yes --detach-sign --local-user "$SIGNING_KEY" "$repo_dir/$arch/$(basename "$pkg_file")"
+    gpg --batch --yes $(gpg_base_args) --detach-sign --local-user "$SIGNING_KEY" "$repo_dir/$arch/$(basename "$pkg_file")"
     found=$((found + 1))
 done
 [ "$found" -gt 0 ] || fail "no pwned-check-native-pam Arch packages found in $INPUT_DIR"

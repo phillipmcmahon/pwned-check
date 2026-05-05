@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OUTPUT_ROOT="${PWNED_CHECK_TEST_OUTPUT_DIR:-$ROOT/.test-output/native-pam-apt-repo-smoke}"
 HOST=""
 REPO_DIR="$ROOT/dist/apt-repository"
+REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-archive-key.asc"
 SUITE="stable"
 COMPONENT="main"
@@ -46,6 +47,8 @@ Options:
   --host <ssh-host>       SSH host, for example codex-vm-ubuntu
   --repo-dir <path>      Local apt repository directory
                           (default: dist/apt-repository)
+  --repo-url <url>       Published apt repository URL. When set, the VM
+                          installs from this URL instead of a copied repo.
   --public-key <path>    Local ASCII-armored repository public key
                           (default: <repo-dir>/pwned-check-archive-key.asc)
   --suite <name>         Apt suite/codename (default: stable)
@@ -80,6 +83,11 @@ while [ "$#" -gt 0 ]; do
             REPO_DIR="$2"
             shift 2
             ;;
+        --repo-url)
+            [ "$#" -ge 2 ] || fail "--repo-url requires a value"
+            REPO_URL="$2"
+            shift 2
+            ;;
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
@@ -111,8 +119,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$HOST" ] || fail "--host is required"
-[ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
-[ -f "$REPO_DIR/dists/$SUITE/InRelease" ] || fail "repository missing signed InRelease for suite $SUITE"
+if [ -z "$REPO_URL" ]; then
+    [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+    [ -f "$REPO_DIR/dists/$SUITE/InRelease" ] || fail "repository missing signed InRelease for suite $SUITE"
+fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 
 require_command ssh
@@ -130,10 +140,12 @@ if [ -z "$REMOTE_DIR" ]; then
 fi
 
 ssh "$HOST" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+if [ -z "$REPO_URL" ]; then
+    scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+fi
 scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/pwned-check-archive-key.asc"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' SUITE='$SUITE' COMPONENT='$COMPONENT' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' SUITE='$SUITE' COMPONENT='$COMPONENT' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -187,11 +199,15 @@ as_root rm -f /etc/apt/sources.list.d/pwned-check-native-pam.list
 as_root install -d -m 0755 /etc/apt/keyrings
 as_root install -m 0644 "$REMOTE_DIR/pwned-check-archive-key.asc" /etc/apt/keyrings/pwned-check-native-pam.asc
 
-repo_path="$REMOTE_DIR/repo"
-as_root sh -c "printf '%s\n' 'deb [signed-by=/etc/apt/keyrings/pwned-check-native-pam.asc] file:$repo_path $SUITE $COMPONENT' > /etc/apt/sources.list.d/pwned-check-native-pam.list"
+if [ -n "$REPO_URL" ]; then
+    repo_source="$REPO_URL"
+else
+    repo_source="file:$REMOTE_DIR/repo"
+fi
+as_root sh -c "printf '%s\n' 'deb [signed-by=/etc/apt/keyrings/pwned-check-native-pam.asc] $repo_source $SUITE $COMPONENT' > /etc/apt/sources.list.d/pwned-check-native-pam.list"
 
 as_root apt-get update
-apt-cache policy "$PACKAGE_NAME" | grep -F "file:$repo_path" >/dev/null || fail "apt policy did not discover $PACKAGE_NAME from repo"
+apt-cache policy "$PACKAGE_NAME" | grep -F "$repo_source" >/dev/null || fail "apt policy did not discover $PACKAGE_NAME from repo"
 as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y "$PACKAGE_NAME"
 
 dpkg -s "$PACKAGE_NAME" >/dev/null

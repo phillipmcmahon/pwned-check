@@ -6,6 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OUTPUT_ROOT="${PWNED_CHECK_TEST_OUTPUT_DIR:-$ROOT/.test-output/native-pam-arch-repo-smoke}"
 HOST="codex-vm-arch"
 REPO_DIR="$ROOT/dist/arch-repository"
+REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-native-pam.asc"
 REMOTE_DIR=""
 REPO_NAME="pwned-check"
@@ -46,6 +47,8 @@ Options:
   --host <ssh-host>       SSH host (default: codex-vm-arch)
   --repo-dir <path>      Local Arch repository directory
                           (default: dist/arch-repository)
+  --repo-url <url>       Published Arch repository URL. When set, the VM
+                          installs from this URL instead of a copied repo.
   --public-key <path>    Local armored GPG public key
                           (default: <repo-dir>/pwned-check-native-pam.asc)
   --repo-name <name>     pacman repository name (default: pwned-check)
@@ -79,6 +82,11 @@ while [ "$#" -gt 0 ]; do
             REPO_DIR="$2"
             shift 2
             ;;
+        --repo-url)
+            [ "$#" -ge 2 ] || fail "--repo-url requires a value"
+            REPO_URL="$2"
+            shift 2
+            ;;
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
@@ -104,7 +112,9 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-[ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+if [ -z "$REPO_URL" ]; then
+    [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 
 require_command ssh
@@ -115,10 +125,12 @@ if [ -z "$REMOTE_DIR" ]; then
 fi
 
 ssh "$HOST" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+if [ -z "$REPO_URL" ]; then
+    scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
+fi
 scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/pwned-check-native-pam.asc"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_NAME='$REPO_NAME' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' REPO_NAME='$REPO_NAME' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -141,6 +153,7 @@ cleanup() {
     set +e
     as_root pwned-check-pam-disable >/dev/null 2>&1
     as_root pacman -Rns --noconfirm "$PACKAGE_NAME" >/dev/null 2>&1
+    as_root rm -f /var/cache/pacman/pkg/pwned-check-native-pam-* >/dev/null 2>&1
     if [ -n "${PACMAN_CONF_BACKUP:-}" ] && [ -f "$PACMAN_CONF_BACKUP" ]; then
         as_root cp "$PACMAN_CONF_BACKUP" /etc/pacman.conf
     fi
@@ -167,23 +180,31 @@ case "$machine" in
     aarch64|arm64) arch="aarch64" ;;
     *) fail "unsupported Arch machine architecture: $machine" ;;
 esac
-[ -f "$REMOTE_DIR/repo/$arch/$REPO_NAME.db" ] || fail "repository missing database for target arch: $arch"
+if [ -z "$REPO_URL" ]; then
+    [ -f "$REMOTE_DIR/repo/$arch/$REPO_NAME.db" ] || fail "repository missing database for target arch: $arch"
+fi
 
 KEY_FINGERPRINT="$(gpg --show-keys --with-colons "$REMOTE_DIR/pwned-check-native-pam.asc" | awk -F: '$1 == "fpr" {print $10; exit}')"
 [ -n "$KEY_FINGERPRINT" ] || fail "could not determine repository signing key fingerprint"
 
 as_root pwned-check-pam-disable >/dev/null 2>&1 || true
 as_root pacman -Rns --noconfirm "$PACKAGE_NAME" >/dev/null 2>&1 || true
+as_root rm -f /var/cache/pacman/pkg/pwned-check-native-pam-* >/dev/null 2>&1 || true
 as_root pacman-key --add "$REMOTE_DIR/pwned-check-native-pam.asc"
 as_root pacman-key --lsign-key "$KEY_FINGERPRINT"
 
 PACMAN_CONF_BACKUP="$(mktemp)"
 as_root cp /etc/pacman.conf "$PACMAN_CONF_BACKUP"
+if [ -n "$REPO_URL" ]; then
+    repo_source="$REPO_URL/$arch"
+else
+    repo_source="file://$REMOTE_DIR/repo/$arch"
+fi
 as_root sh -c "cat >> /etc/pacman.conf" <<CONF
 
 [$REPO_NAME]
 SigLevel = Required DatabaseRequired
-Server = file://$REMOTE_DIR/repo/$arch
+Server = $repo_source
 CONF
 
 as_root pacman -Sy --noconfirm "$PACKAGE_NAME"

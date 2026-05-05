@@ -11,6 +11,7 @@ ORIGIN="pwned-check"
 LABEL="pwned-check native PAM"
 SIGNING_KEY="${PWNED_CHECK_APT_SIGNING_KEY:-}"
 PUBLIC_KEY_OUTPUT=""
+GPG_PASSPHRASE_FILE="${PWNED_CHECK_GPG_PASSPHRASE_FILE:-}"
 
 usage() {
     cat <<'EOF'
@@ -32,6 +33,10 @@ Options:
                               (or PWNED_CHECK_APT_SIGNING_KEY)
   --public-key-output <path>  Export the signing public key to this path
   --help                      Show this help text
+
+Environment:
+  PWNED_CHECK_GPG_PASSPHRASE_FILE  Optional passphrase file for protected
+                                   OpenPGP signing keys
 EOF
 }
 
@@ -42,6 +47,12 @@ fail() {
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+gpg_base_args() {
+    if [ -n "$GPG_PASSPHRASE_FILE" ]; then
+        printf '%s\n' --pinentry-mode loopback --passphrase-file "$GPG_PASSPHRASE_FILE"
+    fi
 }
 
 checksum_line() {
@@ -185,11 +196,11 @@ date_utc="$(date -u '+%a, %d %b %Y %H:%M:%S UTC')"
     done
 } > "$release_file"
 
-gpg --batch --yes --pinentry-mode loopback --local-user "$SIGNING_KEY" --clearsign \
+gpg --batch --yes $(gpg_base_args) --local-user "$SIGNING_KEY" --clearsign \
     --digest-algo SHA256 \
     --output "$release_dir/InRelease" \
     "$release_file"
-gpg --batch --yes --pinentry-mode loopback --local-user "$SIGNING_KEY" --detach-sign \
+gpg --batch --yes $(gpg_base_args) --local-user "$SIGNING_KEY" --detach-sign \
     --armor --digest-algo SHA256 \
     --output "$release_dir/Release.gpg" \
     "$release_file"
@@ -200,7 +211,7 @@ cp -a "$WORK_DIR/repo" "$OUTPUT_DIR"
 
 if [ -n "$PUBLIC_KEY_OUTPUT" ]; then
     mkdir -p "$(dirname "$PUBLIC_KEY_OUTPUT")"
-    gpg --batch --yes --pinentry-mode loopback --armor --export "$SIGNING_KEY" > "$PUBLIC_KEY_OUTPUT"
+    gpg --batch --yes --armor --export "$SIGNING_KEY" > "$PUBLIC_KEY_OUTPUT"
 fi
 
 printf 'Apt repository written to %s\n' "$OUTPUT_DIR"

@@ -4,6 +4,22 @@ This plan describes how native PAM package distribution moves from GitHub releas
 
 Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
 
+## Implementation Status
+
+Epic 8 has repository-generation and repo-only smoke coverage for each target
+family. The remaining production release decision is tracked in
+[#39](https://github.com/phillipmcmahon/pwned-check/issues/39): where the signed
+repositories are hosted and which real release signing keys are used. Until that
+publication decision is executed for a release, GitHub Release assets remain the
+bootstrap channel.
+
+| Family | Repository generation | Repo-only smoke | Current limitation |
+|---|---|---|---|
+| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh` | Requires production OpenPGP key and hosted apt endpoint |
+| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh` | Requires production RPM key and hosted dnf/yum endpoint |
+| Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only until an Arch Linux ARM builder image or VM is selected |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine` with `scripts/native-pam-alpine-repo-smoke.sh` | Requires production RSA key and hosted APK endpoint |
+
 ## Current Channel
 
 GitHub Releases are the bootstrap distribution channel for native PAM packages:

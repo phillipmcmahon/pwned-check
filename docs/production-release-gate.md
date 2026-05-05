@@ -16,6 +16,12 @@ This gate defines when native PAM distribution can be described as production-re
 
 Production readiness is blocked if any package repository requires GitHub credentials, build tools, private signing keys, or repository checkout state on the target distro host.
 
+The repository tooling and repo-only smoke suites are implemented for the
+target families. [Issue #39](https://github.com/phillipmcmahon/pwned-check/issues/39)
+tracks the remaining production activation step: real signing-key selection,
+published repository endpoints, and recorded smoke evidence for those published
+endpoints before the release may be described as production-ready.
+
 ## Signing Model
 
 Signing happens in the release signing environment only. Private keys must not be stored in repo-tracked files, copied to persistent distro test VMs, embedded in smoke-test fixtures, or committed as encrypted blobs.

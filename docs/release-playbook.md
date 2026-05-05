@@ -119,6 +119,9 @@ Before the first package repository release, complete the repository-specific si
 - sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
 - run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch persistent VMs
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
+- record the published repository endpoints, signing key fingerprints, and
+  smoke output paths in the release notes before calling the release
+  production-ready
 
 The production signing model is defined in [Production release gate](production-release-gate.md#signing-model). Private keys must not be stored in repo-tracked files, persistent distro VMs, smoke fixtures, or package repositories.
 

@@ -27,10 +27,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Prepare a release | [Release playbook](release-playbook.md): release validation, Linux artifacts, and failure rule |
 | Check production release readiness | [Production release gate](production-release-gate.md): signing, repository, smoke, rollback, outage, documentation, and board criteria |
 | Plan production package repositories | [Package repositories](package-repositories.md): apt, dnf/yum, Arch, and Alpine repository publication plan |
-| Review native PAM design details | [Native PAM module](native-pam-module.md): Rust/FFI contract, packaging behavior, and test strategy |
-| Review legacy helper integration | [Linux PAM PoC](linux-pam-poc.md): `pam_exec` helper contract and manual password-change test plan |
-| Understand long-term design | [Development and architecture](development-architecture.md): design principles and stability expectations |
-| Review GitHub Docker smoke internals | [Docker smoke matrix](docker-smoke.md): CI distro image matrix and PAM package smoke behavior |
+| Review native PAM design details | [Native PAM module](native-pam-module.md): Rust/FFI contract and PAM placement |
 
 ## Suggested First-Time Flow
 

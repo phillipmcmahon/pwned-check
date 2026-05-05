@@ -125,7 +125,16 @@ mkdir -p \
     fi
 
     cp README.md LICENSE "$DOC_DIR/"
-    cp docs/native-pam-module.md docs/logging-policy.md docs/testing.md "$DOC_DIR/"
+    cp \
+        docs/operations.md \
+        docs/deployment-security-checklist.md \
+        docs/troubleshooting.md \
+        docs/logging-policy.md \
+        docs/security-model.md \
+        docs/provider-policy.md \
+        docs/checker-contract.md \
+        docs/production-release-gate.md \
+        "$DOC_DIR/"
     if [ -n "$PWNED_CHECK_BIN" ]; then
         printf 'pwned-check binary supplied through --pwned-check-bin: %s\n' "$PWNED_CHECK_BIN" > "$PACKAGE_DIR/metadata/pwned-check-go-version.txt"
     elif command -v go >/dev/null 2>&1; then

@@ -149,7 +149,7 @@ Deliverables:
 - Security review checklist for native PAM deployment.
 
 Current implementation notes:
-- [Native PAM module](native-pam-module.md) records the agreed design baseline. The native module is optional and does not replace the current helper path.
+- [Native PAM module](native-pam-module.md) records the agreed design baseline. Native PAM packages are the preferred Linux deployment path; the helper path remains available for compatibility deployments.
 - Epic 6 first-release delivery is complete through `EP6-S9`: Fedora SELinux assessment, RPM, `.deb`, Arch, Alpine, package gates, provenance, recovery docs, and closeout decisions are recorded. Follow-up hardening is now covered for argv parser corpus/memory checks, Ubuntu/Debian AppArmor/lockout drills, and count-based `min_count` checker/native-module policy.
 
 ## Epic 7: macOS and Windows Feasibility

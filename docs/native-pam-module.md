@@ -67,7 +67,7 @@ Out of scope for the first native module release:
 
 ## Design Principles
 
-The native module inherits the project principles in [Development and Architecture Principles](development-architecture.md) and [Security Model](security-model.md). The principles below restate the ones that become sharper inside a shared object loaded by privileged processes.
+The native module inherits the project principles in [Security Model](security-model.md). The principles below restate the ones that become sharper inside a shared object loaded by privileged processes.
 
 ### Smallest Possible Surface
 
@@ -387,11 +387,13 @@ The module must never log:
 
 `PAM_USER` may be included only when debug logging is explicitly enabled, and only as a non-sensitive correlation field on a separate low-cardinality event.
 
-## Packaging Plan
+## Packaging And Release Shape
 
-The native module packaging plan should be implemented after the module contract and tests exist.
+Package installation places files on disk only. Enabling the module remains an
+explicit operator action, starts in `dry_run` mode, and records enough state to
+roll back without hand-editing generated PAM files.
 
-Expected file placement:
+Expected module placement:
 
 | Platform family | Module path |
 |---|---|
@@ -404,27 +406,12 @@ Expected package contents:
 
 - `pam_pwned_check.so`
 - `pwned-check`
-- documentation under `/usr/share/doc/pwned-check/`
+- operator documentation under `/usr/share/doc/pwned-check/`
 - Debian `pam-auth-update` profile under `/usr/share/pam-configs/pwned-check`
-- Fedora/RHEL `authselect` feature plan or package-specific enablement notes
-- Arch Linux package or generic-tarball enablement notes
-- Alpine Linux package or generic-tarball enablement notes for Linux-PAM deployments
+- Fedora/RHEL/Rocky authselect helpers
+- Arch Linux manual-PAM helper scripts
+- Alpine Linux-PAM manual-PAM helper scripts
 - rollback and emergency recovery instructions
-
-Packaging order:
-
-1. Debian/Ubuntu package with `pam-auth-update` integration.
-2. Fedora/RHEL package with `authselect` integration and SELinux assessment.
-3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
-4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
-
-### Delivery Status
-
-Epic 6 first-release delivery is complete. This document keeps the current native PAM contract, package behavior, rollout posture, and test strategy in one place; production repository publication is tracked separately in [Package repositories](package-repositories.md).
-
-### Package Details
-
-Package installation places files on disk only. Enabling the module remains an explicit operator action, starts in `dry_run` mode, and must record enough state to roll back without editing generated PAM files by hand.
 
 | Family | Module path | Package build | Package smoke | Enablement and rollback notes |
 |---|---|---|---|---|
@@ -433,7 +420,7 @@ Package installation places files on disk only. Enabling the module remains an e
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` | `make package-native-pam-arch` | `make native-pam-arch-package-smoke` for CI parity; `codex-vm-arch` through `scripts/validate-before-push.sh` for local release validation | Package `pwned-check-native-pam` is built from `packaging/arch/PKGBUILD.in`; operators use `pwned-check-pam-*` wrappers under `/usr/bin`, which preserve a timestamped PAM service backup for rollback. Release automation builds `x86_64`; `aarch64` is deferred until an Arch Linux ARM builder image or VM is selected. |
 | Alpine Linux | `/usr/lib/security/pam_pwned_check.so` plus `/lib/security/pam_pwned_check.so` for Linux-PAM deployments | `make package-native-pam-alpine` | `make native-pam-alpine-package-smoke` | Package `pwned-check-native-pam` is built from `packaging/alpine/APKBUILD.in`; native PAM integration is Linux-PAM-only, not BusyBox-only auth, and `pwned-check-pam-*` wrappers under `/usr/sbin` restore the timestamped PAM service backup. Release automation builds `x86_64` and `aarch64` packages in Alpine containers. |
 
-The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
+Production repository publication is tracked separately in [Package repositories](package-repositories.md). The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
 
 ### Signing And Provenance
 
@@ -456,43 +443,21 @@ GitHub Release assets are the first native package publication channel. Signed a
 
 ## Testing Strategy
 
-The native module must not rely on the live HIBP API in automated tests.
+The native module must not rely on the live HIBP API in automated tests. The
+test boundary is:
 
-Required test layers:
+- unit tests for argument parsing, checker outcome mapping, event formatting,
+  FFI edge cases, and safe conversation strings from [Logging policy](logging-policy.md)
+- host-level PAM harness tests for module loading and conversation behavior
+- package smokes that install, enable dry-run, switch to enforcement, disable,
+  remove the package, and verify managed-file cleanup
+- no-secret-output checks for module logs, conversation messages, checker argv,
+  and diagnostics
+- dependency allowlist checks for `pam_pwned_check.so`
+- Valgrind-backed native argv parser memory checks on Linux CI
 
-- unit tests for argument parsing, checker outcome mapping, and event formatting
-- equivalent host-level PAM harness tests for module loading and conversation behavior in CI, with `libpam_wrapper` still available as a future no-root refinement
-- container integration tests that install the package and exercise real PAM stack behavior on supported distros
-- fault injection for provider HTTP 5xx, provider timeout, checker missing, checker not executable, checker timeout, checker config failure, provider failure, malformed module args, SELinux enforcing, and AppArmor enforcing or captured host AppArmor state
-- dry-run tests proving would-be rejections do not block password changes
-- no-secret-output tests covering module logs, conversation messages, checker argv, and diagnostics
-- fixture tests for the exact safe conversation strings documented in [Logging policy](logging-policy.md)
-- CI dependency allowlist checks for `pam_pwned_check.so`, using `ldd` or the target distro's equivalent dynamic dependency inspection
-- deterministic property-style parser corpus coverage for module argv handling
-- Valgrind-backed memory-check test path for native PAM argv parsing on Linux, with ASan still available as a future enhancement if the Rust toolchain and target support it cleanly
-- lockout-safety tests that intentionally misconfigure the module and assert documented root recovery paths still work
-
-Current closeout status:
-
-- unit, host harness, Docker distro, package, dependency allowlist, symbol, Ubuntu host, Debian VM, Fedora host, Fedora SELinux, Arch package, and Alpine package gates are in place
-- native module argv parsing has deterministic property-style corpus coverage, and `make native-pam-memory-check` runs parser tests under Valgrind on Linux CI
-- Ubuntu/Debian AppArmor state capture and lockout recovery drills are covered by `make native-pam-ubuntu-hardening-assessment`
-- count-based `min_count` policy is implemented through `pwned-check --stdin --min-count <n>` and native module `min_count=<n>`
-
-The first-wave container test matrix is:
-
-- Debian stable
-- Ubuntu LTS
-- Fedora current
-- Rocky or another RHEL-compatible image with SELinux/authselect behavior addressed
-- Arch Linux
-- Alpine Linux with Linux-PAM installed
-
-The existing Docker PAM smoke tests provide the starting point, but native module tests must load `pam_pwned_check.so` directly rather than testing through `pam_exec.so`.
-
-Per-distro integration tests should install the package, enable the module through the distro's PAM management tool, attempt password changes with known-pwned and known-clean candidates, and assert both syslog content and password state. The tests must continue using the existing HIBP-compatible local provider.
-
-The current Docker and persistent VM distro testing workflow is documented in [distro-testing.md](distro-testing.md).
+The current Docker, persistent VM, architecture, and release-gate matrix is
+documented in [Testing](testing.md) and [Distro testing runbook](distro-testing.md).
 
 ## Rollout Posture
 

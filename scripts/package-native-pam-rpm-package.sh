@@ -157,7 +157,7 @@ test -x %{buildroot}/usr/sbin/pwned-check-pam-disable
 test -x %{buildroot}/lib64/security/pam_pwned_check.so
 test -x %{buildroot}/usr/share/pwned-check/authselect/enable-authselect.sh
 test -x %{buildroot}/usr/share/pwned-check/authselect/rollback-authselect.sh
-test -f %{buildroot}/usr/share/doc/pwned-check/native-pam-module.md
+test -f %{buildroot}/usr/share/doc/pwned-check/operations.md
 
 %post
 if command -v authselect >/dev/null 2>&1; then
@@ -167,9 +167,14 @@ fi
 %files
 %license /usr/share/doc/pwned-check/LICENSE
 %doc /usr/share/doc/pwned-check/README.md
-%doc /usr/share/doc/pwned-check/native-pam-module.md
+%doc /usr/share/doc/pwned-check/operations.md
+%doc /usr/share/doc/pwned-check/deployment-security-checklist.md
+%doc /usr/share/doc/pwned-check/troubleshooting.md
 %doc /usr/share/doc/pwned-check/logging-policy.md
-%doc /usr/share/doc/pwned-check/testing.md
+%doc /usr/share/doc/pwned-check/security-model.md
+%doc /usr/share/doc/pwned-check/provider-policy.md
+%doc /usr/share/doc/pwned-check/checker-contract.md
+%doc /usr/share/doc/pwned-check/production-release-gate.md
 /usr/bin/pwned-check
 /usr/sbin/pwned-check-pam-enable-dry-run
 /usr/sbin/pwned-check-pam-enable-enforce

@@ -1,6 +1,6 @@
 # Operations
 
-This runbook covers Linux installation, native PAM enablement, rollback, and emergency recovery. Native PAM packages are the preferred Linux deployment path. The helper-based `pam_exec.so expose_authtok` path remains supported for PoC or compatibility deployments and is documented in [Linux PAM PoC](linux-pam-poc.md).
+This runbook covers Linux installation, native PAM enablement, rollback, and emergency recovery. Native PAM packages are the preferred Linux deployment path. The helper-based `pam_exec.so expose_authtok` path remains supported for compatibility deployments and is summarized here.
 
 ## Native PAM Package Model
 
@@ -16,7 +16,7 @@ All native package families install the same commands:
 
 Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine install these commands under `/usr/sbin`; Arch installs them under `/usr/bin`. Prefer calling the command name instead of hard-coding the path.
 
-Native package assets are not repository-signed yet. Verify the downloaded `.sha256` file before installation and treat GitHub Release assets as the bootstrap channel, not the final production repository channel. The staged signed repository plan is in [Package repositories](package-repositories.md).
+Native package assets are not repository-signed yet. Verify the downloaded `.sha256` file before installation and treat GitHub Release assets as the bootstrap channel, not the final production repository channel.
 
 ## Install From GitHub Releases
 
@@ -286,7 +286,23 @@ sudo ln -sfn /usr/local/lib/pwned-check/<previous-helper-binary> /usr/local/lib/
 /usr/local/bin/pwned-check-pam-helper --version
 ```
 
-For helper-based PAM configuration, use [Linux PAM PoC](linux-pam-poc.md). Do not combine the helper-based `pam_exec.so expose_authtok` line and the native PAM module in the same password stack unless you are deliberately testing both paths on a disposable host.
+Helper-based PAM configuration uses the installed `pwned-check-pam-helper` as a
+thin timeout wrapper around the checker:
+
+```text
+password requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check --timeout 3s
+```
+
+Place the line before `pam_unix.so` in the target password stack so rejected
+passwords fail before local password storage changes. The helper reads the
+candidate from stdin, invokes `pwned-check --stdin`, never logs the plaintext
+password, and maps all reject, timeout, configuration, and fail-closed provider
+outcomes to a PAM rejection. Back up the PAM file first, keep a privileged shell
+open, test with a disposable user, and restore the backup for rollback.
+
+Do not combine the helper-based `pam_exec.so expose_authtok` line and the native
+PAM module in the same password stack unless you are deliberately testing both
+paths on a disposable host.
 
 ## Checker Configuration
 
@@ -299,14 +315,3 @@ Environment variables:
 - `PWNED_CHECK_HIBP_ENDPOINT`: override HIBP endpoint for controlled tests
 
 For production PAM integration, prefer explicit configuration in the integration layer rather than depending on an ambient shell environment.
-
-## Maintainer References
-
-Packaging, repository, and validation internals live outside this operator runbook:
-
-- [Package repositories](package-repositories.md): signed apt, dnf/yum, Arch, and Alpine repository plan
-- [Release playbook](release-playbook.md): release validation and artifact publication
-- [Distro testing](distro-testing.md): VM and Docker smoke-test matrix
-- [Native PAM module](native-pam-module.md): module contract, PAM placement, and security model
-- [Deployment security checklist](deployment-security-checklist.md): rollout checklist before enforcement
-- [Troubleshooting](troubleshooting.md): operational failure diagnosis

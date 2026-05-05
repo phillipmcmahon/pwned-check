@@ -236,7 +236,7 @@ The PAM package smoke path proves:
 - package installation creates stable binary and symlink paths
 - a dedicated `/etc/pam.d/pwned-check-smoke` service can pass the candidate token to the helper
 
-The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. When `pamtester` is unavailable, the runner compiles a tiny fallback PAM client and now prints the selected client, distro identity, and generated PAM service before executing cases. This is intentionally verbose enough to make any future helper-path segfault actionable. The operator-facing password-change placement remains the Linux PAM PoC path and should be manually tested before enabling it on a host.
+The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. When `pamtester` is unavailable, the runner compiles a tiny fallback PAM client and now prints the selected client, distro identity, and generated PAM service before executing cases. This is intentionally verbose enough to make any future helper-path segfault actionable. Operator-facing password-change placement is documented in [Operations](operations.md) and should be tested on the target host before enablement.
 
 ## Static Analysis
 

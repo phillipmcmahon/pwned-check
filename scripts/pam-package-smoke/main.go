@@ -196,6 +196,9 @@ func writePAMService() {
 	service := "auth requisite pam_exec.so expose_authtok quiet /usr/local/bin/pwned-check-pam-helper --checker /usr/local/bin/pwned-check-smoke-checker --timeout 3s\n" +
 		"auth required pam_permit.so\n"
 	path := "/etc/pam.d/" + serviceName
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		fail("create PAM service directory %s: %v", filepath.Dir(path), err)
+	}
 	if err := os.WriteFile(path, []byte(service), 0o644); err != nil {
 		fail("write PAM service %s: %v", path, err)
 	}

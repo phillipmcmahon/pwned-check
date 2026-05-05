@@ -157,15 +157,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - For repository-backed releases, smoke the live repository endpoints from the
   persistent distro VMs before tagging or promoting release notes:
   ```bash
-  ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu --repo-url https://phillipmcmahon.github.io/pwned-check/apt
-  ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian --repo-url https://phillipmcmahon.github.io/pwned-check/apt
-  ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
-  ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
-  ./scripts/native-pam-arch-repo-smoke.sh --host codex-vm-arch --repo-url https://phillipmcmahon.github.io/pwned-check/arch
+  make native-pam-live-repo-smokes
   ```
-  Alpine live-endpoint smoke currently uses the documented arm64 Docker path
-  until the project has a persistent Alpine VM matching the published package
-  architecture.
+  This runs apt on Ubuntu and Debian, RPM on Fedora and Rocky, and Arch on the
+  persistent Arch VM. Alpine live-endpoint smoke is reported as a deferral
+  until `PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a persistent Alpine VM
+  matching the published package architecture.
 - Archive the release artifacts to the NAS after the GitHub Release assets are
   visible:
   ```bash

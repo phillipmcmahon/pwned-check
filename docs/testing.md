@@ -147,6 +147,7 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-arch-repo-smoke.sh` | Arch repository smoke that installs from signed package files and signed pacman database metadata with a locally trusted public key, then exercises dry-run/enforce/disable, package removal, managed-file cleanup, and writes a combined `.test-output/` report |
 | `scripts/native-pam-alpine-package-smoke.sh` | Alpine Docker smoke that builds the `APKBUILD` package, installs it with `apk`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-alpine-repo-smoke.sh` | Alpine repository smoke that installs from a signed APK index and public RSA key without `--allow-untrusted`, then exercises dry-run/enforce/disable, package removal, managed-file cleanup, and writes a combined `.test-output/` report |
+| `scripts/native-pam-live-repo-smokes.sh` | Release-gate wrapper for published repository endpoints. Runs apt, RPM, and Arch smokes on persistent VMs where architecture coverage exists, and records Alpine as deferred unless a matching Alpine host is configured |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
@@ -191,6 +192,7 @@ Current smoke architecture coverage:
 | Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch on persistent VMs | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
 | Native PAM release assets, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release asset preparation |
 | Native PAM release assets, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 assets |
+| Live repository endpoint smoke | `make native-pam-live-repo-smokes` on persistent VMs before repository-backed release promotion | Not run in normal CI because it mutates real package-manager state and depends on maintainer VMs |
 | Arch package path | `codex-vm-arch` over SSH, `linux/amd64` | Docker `linux/amd64` only |
 
 Release-sensitive checks:

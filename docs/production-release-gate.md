@@ -62,6 +62,16 @@ Required repository smoke coverage:
 | Arch | `codex-vm-arch` | Add custom repository and public key, install with `pacman -S`, run manual helper dry-run/enforcement, disable, remove package, verify managed-file cleanup. |
 | Alpine | Alpine VM | Add public RSA key and repository URL, install with `apk add`, run manual helper dry-run/enforcement on a Linux-PAM service, disable, remove package, verify managed-file cleanup. |
 
+The release-time wrapper is:
+
+```bash
+make native-pam-live-repo-smokes
+```
+
+It runs the live published endpoint smokes for apt, RPM, and Arch where the
+project has persistent VMs today. Alpine is emitted as an explicit deferral
+unless a matching Alpine repository-smoke host is configured.
+
 ## Release Decision
 
 A release may be called production-ready only when this gate passes and the release playbook records the evidence. If a criterion is deferred, the release notes must describe the release as pre-production or bootstrap-channel only, and the deferment must link to the relevant open story.

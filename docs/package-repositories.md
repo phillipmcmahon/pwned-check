@@ -199,6 +199,15 @@ Each repository story must add an install test that uses only repository configu
 The repository smoke must not require GitHub credentials or build tools on the distro host. It should consume only the published repository endpoint, public key material, and normal package manager commands.
 
 The required repository-only smoke gate is defined in [Production release gate](production-release-gate.md#repository-only-smoke-gate).
+For repository-backed release promotion, run the published endpoint wrapper:
+
+```bash
+make native-pam-live-repo-smokes
+```
+
+The wrapper runs apt, RPM, and Arch live endpoint smokes on persistent VMs where
+architecture coverage exists. Alpine is recorded as deferred unless
+`PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a matching persistent Alpine VM.
 
 ## Apt Repository
 

@@ -14,7 +14,8 @@ privileged access is broken, stop and ask for the VM to be repaired, recreated,
 or made available again through the normal `codex-vm-*` SSH path.
 
 Fleet capacity, recovery expectations, and fallback boundaries are maintained
-in [VM fleet](vm-fleet.md).
+in [VM fleet](vm-fleet.md). Per-distro rebuild and refresh steps are maintained
+in [VM runbooks](vm-runbooks.md).
 
 ## Coverage Layers
 
@@ -168,6 +169,9 @@ The combined `.txt` file in each run directory is intended for quick preview. Th
 ## Persistent VM Setup
 
 Each persistent VM should be prepared once, then reused for host package smoke tests.
+Use [VM runbooks](vm-runbooks.md) for the distro-specific package list, primary
+smoke commands, recovery checks, and known quirks. This section records the
+shared access and sync rules that apply to every guest.
 
 Setup rules:
 

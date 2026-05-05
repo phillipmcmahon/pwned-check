@@ -50,11 +50,13 @@ but it is not a replacement for a persistent real-host repository smoke.
 ## Recovery Expectations
 
 The VMs should be recoverable from distro installation media plus this
-repository's runbooks. They should not contain irreplaceable release state.
+repository's runbooks. Use [VM runbooks](vm-runbooks.md) for per-distro
+bootstrap packages, smoke commands, rollback checks, and known quirks. The VMs
+should not contain irreplaceable release state.
 
 | Scenario | Expected response |
 |---|---|
-| Single VM lost | Recreate the guest, reapply SSH key and passwordless sudo, install bootstrap packages from [Distro testing runbook](distro-testing.md), then rerun the matching package and repository smoke. |
+| Single VM lost | Recreate the guest, reapply SSH key and passwordless sudo, install bootstrap packages from [VM runbooks](vm-runbooks.md), then rerun the matching package and repository smoke. |
 | VM has broken PAM/sudo state | Do not attempt hypervisor recovery through Codex. Ask the maintainer to repair or recreate the guest, then rerun the relevant smoke from a clean package state. |
 | Private infrastructure unavailable during a release window | Delay production release promotion or record an explicit deferral. Do not replace persistent VM acceptance with amd64 Docker when a VM exists for that distro. |
 | Local Docker/QEMU unavailable | Skip only the documented arm64 Docker CI-parity stage with `PWNED_CHECK_SKIP_ARM64_DOCKER=1` when appropriate; record that skip in release notes if it affects release evidence. |
@@ -74,7 +76,7 @@ Before adding another distro or architecture, confirm:
 
 - the host has enough CPU, memory, disk, and network capacity for parallel smoke
   runs without starving existing VMs
-- the new VM has a clear owner, SSH alias, and bootstrap runbook
+- the new VM has a clear owner, SSH alias, and entry in [VM runbooks](vm-runbooks.md)
 - release gates identify whether the VM is mandatory or best-effort
 - Docker fallback coverage is documented separately from real-host acceptance
 

@@ -85,7 +85,7 @@ The first run builds a reusable Ubuntu 24.04 image with Rust and PAM development
 
 Each run copies the container test log, per-case PAM output, captured syslog, and selected `/tmp/native-pam-smoke-*` artifacts into an ignored timestamped directory such as `.test-output/native-pam-ubuntu-smoke/20260501T063620Z-native-pam-ubuntu-smoke`. These run directories sort chronologically by name, and `.test-output/native-pam-ubuntu-smoke/latest` points at the newest run. Each run also writes a combined `<timestamp>-native-pam-ubuntu-smoke.txt` file for quick double-click or Preview inspection. Set `NATIVE_PAM_UBUNTU_OUTPUT_DIR` to write those artifacts somewhere else.
 
-For distro-specific Docker and VM validation, use the runbook in [distro-testing.md](distro-testing.md). It defines the first-wave distro set, Docker matrices, persistent VM setup rules, and the current Ubuntu, Debian, Fedora, Alpine, Arch, and Docker coverage paths. Maintainer VM capacity and recovery expectations are in [VM fleet](vm-fleet.md).
+For distro-specific Docker and VM validation, use the runbook in [distro-testing.md](distro-testing.md). It defines the first-wave distro set, Docker matrices, persistent VM setup rules, and the current Ubuntu, Debian, Fedora, Alpine, Arch, and Docker coverage paths. Maintainer VM capacity and recovery expectations are in [VM fleet](vm-fleet.md); per-VM rebuild and refresh procedures are in [VM runbooks](vm-runbooks.md).
 
 ## Coverage Gate
 

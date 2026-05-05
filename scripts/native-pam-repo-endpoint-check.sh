@@ -176,6 +176,10 @@ check_alpine() {
     [ -n "$alpine_sig" ] || fail "Alpine APKINDEX signature entry could not be extracted"
     assert_contains "$alpine_dir/APKINDEX" "P:$PACKAGE_NAME"
     assert_contains "$alpine_dir/APKINDEX" "A:aarch64"
+    alpine_version="$(awk -F: '$1 == "V" {print $2; exit}' "$alpine_dir/APKINDEX")"
+    [ -n "$alpine_version" ] || fail "Alpine APKINDEX does not include a version for $PACKAGE_NAME"
+    alpine_payload="$PACKAGE_NAME-$alpine_version.apk"
+    curl --fail --silent --show-error --location --head "$BASE_URL/alpine/aarch64/$alpine_payload" >/dev/null || fail "Alpine package payload missing: $alpine_payload"
     echo "alpine endpoint passed"
     echo "::endgroup::"
 }

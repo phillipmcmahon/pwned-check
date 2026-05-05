@@ -139,9 +139,12 @@ Run the rehearsal alongside the annual rotation planning window when possible.
 1. Generate the replacement key in the release signing environment.
 2. Publish the replacement public key and fingerprint before using it.
 3. Sign the next repository metadata with the replacement key.
-4. Keep the previous public key available until all supported repository
+4. Update the scheduled repository endpoint monitor constants in
+   `scripts/native-pam-repo-endpoint-check.sh`: `OPENPGP_FPR` for apt, RPM, and
+   Arch rotations, and `ALPINE_KEY_SHA256` for Alpine RSA key rotations.
+5. Keep the previous public key available until all supported repository
    metadata signed by it has aged out.
-5. Do not replace already published package payloads at the same version. If a
+6. Do not replace already published package payloads at the same version. If a
    signing mistake affects a shipped package, publish a corrected patch release.
 
 Emergency revocation or compromised key:

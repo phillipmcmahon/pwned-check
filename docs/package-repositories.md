@@ -60,6 +60,62 @@ Public keys may be published in the repository only after their fingerprints, ro
 
 The signing responsibilities and private-key prohibitions are canonical in the [Production release gate](production-release-gate.md#signing-model).
 
+## Key Rotation And Revocation
+
+Repository key lifecycle is a release-maintainer responsibility. Private keys
+belong only in the release signing environment or managed signing runner. They
+must not be committed, copied to persistent distro VMs, embedded in smoke
+fixtures, or stored beside published repository payloads.
+
+Publish a small key record with every repository-backed production release:
+
+| Field | Required content |
+|---|---|
+| Key purpose | Apt/release OpenPGP, RPM signing, Arch OpenPGP, or Alpine RSA |
+| Public fingerprint | Full fingerprint for OpenPGP/RPM/Arch keys, or SHA256 fingerprint of the Alpine RSA public key |
+| Storage owner | Human maintainer or signing-runner owner responsible for the private key |
+| Created and expires | Creation date and expiry date, or `no expiry` with rationale |
+| Rotation due | Planned replacement date, normally before expiry and before maintainer ownership changes |
+| Revocation notice path | Release notes, repository notice file, GitHub security advisory when appropriate, and operator communication channel |
+
+Planned rotation:
+
+1. Generate the replacement key in the release signing environment.
+2. Publish the replacement public key and fingerprint before using it.
+3. Sign the next repository metadata with the replacement key.
+4. Keep the previous public key available until all supported repository
+   metadata signed by it has aged out.
+5. Do not replace already published package payloads at the same version. If a
+   signing mistake affects a shipped package, publish a corrected patch release.
+
+Emergency revocation or compromised key:
+
+1. Stop repository publication from the affected signing environment.
+2. Publish a revocation notice that includes the affected fingerprint, first
+   known bad version or timestamp, operator action, and replacement key
+   fingerprint when available.
+3. Generate a replacement key in a clean signing environment.
+4. Republish repository metadata signed by the replacement key without silently
+   replacing existing package payloads. Use a new package version if payloads
+   must change.
+5. Instruct operators to remove the affected trusted key, install the
+   replacement public key, refresh repository metadata, and reinstall or upgrade
+   to the corrected version.
+
+Expired key recovery is the same as planned rotation except the old key cannot
+be relied on for new metadata. Publish the replacement public key fingerprint
+through the release notes and the repository trust-bootstrap page before asking
+operators to refresh package metadata.
+
+Operator public-key update commands:
+
+| Family | Update public key |
+|---|---|
+| Apt | Install the replacement armored key under `/etc/apt/keyrings/pwned-check.asc`, update the `signed-by=` source-list entry if the filename changes, then run `sudo apt update`. |
+| DNF/Yum | Install the replacement public key file, update `gpgkey=` in `/etc/yum.repos.d/pwned-check-native-pam.repo` if the URL changes, then run `sudo dnf clean metadata && sudo dnf makecache`. |
+| Arch | `sudo pacman-key --delete <old-fingerprint>`, `sudo pacman-key --add <new-key.asc>`, `sudo pacman-key --lsign-key <new-fingerprint>`, then `sudo pacman -Sy`. |
+| Alpine | Replace `/etc/apk/keys/pwned-check-native-pam.rsa.pub` with the new public RSA key, remove the old key file if the name changed, then run `sudo apk update`. |
+
 ## Publication Layout
 
 The repository layout should be generated from the already validated release package set:

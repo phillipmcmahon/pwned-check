@@ -10,6 +10,7 @@ Use this checklist before enabling `pwned-check` in a Linux password-change path
 - Set a PAM helper timeout with `pwned-check-pam-helper --timeout`, or a native module timeout with `timeout=<seconds>`.
 - Verify the release package checksum before installation.
 - For repository-backed production releases, verify the repository public key, signed metadata, and production readiness evidence from the [Production release gate](production-release-gate.md).
+- Confirm the repository key fingerprint and rotation/revocation notice path in [Package repositories](package-repositories.md#key-rotation-and-revocation).
 - Confirm `pwned-check --version` and `pwned-check-pam-helper --version`.
 - For native PAM deployments, confirm `pam_pwned_check.so` is installed in the distro PAM security module directory and the package rollback helper is present.
 - Review [Provider policy](provider-policy.md), [Security model](security-model.md), and [Logging policy](logging-policy.md).

@@ -26,7 +26,7 @@ Signing happens in the release signing environment only. Private keys must not b
 | RPM signing key | Release maintainer or release signing runner owner | RPM package signatures and optional `repomd.xml` signatures | RPM macros configured only in the signing environment; public key install instructions documented for Fedora/Rocky operators. |
 | Alpine RSA key | Release maintainer or release signing runner owner | APK index and package trust for Alpine Linux-PAM repository installs | Private key outside the repo and VMs; public key distributed for `/etc/apk/keys`; rotation and compromised-key recovery documented. |
 
-Public keys may be published after fingerprints, storage expectations, rotation cadence, revocation notice path, and operator update steps are documented. Existing package payloads must not be silently replaced after publication; publish a new patch version or a clearly versioned repository metadata correction instead.
+Public keys may be published after fingerprints, storage expectations, rotation cadence, revocation notice path, and operator update steps are documented. Existing package payloads must not be silently replaced after publication; publish a new patch version or a clearly versioned repository metadata correction instead. The operational key lifecycle is defined in [Package repositories](package-repositories.md#key-rotation-and-revocation).
 
 ## Repository-Only Smoke Gate
 

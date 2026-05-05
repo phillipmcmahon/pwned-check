@@ -18,6 +18,11 @@ Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine install these commands under `/usr/
 
 Native package assets are not repository-signed yet. Verify the downloaded `.sha256` file before installation and treat GitHub Release assets as the bootstrap channel, not the final production repository channel.
 
+When using repository-backed packages, verify the repository public key
+fingerprint before enabling the PAM module. Key rotation, expired-key recovery,
+and compromised-key recovery steps are maintained in
+[Package repositories](package-repositories.md#key-rotation-and-revocation).
+
 ## Install From GitHub Releases
 
 Set the version and release URL:

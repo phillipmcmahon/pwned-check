@@ -100,6 +100,9 @@ Native PAM package releases must additionally:
 - sign or publish `.deb` artifacts through the project Debian repository/release signing process
 - attach checksum, provenance, and signature files alongside native PAM packages
 - keep private signing keys outside the repository and outside test VMs
+- record repository signing key fingerprints, rotation due dates, revocation
+  notice paths, and operator public-key update steps as described in
+  [Package repositories](package-repositories.md#key-rotation-and-revocation)
 
 GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
 

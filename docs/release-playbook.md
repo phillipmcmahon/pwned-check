@@ -155,7 +155,8 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   ```bash
   ./scripts/archive-release-to-nas.sh --version v0.1.0
   ```
-  This writes immutable artifacts to
+  This downloads the immutable GitHub Release assets, adds the GitHub source
+  archives for the tag, writes them to
   `/volume1/homes/phillipmcmahon/code/pwned-check/archive/<version>/` and resets
   `/volume1/homes/phillipmcmahon/code/pwned-check/latest/<version>/`.
 - Confirm release notes include:

@@ -7,6 +7,8 @@ VERSION=""
 INPUT_DIR="$ROOT/dist/release"
 HOST="${PWNED_CHECK_NAS_HOST:-homestorage}"
 REMOTE_ROOT="${PWNED_CHECK_NAS_RELEASE_ROOT:-/volume1/homes/phillipmcmahon/code/pwned-check}"
+REPO="${PWNED_CHECK_GITHUB_REPO:-phillipmcmahon/pwned-check}"
+SOURCE="${PWNED_CHECK_NAS_ARCHIVE_SOURCE:-github}"
 
 usage() {
   cat <<'EOF'
@@ -17,12 +19,17 @@ Copy release artifacts to the NAS archive layout:
   <remote-root>/archive/<version>/
   <remote-root>/latest/<version>/
 
-The staged artifact set includes matching files from dist/release, generated
-source archives named like GitHub release source archives, and SHA256SUMS.txt.
+By default the staged artifact set is downloaded from the immutable GitHub
+Release assets for the tag. GitHub source archives are downloaded from the same
+release tag and named like the GitHub UI: "Source code (tar.gz)" and
+"Source code (zip)".
 
 Options:
   --version <version>       Release version, for example v0.1.6 or 0.1.6
   --input-dir <path>        Release artifact directory (default: dist/release)
+                             Used only with --source local
+  --source <github|local>   Archive source (default: github)
+  --repo <owner/name>       GitHub repository (default: phillipmcmahon/pwned-check)
   --host <ssh-host>         SSH host (default: homestorage)
   --remote-root <path>      NAS project root
                              (default: /volume1/homes/phillipmcmahon/code/pwned-check)
@@ -51,6 +58,16 @@ while [ "$#" -gt 0 ]; do
       INPUT_DIR="$2"
       shift 2
       ;;
+    --source)
+      [ "$#" -ge 2 ] || fail "--source requires a value"
+      SOURCE="$2"
+      shift 2
+      ;;
+    --repo)
+      [ "$#" -ge 2 ] || fail "--repo requires a value"
+      REPO="$2"
+      shift 2
+      ;;
     --host)
       [ "$#" -ge 2 ] || fail "--host requires a value"
       HOST="$2"
@@ -72,17 +89,19 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$VERSION" ] || fail "--version is required"
-[ -d "$INPUT_DIR" ] || fail "input directory does not exist: $INPUT_DIR"
+case "$SOURCE" in
+  github|local) ;;
+  *) fail "--source must be github or local" ;;
+esac
+if [ "$SOURCE" = "local" ]; then
+  [ -d "$INPUT_DIR" ] || fail "input directory does not exist: $INPUT_DIR"
+fi
 
 require_command git
 require_command scp
 require_command ssh
-require_command zip
-
-if command -v sha256sum >/dev/null 2>&1; then
-  SHA256_CMD=(sha256sum)
-else
-  SHA256_CMD=(shasum -a 256)
+if [ "$SOURCE" = "github" ]; then
+  require_command gh
 fi
 
 VERSION_NO_V="${VERSION#v}"
@@ -101,32 +120,32 @@ trap cleanup EXIT INT TERM
 stage="$work_dir/$VERSION_TAG"
 mkdir -p "$stage"
 
-found=0
-while IFS= read -r file; do
-  base="$(basename "$file")"
-  case "$base" in
-    *"$VERSION_TAG"*|*"$VERSION_NO_V"*|native-pam-SHA256SUMS.txt|native-pam-SHA256SUMS.txt.asc|native-pam-provenance.json|native-pam-provenance.json.asc|SHA256SUMS.txt)
-      cp "$file" "$stage/$base"
-      found=$((found + 1))
-      ;;
-  esac
-done < <(find "$INPUT_DIR" -maxdepth 1 -type f | sort)
+if [ "$SOURCE" = "github" ]; then
+  gh auth status >/dev/null
+  gh release view "$VERSION_TAG" --repo "$REPO" >/dev/null
+  gh release download "$VERSION_TAG" --repo "$REPO" --dir "$stage" --clobber --pattern '*'
+  gh api "repos/$REPO/tarball/$VERSION_TAG" > "$stage/Source code (tar.gz)"
+  gh api "repos/$REPO/zipball/$VERSION_TAG" > "$stage/Source code (zip)"
+else
+  found=0
+  while IFS= read -r file; do
+    base="$(basename "$file")"
+    case "$base" in
+      *"$VERSION_TAG"*|*"$VERSION_NO_V"*|native-pam-SHA256SUMS.txt|native-pam-SHA256SUMS.txt.asc|native-pam-provenance.json|native-pam-provenance.json.asc|SHA256SUMS.txt)
+        cp "$file" "$stage/$base"
+        found=$((found + 1))
+        ;;
+    esac
+  done < <(find "$INPUT_DIR" -maxdepth 1 -type f | sort)
 
-[ "$found" -gt 0 ] || fail "no release artifacts matching $VERSION_TAG or $VERSION_NO_V found in $INPUT_DIR"
+  [ "$found" -gt 0 ] || fail "no release artifacts matching $VERSION_TAG or $VERSION_NO_V found in $INPUT_DIR"
 
-git -C "$ROOT" archive --format=tar.gz --prefix="pwned-check-$VERSION_TAG/" -o "$stage/Source code (tar.gz)" "$ref"
-(
-  cd "$ROOT"
-  git archive --format=zip --prefix="pwned-check-$VERSION_TAG/" -o "$stage/Source code (zip)" "$ref"
-)
-
-(
-  cd "$stage"
-  rm -f SHA256SUMS.txt
-  sums_file="$work_dir/SHA256SUMS.txt"
-  "${SHA256_CMD[@]}" ./* | sed 's# \\./#  #' > "$sums_file"
-  mv "$sums_file" SHA256SUMS.txt
-)
+  git -C "$ROOT" archive --format=tar.gz --prefix="pwned-check-$VERSION_TAG/" -o "$stage/Source code (tar.gz)" "$ref"
+  (
+    cd "$ROOT"
+    git archive --format=zip --prefix="pwned-check-$VERSION_TAG/" -o "$stage/Source code (zip)" "$ref"
+  )
+fi
 
 remote_archive="$REMOTE_ROOT/archive/$VERSION_TAG"
 remote_latest_root="$REMOTE_ROOT/latest"

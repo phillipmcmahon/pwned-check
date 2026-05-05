@@ -223,6 +223,7 @@ cat > "$TMP/service" <<EOF
 password required pam_manual_authtok.so
 password required pam_permit.so
 EOF
+as_root install -d "$(dirname "$SERVICE_FILE")"
 as_root install -m 0644 "$TMP/service" "$SERVICE_FILE"
 
 as_root env \

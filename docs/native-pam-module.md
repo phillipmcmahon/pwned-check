@@ -418,9 +418,9 @@ Packaging order:
 3. Arch Linux package or generic tarball path with explicit PAM edit/restore workflow.
 4. Alpine Linux package or generic tarball path after Linux-PAM path validation.
 
-### Delivery History
+### Delivery Status
 
-The completed Epic 6 story order and historical distro delivery matrix are recorded in [Native PAM delivery history](native-pam-delivery-history.md). This document keeps the current contract, package behavior, rollout posture, and test strategy in one place.
+Epic 6 first-release delivery is complete. This document keeps the current native PAM contract, package behavior, rollout posture, and test strategy in one place; production repository publication is tracked separately in [Package repositories](package-repositories.md).
 
 ### Package Details
 

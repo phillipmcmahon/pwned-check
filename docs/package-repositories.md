@@ -8,12 +8,17 @@ GitHub Releases are the bootstrap distribution channel for native PAM packages:
 
 | Distro family | Release asset | Install tool |
 |---|---|---|
-| Debian/Ubuntu | `pwned-check-native-pam_<version>_amd64.deb` | `apt install ./...deb` |
-| Fedora/RHEL/Rocky | `pwned-check-native-pam-<version>-1.<dist>.x86_64.rpm` | `dnf install ./...rpm` |
+| Debian/Ubuntu | `pwned-check-native-pam_<version>_<arch>.deb` | `apt install ./...deb` |
+| Fedora/RHEL/Rocky | `pwned-check-native-pam-<version>-1.<dist>.<arch>.rpm` | `dnf install ./...rpm` |
 | Arch Linux | `pwned-check-native-pam-<version>-1-x86_64.pkg.tar.zst` | `pacman -U ./...pkg.tar.zst` |
 | Alpine Linux-PAM | `pwned-check-native-pam-<version>-r0.apk` | `apk add --allow-untrusted ./...apk` |
 
 Release assets must include per-file SHA256 files, native aggregate checksums, and native package provenance. Package installation must place files only; PAM enablement stays explicit and starts in `dry_run` mode.
+
+Current release automation builds Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine
+native PAM packages for `amd64`/`x86_64` and `arm64`/`aarch64`. Arch package
+assets are `x86_64` only until an Arch Linux ARM builder image or persistent VM
+is selected.
 
 All native package families expose the same operator commands after installation:
 

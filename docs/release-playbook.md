@@ -137,6 +137,8 @@ git tag -a v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
 - Comment on the release-prep issue with validation and release links.
 - Move shipped story/task issues to `Done`.
 - Run the project board audit.
+- Run `make github-workflow-status` to confirm the latest completed `main`
+  runs for CI, fuzz, and Native PAM Package Gates are green.
 
 ## Release Failure Rule
 

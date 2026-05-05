@@ -6,7 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${DOCKER_SMOKE_PLATFORM:-linux/amd64}"
 GOOS_VALUE="linux"
 GOARCH_VALUE="${GOARCH:-}"
-IMAGES="${DOCKER_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20}"
+IMAGES="${DOCKER_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22}"
 
 usage() {
     cat <<'EOF'

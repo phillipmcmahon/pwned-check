@@ -38,15 +38,22 @@ For checker configuration, provider, and unexpected-exit failures, the helper ma
 | SELinux AVCs mention `pwned-check` or `pam_pwned_check` | Local policy blocks the checker path or network behavior from the password-change domain. | Keep enforcement disabled, collect the AVCs, and apply the operator-managed policy decision before retrying. |
 | AppArmor denials mention `pwned-check`, `pam_pwned_check`, or the native PAM smoke service | Local AppArmor policy blocks the checker or PAM module path. | Keep enforcement disabled, run `make native-pam-ubuntu-hardening-assessment`, and inspect the combined report under `.test-output/native-pam-ubuntu-hardening-assessment/latest/`. |
 
-Package-specific rollback commands are in [Operations](operations.md#native-pam-emergency-recovery).
+Package-specific rollback commands are in [Operations](operations.md#emergency-recovery).
 
 ## Common Checks
 
 Confirm binaries:
 
 ```bash
-/usr/local/bin/pwned-check --version
-/usr/local/bin/pwned-check-pam-helper --version
+command -v pwned-check
+pwned-check --version
+```
+
+For the legacy tarball helper path, also confirm:
+
+```bash
+command -v pwned-check-pam-helper
+pwned-check-pam-helper --version
 ```
 
 Check live HIBP reachability from the host:
@@ -61,7 +68,7 @@ Check fail-open behavior:
 printf 'password\n' | \
   PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/ \
   PWNED_CHECK_FAIL_CLOSED=false \
-  /usr/local/bin/pwned-check --stdin
+  pwned-check --stdin
 echo $?
 ```
 
@@ -73,7 +80,7 @@ Check fail-closed behavior:
 printf 'password\n' | \
   PWNED_CHECK_HIBP_ENDPOINT=http://127.0.0.1:9/range/ \
   PWNED_CHECK_FAIL_CLOSED=true \
-  /usr/local/bin/pwned-check --stdin
+  pwned-check --stdin
 echo $?
 ```
 

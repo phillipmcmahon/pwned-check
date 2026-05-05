@@ -38,7 +38,7 @@ The first-wave distro set is:
 | Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
 | RHEL-compatible | Rocky Linux 10 | Not used for local Rocky testing | `codex-vm-rocky` |
 | Arch Linux | Rolling | `archlinux:base-devel` | Docker only for now |
-| Alpine Linux | Alpine with Linux-PAM | `alpine:3.20` | `codex-vm-alpine` |
+| Alpine Linux | Alpine with Linux-PAM | `alpine:3.22` | `codex-vm-alpine` |
 
 Do not check VM passwords, IP addresses, or generated private keys into the repository. Store SSH aliases in `~/.ssh/config` and rotated emergency passwords outside the checkout.
 
@@ -55,7 +55,7 @@ intentionally reproducing CI behavior. For the current VM-first local path:
 The Docker matrix used for non-VM targets is:
 
 ```text
-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20
+debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22
 ```
 
 Rocky Linux testing is performed on `codex-vm-rocky`; do not use the
@@ -78,7 +78,7 @@ Use a focused matrix while iterating:
 ```bash
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "alpine:3.20"
+./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "alpine:3.22"
 ```
 
 On ARM Docker hosts, these commands may run under amd64 emulation. That is slower, but it keeps the matrix aligned with CI and release artifacts.
@@ -437,7 +437,7 @@ ssh codex-vm-alpine 'cd /home/codex/pwned-check &&
 ```
 
 Alpine Linux-PAM module placement varies by release. The persistent Alpine VM
-loads from `/usr/lib/security`, while the pinned `alpine:3.20` Docker image
+loads from `/usr/lib/security`, while the pinned `alpine:3.22` Docker image
 loads from `/lib/security`. The Alpine package installs `pam_pwned_check.so`
 in both locations for first-release compatibility:
 

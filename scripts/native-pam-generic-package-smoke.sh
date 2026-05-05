@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${NATIVE_PAM_GENERIC_PACKAGE_SMOKE_PLATFORM:-linux/amd64}"
-IMAGES="${NATIVE_PAM_GENERIC_PACKAGE_SMOKE_IMAGES:-archlinux:base-devel alpine:3.20}"
+IMAGES="${NATIVE_PAM_GENERIC_PACKAGE_SMOKE_IMAGES:-archlinux:base-devel alpine:3.22}"
 WORKDIR="/workspace/pwned-check"
 SERVICE="pwned-check-native-generic-package-smoke"
 PREBUILT_CHECKER=""
@@ -302,6 +302,7 @@ esac
 CHECKER_EOF
         chmod 0755 /usr/local/bin/native-pam-generic-checker
 
+        install -d /etc/pam.d
         {
           echo 'password required pam_smoke_authtok.so'
           echo 'password required pam_permit.so'

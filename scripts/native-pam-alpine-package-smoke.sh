@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_PLATFORM:-linux/amd64}"
-IMAGE="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_IMAGE:-alpine:3.20}"
+IMAGE="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_IMAGE:-alpine:3.22}"
 SMOKE_VERSION="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION:-0.0.0}"
 EXPORT_DIR="${NATIVE_PAM_ALPINE_PACKAGE_SMOKE_EXPORT_DIR:-}"
 WORKDIR="/workspace/pwned-check"
@@ -20,7 +20,7 @@ package, and verify managed-file cleanup.
 
 Options:
   --platform <platform>   Docker platform: linux/amd64 or linux/arm64
-  --image <image>         Alpine Docker image (default: alpine:3.20)
+  --image <image>         Alpine Docker image (default: alpine:3.22)
   --help                  Show this help text
 EOF
 }

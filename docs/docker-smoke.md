@@ -31,7 +31,7 @@ The default matrix is:
 | Ubuntu | `ubuntu:24.04` |
 | Fedora | `fedora:latest` |
 | Arch Linux | `archlinux:base-devel` |
-| Alpine | `alpine:3.20` |
+| Alpine | `alpine:3.22` |
 
 The Debian, Ubuntu, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images. Rocky Linux coverage runs on `codex-vm-rocky`; do not use the `rockylinux` Docker image for local Rocky validation.
 
@@ -68,7 +68,7 @@ The script supports:
 Use `--images` for a one-off matrix:
 
 ```bash
-./scripts/docker-smoke.sh --images "debian:stable-slim alpine:3.20"
+./scripts/docker-smoke.sh --images "debian:stable-slim alpine:3.22"
 ```
 
 For local VM-first validation, run Docker only for targets without persistent
@@ -96,7 +96,7 @@ GitHub Actions runs:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64
-./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
+./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
 ```
 
 The `linux/amd64` CI run keeps the full distro matrix available, including
@@ -177,7 +177,7 @@ Equivalent command:
 Run the arm64 PAM package smoke for images that publish arm64 variants:
 
 ```bash
-./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
+./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
 ```
 
 For local VM-first validation, limit the Docker PAM package smoke to targets
@@ -190,7 +190,7 @@ without persistent VMs:
 The default distro list matches the binary Docker smoke matrix:
 
 ```text
-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20
+debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22
 ```
 
 For `linux/arm64`, the default list omits `archlinux:base-devel` because that
@@ -199,7 +199,7 @@ image does not currently publish arm64.
 Use a smaller matrix while iterating:
 
 ```bash
-./scripts/docker-pam-smoke.sh --images "debian:stable-slim alpine:3.20"
+./scripts/docker-pam-smoke.sh --images "debian:stable-slim alpine:3.22"
 ```
 
 The PAM smoke installs PAM runtime support and either `pamtester` or the minimal packages needed to compile the fallback PAM client inside each throwaway container. That makes it slower than `make docker-smoke`, but it keeps the test reproducible against minimal public distro images without requiring custom fixture images.

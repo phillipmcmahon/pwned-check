@@ -82,6 +82,6 @@ This starts an in-process HIBP-compatible test server and verifies that the bina
 ## Next Steps
 
 - Read [Operations](operations.md) for install and rollback guidance.
-- For native PAM packages, start with [Install Native PAM From GitHub Releases](operations.md#install-native-pam-from-github-releases).
+- For native PAM packages, start with [Install From GitHub Releases](operations.md#install-from-github-releases).
 - Read [Linux PAM PoC](linux-pam-poc.md) before editing PAM helper stacks.
 - Read [Deployment security checklist](deployment-security-checklist.md) before enforcing password changes.

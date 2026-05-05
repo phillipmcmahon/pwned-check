@@ -65,13 +65,13 @@ case "$PLATFORM" in
     linux/amd64)
         GOARCH_VALUE="amd64"
         GOAMD64_VALUE="${GOAMD64:-v1}"
-        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.20"
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22"
         ;;
     linux/arm64|linux/arm64/v8)
         PLATFORM="linux/arm64"
         GOARCH_VALUE="arm64"
         GOAMD64_VALUE=""
-        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.20"
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
         ;;
     *)
         fail "unsupported platform for PAM smoke: $PLATFORM"

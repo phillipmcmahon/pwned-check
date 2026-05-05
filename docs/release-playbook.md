@@ -100,6 +100,10 @@ Native PAM package releases must additionally:
 - sign or publish `.deb` artifacts through the project Debian repository/release signing process
 - attach checksum, provenance, and signature files alongside native PAM packages
 - keep private signing keys outside the repository and outside test VMs
+- publish the first production repositories through GitHub Pages under
+  `https://phillipmcmahon.github.io/pwned-check/`
+- use one maintainer-owned OpenPGP production key for apt/RPM/Arch and one
+  maintainer-owned Alpine RSA production key
 - record repository signing key fingerprints, rotation due dates, revocation
   notice paths, and operator public-key update steps as described in
   [Package repositories](package-repositories.md#key-rotation-and-revocation)

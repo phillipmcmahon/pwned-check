@@ -7,11 +7,18 @@ Repository-backed releases must satisfy the [Production release gate](production
 ## Implementation Status
 
 Epic 8 has repository-generation and repo-only smoke coverage for each target
-family. The remaining production release decision is tracked in
-[#39](https://github.com/phillipmcmahon/pwned-check/issues/39): where the signed
-repositories are hosted and which real release signing keys are used. Until that
-publication decision is executed for a release, GitHub Release assets remain the
-bootstrap channel.
+family. The production hosting and key model has been selected for
+[#39](https://github.com/phillipmcmahon/pwned-check/issues/39):
+
+- host the first production repositories on GitHub Pages under
+  `https://phillipmcmahon.github.io/pwned-check/`
+- use one maintainer-owned OpenPGP production key for apt, RPM, and Arch
+- use one maintainer-owned Alpine RSA production key for the APK repository
+- keep private keys outside the repository, GitHub Pages branch, and distro VMs
+
+Until those repositories are published with production keys and smoke-tested
+from the published endpoints, GitHub Release assets remain the bootstrap
+channel.
 
 | Family | Repository generation | Repo-only smoke | Current limitation |
 |---|---|---|---|
@@ -19,6 +26,15 @@ bootstrap channel.
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh` | Requires production RPM key and hosted dnf/yum endpoint |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only until an Arch Linux ARM builder image or VM is selected |
 | Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine` with `scripts/native-pam-alpine-repo-smoke.sh` | Requires production RSA key and hosted APK endpoint |
+
+Planned GitHub Pages endpoints:
+
+| Family | Endpoint |
+|---|---|
+| Apt | `https://phillipmcmahon.github.io/pwned-check/apt` |
+| DNF/Yum | `https://phillipmcmahon.github.io/pwned-check/rpm` |
+| Arch | `https://phillipmcmahon.github.io/pwned-check/arch` |
+| Alpine | `https://phillipmcmahon.github.io/pwned-check/alpine` |
 
 ## Current Channel
 
@@ -67,8 +83,7 @@ Repository publication needs a signing environment, not ad hoc signing on the te
 
 | Input | Required for | Notes |
 |---|---|---|
-| OpenPGP release key | Apt `InRelease`/`Release.gpg`, detached checksum/provenance signatures, optional Arch package signatures | Private key must stay outside the repository and outside distro VMs |
-| RPM signing key | RPM package signatures and optional `repomd.xml` signatures | Configure through the signing environment's RPM macro file, not committed repo config |
+| OpenPGP production key | Apt `InRelease`/`Release.gpg`, RPM package signatures and optional `repomd.xml` signatures, Arch package/database signatures, detached checksum/provenance signatures | One maintainer-owned private key for apt/RPM/Arch; private key must stay outside the repository, GitHub Pages branch, and distro VMs |
 | Alpine RSA key | APK package/index signing | Public key is published for `/etc/apk/keys`; private key remains in the signing environment |
 | Release provenance inputs | All repositories | Use `SOURCE_DATE_EPOCH` from the release tag timestamp and `make native-pam-release-provenance` after packages are staged |
 

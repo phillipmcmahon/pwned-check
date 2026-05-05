@@ -18,9 +18,10 @@ Production readiness is blocked if any package repository requires GitHub creden
 
 The repository tooling and repo-only smoke suites are implemented for the
 target families. [Issue #39](https://github.com/phillipmcmahon/pwned-check/issues/39)
-tracks the remaining production activation step: real signing-key selection,
-published repository endpoints, and recorded smoke evidence for those published
-endpoints before the release may be described as production-ready.
+tracks production activation with the selected model: GitHub Pages endpoints,
+one maintainer-owned OpenPGP production key for apt/RPM/Arch, one
+maintainer-owned Alpine RSA production key, and recorded smoke evidence for the
+published endpoints before the release may be described as production-ready.
 
 ## Signing Model
 
@@ -28,8 +29,7 @@ Signing happens in the release signing environment only. Private keys must not b
 
 | Key material | Owner | Used for | Required controls |
 |---|---|---|---|
-| OpenPGP release key | Release maintainer or release signing runner owner | Apt `InRelease` and `Release.gpg`, detached checksum/provenance signatures, optional Arch package signatures | Private key outside the repo and VMs; published fingerprint; documented rotation and revocation path. |
-| RPM signing key | Release maintainer or release signing runner owner | RPM package signatures and optional `repomd.xml` signatures | RPM macros configured only in the signing environment; public key install instructions documented for Fedora/Rocky operators. |
+| OpenPGP production key | Release maintainer or release signing runner owner | Apt `InRelease` and `Release.gpg`, RPM package signatures, optional RPM `repomd.xml` signatures, Arch package/database signatures, detached checksum/provenance signatures | One key for apt/RPM/Arch; private key outside the repo, GitHub Pages branch, and VMs; published fingerprint; documented rotation and revocation path. |
 | Alpine RSA key | Release maintainer or release signing runner owner | APK index and package trust for Alpine Linux-PAM repository installs | Private key outside the repo and VMs; public key distributed for `/etc/apk/keys`; rotation and compromised-key recovery documented. |
 
 Public keys may be published after fingerprints, storage expectations, rotation cadence, revocation notice path, and operator update steps are documented. Existing package payloads must not be silently replaced after publication; publish a new patch version or a clearly versioned repository metadata correction instead. The operational key lifecycle is defined in [Package repositories](package-repositories.md#key-rotation-and-revocation).

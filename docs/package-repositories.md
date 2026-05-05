@@ -150,6 +150,66 @@ removed:
 The VM does not need GitHub credentials, repository source code, Rust, Go, or C
 build tooling for this repo-only smoke.
 
+## RPM Repository
+
+The RPM-family repository path signs package headers and repository metadata.
+Generate metadata from already validated `.rpm` artifacts and sign with a key
+held in the release signing environment:
+
+```bash
+PWNED_CHECK_RPM_SIGNING_KEY="<key fingerprint>" \
+  ./scripts/build-native-pam-rpm-repository.sh \
+    --input-dir dist/release \
+    --output-dir dist/rpm-repository \
+    --public-key-output dist/rpm-repository/RPM-GPG-KEY-pwned-check-native-pam.asc
+```
+
+The generated repository contains signed RPMs, `repodata/repomd.xml`, and
+`repodata/repomd.xml.asc`. Operator repository configuration must require both
+package and metadata signature checks:
+
+```ini
+[pwned-check-native-pam]
+name=pwned-check native PAM repository
+baseurl=https://example.invalid/rpm
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam
+```
+
+Install the public key and package through normal dnf/yum operations:
+
+```bash
+sudo install -d -m 0755 /etc/pki/rpm-gpg
+curl -fsSL https://example.invalid/RPM-GPG-KEY-pwned-check-native-pam.asc |
+  sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam >/dev/null
+sudo rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-pwned-check-native-pam
+sudo dnf install pwned-check-native-pam
+```
+
+Replace `https://example.invalid/rpm` with the published repository endpoint.
+Package installation still only places files. Enablement remains explicit:
+
+```bash
+sudo pwned-check-pam-enable-dry-run
+sudo pwned-check-pam-enable-enforce
+sudo pwned-check-pam-disable
+```
+
+Repo-only smoke copies the prepared repository and public key to a target VM,
+configures dnf/yum with `gpgcheck=1` and `repo_gpgcheck=1`, installs from the
+repository, exercises dry-run/enforce/disable, removes the package, and verifies
+managed files are gone:
+
+```bash
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky
+```
+
+The VM does not need GitHub credentials, repository source code, Rust, Go, C
+build tooling, `rpmbuild`, or `createrepo_c` for this repo-only smoke.
+
 ## Required Stories
 
 Create these stories before implementation:

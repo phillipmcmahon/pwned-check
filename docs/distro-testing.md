@@ -606,6 +606,22 @@ ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-p
 
 The Fedora RPM and SELinux gates are not run on generic CI runners because the acceptance path validates real `authselect` selection, backup restoration, SELinux enforcing mode, and host rollback. Record their output in `.test-output/` or the release validation notes before release. Fedora package smokes must prove both `pwned-check-pam-enable-dry-run` and `pwned-check-pam-enable-enforce` before `pwned-check-pam-disable` restores the first-enable authselect backup.
 
+Fedora/Rocky RPM repository smoke:
+
+```bash
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky
+```
+
+Run this after `dist/rpm-repository` has been generated with
+`scripts/build-native-pam-rpm-repository.sh`. The target VM receives only the
+repository files and public key, installs through dnf/yum with package and
+repository metadata signature checks enabled, exercises the packaged
+dry-run/enforce/disable helpers, removes the package, and verifies managed-file
+cleanup. Each run writes a combined report under
+`.test-output/native-pam-rpm-repo-smoke/<timestamp>-native-pam-rpm-repo-smoke/`
+and updates `.test-output/native-pam-rpm-repo-smoke/latest`.
+
 ## Current Observations
 
 - Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.

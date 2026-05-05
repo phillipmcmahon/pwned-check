@@ -108,8 +108,9 @@ The Debian/Ubuntu native package builder runs in a pinned Rust Debian container 
 Before the first package repository release, complete the repository-specific signing stories in [Package repositories](package-repositories.md):
 
 - publish public key fingerprints and operator trust-bootstrap commands
-- generate repository metadata from the validated release package set; for apt,
-  use `scripts/build-native-pam-apt-repository.sh`
+- generate repository metadata from the validated release package set; use
+  `scripts/build-native-pam-apt-repository.sh` for apt and
+  `scripts/build-native-pam-rpm-repository.sh` for RPM-family repositories
 - sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
 - run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch persistent VMs
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install

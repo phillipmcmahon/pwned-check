@@ -8,6 +8,14 @@ The format is intentionally lightweight while the project is pre-production.
 
 - No unreleased changes yet.
 
+## v0.1.6 - 2026-05-05
+
+- Release helper scripts now preflight `gh auth status` before querying GitHub Actions, making authentication failures explicit.
+- The release playbook now requires monitoring the GitHub CI workflow to completion after pushing `main` and before tagging.
+- Operator documentation was consolidated so install, enablement, rollback, testing, and release guidance have clearer ownership and less overlap.
+- Native package documentation bundles now exclude maintainer-only production release gate notes while signed repository publication remains tracked under Epic 8.
+- Local testing documentation now records the expected wall-clock cost of the arm64 Docker pre-push stage.
+
 ## v0.1.5 - 2026-05-04
 
 - Local pre-push validation now runs native PAM package smoke tests against clean package installs on the persistent Ubuntu, Debian, Fedora, Rocky, and Alpine VMs.

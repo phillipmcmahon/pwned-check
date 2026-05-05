@@ -81,7 +81,7 @@ Each repository story must add an install test that uses only repository configu
 |---|---|
 | Apt | Add the public key and source list on Ubuntu and Debian VMs, `apt update`, install `pwned-check-native-pam`, run dry-run/enforce/disable, remove the package, and verify managed files are gone |
 | DNF/Yum | Add the repo file on Fedora, install with `dnf`, run dry-run/enforce/disable through authselect, remove the package, and rerun SELinux assessment |
-| Arch | Add the custom repository and public key in an Arch container until a VM exists, install with `pacman -S`, run dry-run/enforce/disable, remove the package, and verify managed files are gone |
+| Arch | Add the custom repository and public key on `codex-vm-arch`, install with `pacman -S`, run dry-run/enforce/disable, remove the package, and verify managed files are gone |
 | Alpine | Add the public key and repository URL on the Alpine VM, install with `apk add`, run dry-run/enforce/disable on a Linux-PAM service, remove the package, and verify managed files are gone |
 
 The repository smoke must not require GitHub credentials or build tools on the distro host. It should consume only the published repository endpoint, public key material, and normal package manager commands.

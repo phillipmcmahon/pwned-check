@@ -6,7 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PLATFORM="${DOCKER_SMOKE_PLATFORM:-linux/amd64}"
 GOOS_VALUE="linux"
 GOARCH_VALUE="${GOARCH:-}"
-IMAGES="${DOCKER_SMOKE_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22}"
+IMAGES="${DOCKER_SMOKE_IMAGES:-}"
 
 usage() {
     cat <<'EOF'
@@ -65,15 +65,19 @@ case "$PLATFORM" in
     linux/amd64)
         GOARCH_VALUE="amd64"
         GOAMD64_VALUE="${GOAMD64:-v1}"
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22"
         ;;
     linux/arm64|linux/arm64/v8)
+        PLATFORM="linux/arm64"
         GOARCH_VALUE="arm64"
         GOAMD64_VALUE=""
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
         ;;
     *)
         fail "unsupported platform: $PLATFORM"
         ;;
 esac
+[ -n "$IMAGES" ] || IMAGES="$DEFAULT_IMAGES"
 
 cd "$ROOT"
 

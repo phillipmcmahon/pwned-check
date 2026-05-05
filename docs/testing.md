@@ -44,8 +44,7 @@ go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
-./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+./scripts/validate-before-push.sh
 make package-linux
 ```
 
@@ -56,16 +55,20 @@ scripts/install-git-hooks.sh
 ```
 
 The hook runs the same validation gate before `git push`, including persistent
-VM package smoke by default. `scripts/validate-before-push.sh` syncs the current
-checkout to every host listed in `PWNED_CHECK_VM_SMOKE_HOSTS`, copies a locally
-built static Linux `pwned-check` binary for package smokes, and executes the
-distro's native PAM smoke over SSH. If a native package is already installed on
-a VM, the hook disables and removes that package first so the full package
-install, enablement, rollback, removal, and cleanup smoke runs from a clean
-package state.
+VM package smoke and arm64 Docker smoke by default. `scripts/validate-before-push.sh`
+syncs the current checkout to every host listed in `PWNED_CHECK_VM_SMOKE_HOSTS`,
+copies a locally built static Linux `pwned-check` binary for package smokes, and
+executes the distro's native PAM smoke over SSH. If a native package is already
+installed on a VM, the hook disables and removes that package first so the full
+package install, enablement, rollback, removal, and cleanup smoke runs from a
+clean package state. Local amd64 Docker smoke is not part of the default gate
+because the persistent VMs cover first-wave amd64 distro behavior; local arm64
+Docker smoke runs for Debian, Ubuntu, Fedora, Rocky, and Alpine to reduce the gap with
+GitHub CI.
 Use `PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh` to exercise
-just the SSH VM stage, and use `PWNED_CHECK_SKIP_VM_SMOKE=1` only for deliberate
-offline work where VM validation will be run separately before pushing.
+just the SSH VM stage. Use `PWNED_CHECK_SKIP_VM_SMOKE=1` or
+`PWNED_CHECK_SKIP_ARM64_DOCKER=1` only for deliberate offline work where the
+skipped validation will be run separately before pushing.
 
 For native PAM development, run the persistent Ubuntu smoke container:
 
@@ -133,7 +136,7 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
 | `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven dry-run/enforce switching, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
 | `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises dry-run/enforce switching, clean/reject behavior, and rollback through installed manual helpers |
-| `scripts/native-pam-arch-package-smoke.sh` | Arch Docker smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
+| `scripts/native-pam-arch-package-smoke.sh` | Arch Docker CI/fallback smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup. Local Arch validation uses `codex-vm-arch` through `scripts/validate-before-push.sh` |
 | `scripts/native-pam-alpine-package-smoke.sh` | Alpine Docker smoke that builds the `APKBUILD` package, installs it with `apk`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
@@ -153,7 +156,7 @@ The GitHub workflow is split into:
 - `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before artifact publication, including native PAM package assets for `linux/amd64` and `linux/arm64` where a supported distro builder image exists
 
-The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, Alpine Docker fallback package smoke, and an arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs. Debian `.deb` host validation, Fedora RPM/SELinux host validation, and Alpine package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state. Arch package automation remains `linux/amd64` until the project chooses an Arch Linux ARM builder image or persistent VM.
+The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, Alpine Docker fallback package smoke, and an arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs. Debian `.deb` host validation, Fedora RPM/SELinux host validation, Alpine package validation, and Arch package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state. Arch package automation remains `linux/amd64` until the project chooses an Arch Linux ARM builder image or VM.
 
 Run `make github-workflow-status` during release closeout to confirm the latest
 completed `main` runs for CI, fuzz, and Native PAM Package Gates are green.
@@ -166,14 +169,14 @@ Current smoke architecture coverage:
 | Area | Local Pre-Push | GitHub CI |
 |---|---|---|
 | CLI binary smoke | Host-built binary on the development machine | Host-built binary on `ubuntu-24.04` |
-| Docker binary smoke, `linux/amd64` | Arch only by default, because VM-backed distros run over SSH | Debian, Ubuntu, Fedora, Arch, Alpine |
-| Docker binary smoke, `linux/arm64` | Available manually with `./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"` | Debian, Ubuntu, Fedora, Alpine |
-| Docker PAM package smoke, `linux/amd64` | Arch only by default | Debian, Ubuntu, Fedora, Arch, Alpine |
-| Docker PAM package smoke, `linux/arm64` | Available manually with `./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"` | Debian, Ubuntu, Fedora, Alpine |
-| Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine on persistent VMs; Arch in Docker | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
+| Docker binary smoke, `linux/amd64` | Not run by default, because first-wave local amd64 coverage is VM-backed; available manually for CI reproduction | Debian, Ubuntu, Fedora, Arch, Alpine |
+| Docker binary smoke, `linux/arm64` | Run by full `scripts/validate-before-push.sh` for Debian, Ubuntu, Fedora, Rocky, and Alpine | Debian, Ubuntu, Fedora, Rocky, Alpine |
+| Docker PAM package smoke, `linux/amd64` | Not run by default, because first-wave local amd64 coverage is VM-backed; available manually for CI reproduction | Debian, Ubuntu, Fedora, Arch, Alpine |
+| Docker PAM package smoke, `linux/arm64` | Run by full `scripts/validate-before-push.sh` for Debian, Ubuntu, Fedora, Rocky, and Alpine | Debian, Ubuntu, Fedora, Rocky, Alpine |
+| Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch on persistent VMs | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
 | Native PAM release assets, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release asset preparation |
 | Native PAM release assets, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 assets |
-| Arch package path | Docker `linux/amd64` only | Docker `linux/amd64` only |
+| Arch package path | `codex-vm-arch` over SSH, `linux/amd64` | Docker `linux/amd64` only |
 
 Release-sensitive checks:
 
@@ -189,8 +192,8 @@ Release-sensitive checks:
 - bounded parser fuzz coverage, including a 60s release gate
 - 85% minimum coverage for included product logic packages
 - binary smoke test
-- Docker binary smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, and Alpine on `linux/arm64`
-- Docker PAM package smoke across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, and Alpine on `linux/arm64`
+- Docker binary smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, Rocky, and Alpine on `linux/arm64`
+- Docker PAM package smoke across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, Rocky, and Alpine on `linux/arm64`
 - Rocky/RHEL-compatible host validation on the persistent Rocky VM
 - Linux package build for `amd64` and `arm64` with SHA256 files
 

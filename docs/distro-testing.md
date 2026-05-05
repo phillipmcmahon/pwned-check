@@ -23,7 +23,7 @@ Use the cheapest layer that can prove the behavior under test, then move outward
 | Docker binary smoke | Throwaway distro containers | Static Linux binaries run across minimal distro images |
 | Docker PAM package smoke | Throwaway distro containers | Helper package install, `pam_exec.so expose_authtok`, helper exit-code mapping, timeout and config-error behavior |
 | Docker native PAM distro smoke | Throwaway distro containers | Distro toolchain can build/load `pam_pwned_check.so`, direct clean and pwned `pam_chauthtok` outcomes work |
-| Docker generic native package smoke | Throwaway Arch/Alpine containers | Generic artifact installs, manual PAM helper enables, direct native PAM outcomes work, rollback restores the service |
+| Docker generic native package smoke | Throwaway Arch/Alpine containers | CI/fallback generic artifact installs, manual PAM helper enables, direct native PAM outcomes work, rollback restores the service |
 | Persistent Ubuntu smoke container | Reused Ubuntu container | Fast native PAM development loop with captured logs, syslog, exact conversation strings, checker environment, Debian/Ubuntu artifact enable/rollback |
 | Persistent distro VMs | Real distro hosts | Host package layout, package tooling, distro-specific module directory/dependency drift, enablement and rollback against a real system |
 
@@ -36,30 +36,41 @@ The first-wave distro set is:
 | Debian | Debian stable | `debian:stable-slim` | `codex-vm-debian` (Debian 13) |
 | Ubuntu | Ubuntu 24.04 | `ubuntu:24.04` | `codex-vm-ubuntu` |
 | Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
-| RHEL-compatible | Rocky Linux 10 | Not used for local Rocky testing | `codex-vm-rocky` |
-| Arch Linux | Rolling | `archlinux:base-devel` | Docker only for now |
+| RHEL-compatible | Rocky Linux 10 | `rockylinux/rockylinux:10.1` for arm64 CI parity only | `codex-vm-rocky` |
+| Arch Linux | Rolling | `archlinux:base-devel` | `codex-vm-arch` |
 | Alpine Linux | Alpine with Linux-PAM | `alpine:3.22` | `codex-vm-alpine` |
 
 Do not check VM passwords, IP addresses, or generated private keys into the repository. Store SSH aliases in `~/.ssh/config` and rotated emergency passwords outside the checkout.
 
 ## Docker Test Commands
 
-Run Docker only for targets that do not have a persistent VM, or when you are
-intentionally reproducing CI behavior. For the current VM-first local path:
+Local `linux/amd64` validation is VM-first. Do not run amd64 Docker locally as
+routine coverage when the matching persistent VM exists. Use amd64 Docker only
+when intentionally reproducing CI behavior or when a persistent VM is
+unavailable.
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
-The Docker matrix used for non-VM targets is:
+Local `linux/arm64` validation uses Docker to reduce the gap with GitHub CI:
+
+```bash
+./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
+./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
+```
+
+The default amd64 Docker matrix used by GitHub CI is:
 
 ```text
 debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22
 ```
 
 Rocky Linux testing is performed on `codex-vm-rocky`; do not use the
-`rockylinux` Docker image for local Rocky validation.
+`rockylinux` Docker image for local amd64 Rocky validation. The
+`rockylinux/rockylinux:10.1` image is used for arm64 Docker smoke because the
+project does not have a persistent arm64 Rocky VM.
 
 Run the direct native PAM module matrix when changing `native/pam-pwned-check`, shared-library dependency policy, or PAM module placement:
 
@@ -81,7 +92,8 @@ Use a focused matrix while iterating:
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "alpine:3.22"
 ```
 
-On ARM Docker hosts, these commands may run under amd64 emulation. That is slower, but it keeps the matrix aligned with CI and release artifacts.
+Arch is omitted from local and CI arm64 Docker smoke because
+`archlinux:base-devel` does not currently publish a suitable arm64 image.
 
 ## Ubuntu Persistent Smoke Container
 
@@ -460,17 +472,30 @@ Alpine package smoke should run on `codex-vm-alpine` for release validation. Use
 
 The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises dry-run/enforce/disable through the manual PAM helper wrappers, removes the package, and verifies package-managed files are gone.
 
-## Arch Docker Until VM Exists
+## Arch VM Route
 
-Until a persistent Arch VM is available, use the Docker tests as the Arch acceptance path:
+Arch package smoke should run on `codex-vm-arch` for local and release
+validation. The pre-push hook syncs the checkout to the VM, removes any
+previous `pwned-check-native-pam` install, builds the Arch package with
+`makepkg`, installs it with `pacman -U`, runs the installed native PAM manual
+smoke, removes the package, and verifies rollback and managed-file cleanup.
+
+To run the Arch VM package smoke manually:
+
+```bash
+PWNED_CHECK_VM_SMOKE_ONLY=1 \
+PWNED_CHECK_VM_SMOKE_HOSTS=codex-vm-arch \
+./scripts/validate-before-push.sh
+```
+
+Use the Arch Docker path only for GitHub CI parity or when the VM is
+unavailable:
 
 ```bash
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
 ```
-
-These prove the Arch toolchain can build the module, the module loads from `/usr/lib/security`, the generic artifact installs, the `PKGBUILD` package builds and installs with `pacman`, manual enablement works, clean/pwned outcomes are correct, package removal cleans managed files, and rollback restores the disposable PAM service.
 
 ## When To Run What
 
@@ -488,16 +513,13 @@ make native-pam-symbols
 Before changing packaging or distro paths:
 
 ```bash
-./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
 ```
 
 Before claiming a distro package path is ready:
 
-- run the matching persistent VM path when that distro uses a persistent VM in this runbook
-- run the matching Docker path only for targets without a persistent VM, or when reproducing CI-only behavior
+- run the matching persistent VM path for local release validation
+- run the matching Docker path only when reproducing CI-only behavior or when a VM is unavailable
 - verify install and rollback
 - inspect dynamic dependencies with `ldd pam_pwned_check.so`
 - record any new shared-library dependency in the allowlist and docs only after review
@@ -511,13 +533,14 @@ Automated in that workflow:
 - Ubuntu `.deb` package smoke on an ephemeral Ubuntu runner
 - direct native PAM distro smoke across the first-wave Docker images
 - generic manual-PAM package smoke across Arch and Alpine Docker images
-- Arch `PKGBUILD` package smoke through Docker
+- Arch `PKGBUILD` package smoke through Docker for CI parity
 - Alpine `APKBUILD` package smoke through Docker
 - arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs
 
-For local and release validation, prefer persistent VMs whenever one exists for
-the distro. Docker remains useful for CI parity and for targets without a VM,
-currently Arch container coverage.
+For local and release validation, use persistent VMs for first-wave amd64 distro
+coverage. Use local arm64 Docker smoke for CI parity. Use amd64 Docker locally
+only as fallback reproduction when a VM is unavailable or a GitHub-only failure
+needs to be reproduced.
 
 Smoke architecture coverage is split by runner capability:
 
@@ -526,20 +549,33 @@ Smoke architecture coverage is split by runner capability:
 | Debian | `codex-vm-debian` over SSH | VM is `linux/amd64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Debian native PAM package asset smoke |
 | Ubuntu | `codex-vm-ubuntu` over SSH | VM is `linux/amd64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64`; `.deb` smoke on `ubuntu-24.04` runner | Covered by Debian-family package asset path |
 | Fedora | `codex-vm-fedora` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Fedora native PAM package asset smoke |
-| Rocky | `codex-vm-rocky` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Not in Docker CI; Rocky acceptance is VM-first | Covered by Fedora/RHEL-family package scripts, but no separate arm64 Rocky smoke |
+| Rocky | `codex-vm-rocky` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/arm64` using `rockylinux/rockylinux:10.1`; amd64 Rocky acceptance is VM-first | Covered by Fedora/RHEL-family package scripts, plus arm64 Docker smoke for runtime/PAM parity |
 | Alpine | `codex-vm-alpine` over SSH | VM is `linux/amd64`; APK smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Alpine native PAM package asset smoke |
-| Arch | Docker only | `linux/amd64` only | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | No arm64 Arch smoke until an Arch Linux ARM image or VM is selected |
+| Arch | `codex-vm-arch` over SSH | VM is `linux/amd64`; pacman smoke runs from clean package state | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | No arm64 Arch smoke until an Arch Linux ARM image or VM is selected |
 
 The pre-push hook runs the VM package smoke stage over SSH against the default
-persistent VM set:
+persistent VM set and, in the full validation path, runs local arm64 Docker
+binary and PAM package smoke against Debian, Ubuntu, Fedora, Rocky, and Alpine:
+
+```bash
+./scripts/validate-before-push.sh
+```
+
+To run only the VM stage:
 
 ```bash
 PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
 ```
 
+For deliberate offline work, skip the arm64 Docker stage explicitly:
+
+```bash
+PWNED_CHECK_SKIP_ARM64_DOCKER=1 ./scripts/validate-before-push.sh
+```
+
 Before running each package smoke, the hook disables and removes any existing
 `pwned-check-native-pam` package on that VM. This keeps Ubuntu, Debian, Fedora,
-Rocky, and Alpine on the same clean package-install validation path.
+Rocky, Alpine, and Arch on the same clean package-install validation path.
 
 Use the host-specific commands below to rerun a single VM manually, to capture
 release evidence, or to run gates that are intentionally not part of the default
@@ -566,5 +602,5 @@ The Fedora RPM and SELinux gates are not run on generic CI runners because the a
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security` for the VM and `/lib/security` for the pinned Docker image.
 - Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
-- Arch currently has Docker coverage for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
+- Arch local validation now runs on `codex-vm-arch`; Docker coverage remains for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal in CI/fallback contexts. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
 - Debian Docker coverage remains available for binary smoke, helper PAM package smoke, and direct native PAM loading against `debian:stable-slim`.

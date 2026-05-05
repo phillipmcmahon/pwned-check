@@ -71,7 +71,7 @@ case "$PLATFORM" in
         PLATFORM="linux/arm64"
         GOARCH_VALUE="arm64"
         GOAMD64_VALUE=""
-        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
+        DEFAULT_IMAGES="debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
         ;;
     *)
         fail "unsupported platform for PAM smoke: $PLATFORM"

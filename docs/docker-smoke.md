@@ -30,10 +30,16 @@ The default matrix is:
 | Debian | `debian:stable-slim` |
 | Ubuntu | `ubuntu:24.04` |
 | Fedora | `fedora:latest` |
+| Rocky Linux | `rockylinux/rockylinux:10.1` for arm64 CI parity |
 | Arch Linux | `archlinux:base-devel` |
 | Alpine | `alpine:3.22` |
 
-The Debian, Ubuntu, and Alpine entries use explicit stable tags. Arch Linux and Fedora do not provide a long-lived fixed release tag that is as useful for this smoke purpose, so they intentionally track their rolling/latest public base images. Rocky Linux coverage runs on `codex-vm-rocky`; do not use the `rockylinux` Docker image for local Rocky validation.
+The Debian, Ubuntu, Rocky Linux, and Alpine entries use explicit stable tags.
+Arch Linux and Fedora do not provide a long-lived fixed release tag that is as
+useful for this smoke purpose, so they intentionally track their
+rolling/latest public base images. Rocky Linux amd64 package validation runs on
+`codex-vm-rocky`; use `rockylinux/rockylinux:10.1` only for arm64 Docker
+parity.
 
 ## Run Locally
 
@@ -71,11 +77,18 @@ Use `--images` for a one-off matrix:
 ./scripts/docker-smoke.sh --images "debian:stable-slim alpine:3.22"
 ```
 
-For local VM-first validation, run Docker only for targets without persistent
-VMs:
+For local validation, do not run amd64 Docker routinely. First-wave amd64
+coverage is VM-backed. Run amd64 Docker locally only to reproduce CI behavior
+or as fallback when a VM is unavailable:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
+```
+
+Run local arm64 Docker smoke to reduce the gap with GitHub CI:
+
+```bash
+./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
 ```
 
 Or use the environment variable:
@@ -96,12 +109,12 @@ GitHub Actions runs:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64
-./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
+./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
 ```
 
 The `linux/amd64` CI run keeps the full distro matrix available, including
 Arch Linux. The `linux/arm64` CI run covers the public images that publish that
-architecture: Debian, Ubuntu, Fedora, and Alpine. Arch Linux is omitted from
+architecture: Debian, Ubuntu, Fedora, Rocky, and Alpine. Arch Linux is omitted from
 arm64 smoke because `archlinux:base-devel` does not currently publish an arm64
 image.
 
@@ -177,24 +190,37 @@ Equivalent command:
 Run the arm64 PAM package smoke for images that publish arm64 variants:
 
 ```bash
-./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest alpine:3.22"
+./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
 ```
 
-For local VM-first validation, limit the Docker PAM package smoke to targets
-without persistent VMs:
+For local validation, do not run amd64 Docker PAM package smoke routinely.
+First-wave amd64 coverage is VM-backed. Run amd64 Docker locally only to
+reproduce CI behavior or as fallback when a VM is unavailable:
 
 ```bash
 ./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
-The default distro list matches the binary Docker smoke matrix:
+Run local arm64 Docker PAM package smoke to reduce the gap with GitHub CI:
+
+```bash
+./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
+```
+
+The default amd64 distro list matches the binary Docker smoke matrix:
 
 ```text
 debian:stable-slim ubuntu:24.04 fedora:latest archlinux:base-devel alpine:3.22
 ```
 
-For `linux/arm64`, the default list omits `archlinux:base-devel` because that
-image does not currently publish arm64.
+For `linux/arm64`, the default list is:
+
+```text
+debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22
+```
+
+It omits `archlinux:base-devel` because that image does not currently publish
+arm64.
 
 Use a smaller matrix while iterating:
 
@@ -224,4 +250,4 @@ Use a smaller native matrix while iterating:
 ./scripts/native-pam-distro-smoke.sh --images "fedora:latest archlinux:base-devel"
 ```
 
-For the full distro testing workflow, including persistent Ubuntu, Debian, Fedora, Rocky, and Alpine VMs, see [distro-testing.md](distro-testing.md).
+For the full distro testing workflow, including persistent Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch VMs, see [distro-testing.md](distro-testing.md).

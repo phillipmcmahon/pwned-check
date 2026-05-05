@@ -12,7 +12,10 @@ Run the local validation gate that mirrors the required CI checks.
 
 Environment:
   PWNED_CHECK_VM_SMOKE_HOSTS       Space-separated VM host aliases to test
+  PWNED_CHECK_NO_VM_DOCKER_IMAGES  Space-separated local Docker-only images
+  PWNED_CHECK_ARM64_DOCKER_IMAGES  Space-separated arm64 Docker images to test
   PWNED_CHECK_SKIP_VM_SMOKE=1      Skip VM smoke for deliberate offline work
+  PWNED_CHECK_SKIP_ARM64_DOCKER=1  Skip arm64 Docker smoke for deliberate offline work
   PWNED_CHECK_VM_SMOKE_ONLY=1      Run only the VM smoke stage
 EOF
 }
@@ -34,8 +37,9 @@ fi
 
 cd "$ROOT"
 
-NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-archlinux:base-devel}"
-VM_SMOKE_HOSTS="${PWNED_CHECK_VM_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-fedora codex-vm-rocky codex-vm-alpine}"
+NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-}"
+ARM64_DOCKER_IMAGES="${PWNED_CHECK_ARM64_DOCKER_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22}"
+VM_SMOKE_HOSTS="${PWNED_CHECK_VM_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-fedora codex-vm-rocky codex-vm-alpine codex-vm-arch}"
 VM_PREBUILT_DIR="/tmp/pwned-check-vm-prebuilt"
 VM_PREBUILT_BIN="$VM_PREBUILT_DIR/pwned-check"
 VM_CHECKOUT="/home/codex/pwned-check"
@@ -44,6 +48,7 @@ LDFLAGS_VALUE="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$
 REMOVE_DEB_PACKAGE="if dpkg -s pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo env DEBIAN_FRONTEND=noninteractive dpkg -r pwned-check-native-pam; fi"
 REMOVE_RPM_PACKAGE="if rpm -q pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo rpm -e pwned-check-native-pam; fi"
 REMOVE_APK_PACKAGE="if apk info -e pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo apk del pwned-check-native-pam; fi"
+REMOVE_ARCH_PACKAGE="if pacman -Q pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo pacman -Rns --noconfirm pwned-check-native-pam; fi"
 
 run_vm() {
     host="$1"
@@ -90,6 +95,10 @@ run_vm_smoke() {
             sync_vm_checkout "$host"
             run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_APK_PACKAGE && apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo apk del pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo apk add --allow-untrusted \"dist/release/\$apk_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo apk del pwned-check-native-pam && trap - EXIT INT TERM"
             ;;
+        codex-vm-arch)
+            sync_vm_checkout "$host"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_ARCH_PACKAGE && pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo pacman -Rns --noconfirm pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo pacman -U --noconfirm \"dist/release/\$pkg_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo pacman -Rns --noconfirm pwned-check-native-pam && trap - EXIT INT TERM"
+            ;;
         *)
             fail "unknown VM smoke host: $host"
             ;;
@@ -115,6 +124,22 @@ run_vm_smoke_stage() {
         echo "VM smoke: $host"
         run_vm_smoke "$host"
     done
+}
+
+run_arm64_docker_smoke_stage() {
+    if [ "${PWNED_CHECK_SKIP_ARM64_DOCKER:-}" = "1" ]; then
+        echo "arm64 Docker smoke skipped by PWNED_CHECK_SKIP_ARM64_DOCKER=1"
+        return
+    fi
+
+    [ -n "$ARM64_DOCKER_IMAGES" ] || fail "PWNED_CHECK_ARM64_DOCKER_IMAGES must not be empty unless PWNED_CHECK_SKIP_ARM64_DOCKER=1 is set"
+    require_command docker
+
+    echo "make docker-smoke (local arm64 CI-parity targets: $ARM64_DOCKER_IMAGES)"
+    DOCKER_SMOKE_IMAGES="$ARM64_DOCKER_IMAGES" DOCKER_SMOKE_PLATFORM=linux/arm64 make docker-smoke
+
+    echo "make docker-pam-smoke (local arm64 CI-parity targets: $ARM64_DOCKER_IMAGES)"
+    DOCKER_PAM_SMOKE_IMAGES="$ARM64_DOCKER_IMAGES" DOCKER_PAM_SMOKE_PLATFORM=linux/arm64 make docker-pam-smoke
 }
 
 if [ "${PWNED_CHECK_VM_SMOKE_ONLY:-}" = "1" ]; then
@@ -174,11 +199,17 @@ make smoke
 
 run_vm_smoke_stage
 
-echo "make docker-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
-DOCKER_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-smoke
+if [ -n "$NO_VM_DOCKER_IMAGES" ]; then
+    echo "make docker-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
+    DOCKER_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-smoke
 
-echo "make docker-pam-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
-DOCKER_PAM_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-pam-smoke
+    echo "make docker-pam-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
+    DOCKER_PAM_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-pam-smoke
+else
+    echo "no local Docker-only smoke targets configured"
+fi
+
+run_arm64_docker_smoke_stage
 
 echo "make package-linux"
 make package-linux

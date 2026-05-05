@@ -44,4 +44,4 @@ Use this checklist before enabling `pwned-check` in a Linux password-change path
 - Investigate repeated provider failures, helper timeouts, or checker config failures.
 - Re-verify package checksums and metadata during upgrades.
 - Track repository key rotation, revocation notices, and operator trust-store updates.
-- Re-run the Docker PAM package smoke and native PAM distro/package tests after packaging or PAM behavior changes.
+- Re-run VM-backed amd64 package smokes and local arm64 Docker PAM package smoke after packaging or PAM behavior changes.

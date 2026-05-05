@@ -45,7 +45,7 @@ Required repository smoke coverage:
 |---|---|---|
 | Apt | Ubuntu and Debian VMs | Add public key and source list, `apt update`, install, enable dry-run, switch to enforcement, disable, remove package, verify managed-file cleanup. |
 | DNF/Yum | Fedora and Rocky VMs | Add public key and repo file, install with `dnf`, run authselect dry-run/enforcement, disable, remove package, verify rollback, and keep SELinux assessment clean or tracked. |
-| Arch | Arch Docker until an Arch VM exists | Add custom repository and public key, install with `pacman -S`, run manual helper dry-run/enforcement, disable, remove package, verify managed-file cleanup. |
+| Arch | `codex-vm-arch` | Add custom repository and public key, install with `pacman -S`, run manual helper dry-run/enforcement, disable, remove package, verify managed-file cleanup. |
 | Alpine | Alpine VM | Add public RSA key and repository URL, install with `apk add`, run manual helper dry-run/enforcement on a Linux-PAM service, disable, remove package, verify managed-file cleanup. |
 
 ## Release Decision

@@ -13,6 +13,9 @@ hypervisor or any other infrastructure host. If a VM becomes unreachable or its
 privileged access is broken, stop and ask for the VM to be repaired, recreated,
 or made available again through the normal `codex-vm-*` SSH path.
 
+Fleet capacity, recovery expectations, and fallback boundaries are maintained
+in [VM fleet](vm-fleet.md).
+
 ## Coverage Layers
 
 Use the cheapest layer that can prove the behavior under test, then move outward when packaging or host integration is involved.

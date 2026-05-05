@@ -126,6 +126,8 @@ Before the first package repository release, complete the repository-specific si
   `scripts/build-native-pam-alpine-repository.sh` for Alpine repositories
 - sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
 - run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch persistent VMs
+- confirm the persistent VM fleet is available or record explicit deferrals
+  using [VM fleet](vm-fleet.md)
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
 - record the published repository endpoints, signing key fingerprints, and
   smoke output paths in the release notes before calling the release

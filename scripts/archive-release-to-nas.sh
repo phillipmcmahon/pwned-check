@@ -4,10 +4,30 @@ set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 . "$ROOT/scripts/lib/release-helpers.sh"
+CONFIG_FILE="${PWNED_CHECK_NAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/pwned-check/archive-release.env}"
+ENV_NAS_HOST="${PWNED_CHECK_NAS_HOST-}"
+ENV_NAS_HOST_SET="${PWNED_CHECK_NAS_HOST+x}"
+ENV_NAS_RELEASE_ROOT="${PWNED_CHECK_NAS_RELEASE_ROOT-}"
+ENV_NAS_RELEASE_ROOT_SET="${PWNED_CHECK_NAS_RELEASE_ROOT+x}"
+ENV_NAS_ARCHIVE_SOURCE="${PWNED_CHECK_NAS_ARCHIVE_SOURCE-}"
+ENV_NAS_ARCHIVE_SOURCE_SET="${PWNED_CHECK_NAS_ARCHIVE_SOURCE+x}"
+ENV_GITHUB_REPO="${PWNED_CHECK_GITHUB_REPO-}"
+ENV_GITHUB_REPO_SET="${PWNED_CHECK_GITHUB_REPO+x}"
+
+if [ -f "$CONFIG_FILE" ]; then
+  # shellcheck source=/dev/null
+  . "$CONFIG_FILE"
+fi
+
+[ -z "$ENV_NAS_HOST_SET" ] || PWNED_CHECK_NAS_HOST="$ENV_NAS_HOST"
+[ -z "$ENV_NAS_RELEASE_ROOT_SET" ] || PWNED_CHECK_NAS_RELEASE_ROOT="$ENV_NAS_RELEASE_ROOT"
+[ -z "$ENV_NAS_ARCHIVE_SOURCE_SET" ] || PWNED_CHECK_NAS_ARCHIVE_SOURCE="$ENV_NAS_ARCHIVE_SOURCE"
+[ -z "$ENV_GITHUB_REPO_SET" ] || PWNED_CHECK_GITHUB_REPO="$ENV_GITHUB_REPO"
+
 VERSION=""
 INPUT_DIR="$ROOT/dist/release"
-HOST="${PWNED_CHECK_NAS_HOST:-homestorage}"
-REMOTE_ROOT="${PWNED_CHECK_NAS_RELEASE_ROOT:-/volume1/homes/phillipmcmahon/code/pwned-check}"
+HOST="${PWNED_CHECK_NAS_HOST:-}"
+REMOTE_ROOT="${PWNED_CHECK_NAS_RELEASE_ROOT:-}"
 REPO="${PWNED_CHECK_GITHUB_REPO:-phillipmcmahon/pwned-check}"
 SOURCE="${PWNED_CHECK_NAS_ARCHIVE_SOURCE:-github}"
 
@@ -31,10 +51,19 @@ Options:
                              Used only with --source local
   --source <github|local>   Archive source (default: github)
   --repo <owner/name>       GitHub repository (default: phillipmcmahon/pwned-check)
-  --host <ssh-host>         SSH host (default: homestorage)
+  --host <ssh-host>         SSH host, or PWNED_CHECK_NAS_HOST/config file
   --remote-root <path>      NAS project root
-                             (default: /volume1/homes/phillipmcmahon/code/pwned-check)
+                             or PWNED_CHECK_NAS_RELEASE_ROOT/config file
   --help                    Show this help text
+
+Config:
+  The optional config file defaults to:
+    ${XDG_CONFIG_HOME:-$HOME/.config}/pwned-check/archive-release.env
+  Override with PWNED_CHECK_NAS_CONFIG. Supported variables:
+    PWNED_CHECK_NAS_HOST
+    PWNED_CHECK_NAS_RELEASE_ROOT
+    PWNED_CHECK_NAS_ARCHIVE_SOURCE
+    PWNED_CHECK_GITHUB_REPO
 EOF
 }
 
@@ -81,6 +110,8 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$VERSION" ] || fail "--version is required"
+[ -n "$HOST" ] || fail "NAS host is required; set --host, PWNED_CHECK_NAS_HOST, or $CONFIG_FILE"
+[ -n "$REMOTE_ROOT" ] || fail "NAS release root is required; set --remote-root, PWNED_CHECK_NAS_RELEASE_ROOT, or $CONFIG_FILE"
 case "$SOURCE" in
   github|local) ;;
   *) fail "--source must be github or local" ;;

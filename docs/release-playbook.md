@@ -173,10 +173,25 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   ```
   This downloads the immutable GitHub Release assets, adds the GitHub source
   archives for the tag, writes them to the configured NAS release root, and
-  resets its `latest/<version>/` directory. The maintainer default is
-  `homestorage:/volume1/homes/phillipmcmahon/code/pwned-check`; override it with
-  `PWNED_CHECK_NAS_HOST` and `PWNED_CHECK_NAS_RELEASE_ROOT` for another archive
-  destination.
+  resets its `latest/<version>/` directory.
+
+  The archive destination is maintainer-local configuration. Set it either with
+  environment variables:
+  ```bash
+  PWNED_CHECK_NAS_HOST=<ssh-host> \
+  PWNED_CHECK_NAS_RELEASE_ROOT=<remote-project-root> \
+    ./scripts/archive-release-to-nas.sh --version v0.1.0
+  ```
+  or with a private config file at
+  `${XDG_CONFIG_HOME:-$HOME/.config}/pwned-check/archive-release.env`:
+  ```bash
+  PWNED_CHECK_NAS_HOST=<ssh-host>
+  PWNED_CHECK_NAS_RELEASE_ROOT=<remote-project-root>
+  PWNED_CHECK_NAS_ARCHIVE_SOURCE=github
+  ```
+  Keep that config file outside the repository. Co-maintainers should point the
+  same script at their own SSH host and project root; the GitHub immutable asset
+  mirror behavior is unchanged.
 - Confirm release notes include:
   - highlights
   - operator impact

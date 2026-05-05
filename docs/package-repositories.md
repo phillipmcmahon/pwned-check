@@ -209,6 +209,17 @@ The wrapper runs apt, RPM, and Arch live endpoint smokes on persistent VMs where
 architecture coverage exists. Alpine is recorded as deferred unless
 `PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a matching persistent Alpine VM.
 
+For continuous availability monitoring, the scheduled `Repository Endpoints`
+GitHub Actions workflow runs:
+
+```bash
+make native-pam-repo-endpoint-check
+```
+
+That check verifies public-key availability, signed apt/RPM/Arch metadata,
+Alpine signed-index presence, and package entries from the published endpoint
+without installing packages or mutating PAM state.
+
 ## Apt Repository
 
 The apt repository path is the first Epic 8 repository implementation target.

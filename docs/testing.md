@@ -148,6 +148,7 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-alpine-package-smoke.sh` | Alpine Docker smoke that builds the `APKBUILD` package, installs it with `apk`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-alpine-repo-smoke.sh` | Alpine repository smoke that installs from a signed APK index and public RSA key without `--allow-untrusted`, then exercises dry-run/enforce/disable, package removal, managed-file cleanup, and writes a combined `.test-output/` report |
 | `scripts/native-pam-live-repo-smokes.sh` | Release-gate wrapper for published repository endpoints. Runs apt, RPM, and Arch smokes on persistent VMs where architecture coverage exists, and records Alpine as deferred unless a matching Alpine host is configured |
+| `scripts/native-pam-repo-endpoint-check.sh` | Non-mutating published endpoint monitor for scheduled CI. Verifies public keys, signed apt/RPM/Arch metadata, Alpine signed index presence, and package visibility without installing packages |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
 | `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
@@ -168,10 +169,17 @@ The GitHub workflow is split into:
 
 The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, generic manual-PAM package Docker matrix, Arch package smoke, Alpine Docker fallback package smoke, and an arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs. Debian `.deb` host validation, Fedora RPM/SELinux host validation, Alpine package validation, and Arch package validation remain documented release gates on persistent VMs because they depend on real host package, PAM, or security-module state. Arch package automation remains `linux/amd64` until the project chooses an Arch Linux ARM builder image or VM.
 
+The `Repository Endpoints` workflow runs daily and on demand. It does not
+install packages or alter PAM state. It validates that the published GitHub
+Pages repository endpoints expose the expected public keys, signed metadata,
+repository indexes, and `pwned-check-native-pam` package entries. It is an
+availability and publication-drift monitor, not a replacement for the
+persistent VM release gate in `make native-pam-live-repo-smokes`.
+
 Run `make github-workflow-status` during release closeout to confirm the latest
-completed `main` runs for CI, fuzz, and Native PAM Package Gates are green.
-This catches scheduled workflow failures that local validation and
-tag-triggered release checks do not see automatically.
+completed `main` runs for CI, fuzz, Native PAM Package Gates, and Repository
+Endpoints are green. This catches scheduled workflow failures that local
+validation and tag-triggered release checks do not see automatically.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 During release publication, run `make github-ci-watch` immediately after
@@ -193,6 +201,7 @@ Current smoke architecture coverage:
 | Native PAM release assets, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release asset preparation |
 | Native PAM release assets, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 assets |
 | Live repository endpoint smoke | `make native-pam-live-repo-smokes` on persistent VMs before repository-backed release promotion | Not run in normal CI because it mutates real package-manager state and depends on maintainer VMs |
+| Live repository endpoint monitor | `make native-pam-repo-endpoint-check` for local endpoint diagnosis | Scheduled and manual `Repository Endpoints` workflow validates published metadata/signatures without package install |
 | Arch package path | `codex-vm-arch` over SSH, `linux/amd64` | Docker `linux/amd64` only |
 
 Release-sensitive checks:

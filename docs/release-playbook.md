@@ -165,6 +165,14 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   persistent Arch VM. Alpine live-endpoint smoke is reported as a deferral
   until `PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a persistent Alpine VM
   matching the published package architecture.
+- Confirm the non-mutating published endpoint monitor passes, or use it for
+  focused endpoint diagnosis:
+  ```bash
+  make native-pam-repo-endpoint-check
+  ```
+  This is the same check run by the scheduled `Repository Endpoints` GitHub
+  Actions workflow. It verifies public keys, signed metadata, indexes, and
+  package visibility without installing packages or changing PAM state.
 - Archive the release artifacts to the NAS after the GitHub Release assets are
   visible:
   ```bash

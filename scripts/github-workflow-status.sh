@@ -4,7 +4,7 @@ set -eu
 
 OWNER_REPO="${PWNED_CHECK_GITHUB_REPO:-phillipmcmahon/pwned-check}"
 BRANCH="${PWNED_CHECK_GITHUB_BRANCH:-main}"
-WORKFLOWS="${PWNED_CHECK_GITHUB_WORKFLOWS:-ci.yml native-pam-packages.yml fuzz.yml}"
+WORKFLOWS="${PWNED_CHECK_GITHUB_WORKFLOWS:-ci.yml native-pam-packages.yml repository-endpoints.yml fuzz.yml}"
 
 usage() {
     cat <<'EOF'

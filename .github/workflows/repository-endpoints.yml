@@ -1,0 +1,21 @@
+name: Repository Endpoints
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * *"
+
+jobs:
+  published-endpoints:
+    name: Published Repository Endpoints
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install endpoint verification tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ca-certificates curl gnupg gzip openssl tar zstd
+
+      - name: Validate published repository endpoints
+        run: make native-pam-repo-endpoint-check

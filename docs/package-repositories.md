@@ -120,6 +120,12 @@ suspicion of key exposure, maintainer handover risk, or signing-environment
 compromise. Set the next planned rotation date when each key is created and
 record it in release notes or the operator key inventory.
 
+Rehearse the planned rotation process annually even when the active keys are
+not being replaced. The rehearsal should use non-production test keys and
+confirm key export, metadata signing, operator trust-bootstrap instructions,
+revocation-notice drafting, and rollback to the current production trust path.
+Run the rehearsal alongside the annual rotation planning window when possible.
+
 1. Generate the replacement key in the release signing environment.
 2. Publish the replacement public key and fingerprint before using it.
 3. Sign the next repository metadata with the replacement key.

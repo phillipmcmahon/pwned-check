@@ -124,6 +124,8 @@ if [ "$SOURCE" = "github" ]; then
   gh auth status >/dev/null
   gh release view "$VERSION_TAG" --repo "$REPO" >/dev/null
   gh release download "$VERSION_TAG" --repo "$REPO" --dir "$stage" --clobber --pattern '*'
+  # Match GitHub's UI labels exactly so the NAS mirror is easy to compare
+  # against the immutable release assets, including the spaces and parentheses.
   gh api "repos/$REPO/tarball/$VERSION_TAG" > "$stage/Source code (tar.gz)"
   gh api "repos/$REPO/zipball/$VERSION_TAG" > "$stage/Source code (zip)"
 else
@@ -140,6 +142,7 @@ else
 
   [ "$found" -gt 0 ] || fail "no release artifacts matching $VERSION_TAG or $VERSION_NO_V found in $INPUT_DIR"
 
+  # Keep local fallback archives named like GitHub's generated source assets.
   git -C "$ROOT" archive --format=tar.gz --prefix="pwned-check-$VERSION_TAG/" -o "$stage/Source code (tar.gz)" "$ref"
   (
     cd "$ROOT"

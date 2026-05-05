@@ -115,6 +115,11 @@ Publish a small key record with every repository-backed production release:
 
 Planned rotation:
 
+Rotate repository signing keys annually by default, and immediately on any
+suspicion of key exposure, maintainer handover risk, or signing-environment
+compromise. Set the next planned rotation date when each key is created and
+record it in release notes or the operator key inventory.
+
 1. Generate the replacement key in the release signing environment.
 2. Publish the replacement public key and fingerprint before using it.
 3. Sign the next repository metadata with the replacement key.

@@ -108,7 +108,11 @@ Native PAM package releases must additionally:
   notice paths, and operator public-key update steps as described in
   [Package repositories](package-repositories.md#key-rotation-and-revocation)
 
-GitHub Releases are the current native package publication channel. The staged package repository plan lives in [Package repositories](package-repositories.md) and must be followed before publishing apt, dnf/yum, Arch, or Alpine repository metadata.
+GitHub Releases remain the immutable source of release assets and recovery
+downloads. Signed package repositories are the production-style operator
+installation channel for native PAM packages; build and publish them from the
+validated GitHub Release asset set by following
+[Package repositories](package-repositories.md).
 
 The Debian/Ubuntu native package builder runs in a pinned Rust Debian container for both release architectures so the release path does not depend on the host Cargo version.
 
@@ -150,15 +154,29 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Verify release provenance attestation is present for the published checksums.
 - Verify the attestation can be resolved against `SHA256SUMS.txt`.
 - For repository-backed releases, verify signed repository metadata and public-key instructions before publishing release notes.
+- For repository-backed releases, smoke the live repository endpoints from the
+  persistent distro VMs before tagging or promoting release notes:
+  ```bash
+  ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu --repo-url https://phillipmcmahon.github.io/pwned-check/apt
+  ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian --repo-url https://phillipmcmahon.github.io/pwned-check/apt
+  ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
+  ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
+  ./scripts/native-pam-arch-repo-smoke.sh --host codex-vm-arch --repo-url https://phillipmcmahon.github.io/pwned-check/arch
+  ```
+  Alpine live-endpoint smoke currently uses the documented arm64 Docker path
+  until the project has a persistent Alpine VM matching the published package
+  architecture.
 - Archive the release artifacts to the NAS after the GitHub Release assets are
   visible:
   ```bash
   ./scripts/archive-release-to-nas.sh --version v0.1.0
   ```
   This downloads the immutable GitHub Release assets, adds the GitHub source
-  archives for the tag, writes them to
-  `/volume1/homes/phillipmcmahon/code/pwned-check/archive/<version>/` and resets
-  `/volume1/homes/phillipmcmahon/code/pwned-check/latest/<version>/`.
+  archives for the tag, writes them to the configured NAS release root, and
+  resets its `latest/<version>/` directory. The maintainer default is
+  `homestorage:/volume1/homes/phillipmcmahon/code/pwned-check`; override it with
+  `PWNED_CHECK_NAS_HOST` and `PWNED_CHECK_NAS_RELEASE_ROOT` for another archive
+  destination.
 - Confirm release notes include:
   - highlights
   - operator impact

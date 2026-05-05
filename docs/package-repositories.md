@@ -26,10 +26,10 @@ artifact source and bootstrap fallback.
 
 | Family | Repository generation | Published repo smoke | Current limitation |
 |---|---|---|---|
-| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`; `arm64` package metadata is published and awaits an arm64 VM smoke |
-| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`; `aarch64` package metadata is published and awaits an aarch64 VM smoke |
-| Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only until an Arch Linux ARM builder image or VM is selected |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `aarch64` Docker smoke against `https://phillipmcmahon.github.io/pwned-check/alpine` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; the persistent Alpine VM is `x86_64` and cannot install this package |
+| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`; `arm64` metadata is published and intentionally deferred until an explicitly provisioned arm64 Debian or Ubuntu VM is available |
+| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`; `aarch64` metadata is published and intentionally deferred until an explicitly provisioned aarch64 Fedora or Rocky VM is available |
+| Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM support is deferred until a persistent Arch Linux ARM VM or trusted builder path is selected |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `aarch64` Docker smoke against `https://phillipmcmahon.github.io/pwned-check/alpine` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; the persistent Alpine VM is `x86_64`, so x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
 
 GitHub Pages endpoints:
 
@@ -57,6 +57,16 @@ Current release automation builds Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine
 native PAM packages for `amd64`/`x86_64` and `arm64`/`aarch64`. Arch package
 assets are `x86_64` only until an Arch Linux ARM builder image or persistent VM
 is selected.
+
+Published repository architecture status is deliberately narrower than package
+build support when a matching persistent VM does not exist:
+
+| Family | Published architectures | Real-host repository smoke | Deferred repository smoke |
+|---|---|---|---|
+| Apt | `amd64`, `arm64` | `amd64` on Ubuntu and Debian VMs | `arm64` until an arm64 Debian or Ubuntu VM is provided |
+| DNF/Yum | `x86_64`, `aarch64` | `x86_64` on Fedora and Rocky VMs | `aarch64` until an aarch64 Fedora or Rocky VM is provided |
+| Arch | `x86_64` | `x86_64` on the Arch VM | Arch Linux ARM until the project selects a builder or VM |
+| Alpine | `aarch64` for `v0.1.6` | None on the persistent Alpine VM because it is `x86_64` | `x86_64` until a release includes a signed x86_64 APK/index; native aarch64 until an aarch64 Alpine VM is provided |
 
 All native package families expose the same operator commands after installation:
 
@@ -432,6 +442,24 @@ package, and verifies managed files are gone:
 
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
 build tooling, `abuild`, or `apk index` for this repo-only smoke.
+
+### Alpine x86_64 Status
+
+The persistent Alpine VM is `x86_64`, but the first published Alpine repository
+from the immutable `v0.1.6` release assets contains only the `aarch64` APK. The
+x86_64 package path itself is not rejected: the VM-backed Alpine package smoke
+continues to validate package install, helper enablement, rollback, removal,
+and managed-file cleanup from locally built artifacts. The publication gap is
+that the immutable release asset set did not include a signed x86_64 APK and
+matching `x86_64/APKINDEX.tar.gz`.
+
+x86_64 Alpine repository publication is intentionally deferred until a future
+release includes a signed x86_64 APK in the immutable asset set and the
+published repository index. At that point, `scripts/native-pam-alpine-repo-smoke.sh
+--host codex-vm-alpine --repo-url https://phillipmcmahon.github.io/pwned-check/alpine`
+becomes a required live endpoint gate. Until then, the Alpine live endpoint is
+validated through the documented aarch64 Docker path and recorded as a
+real-host coverage gap in release notes.
 
 ## Required Stories
 

@@ -42,6 +42,49 @@ The first-wave distro set is:
 
 Do not check VM passwords, IP addresses, or generated private keys into the repository. Store SSH aliases in `~/.ssh/config` and rotated emergency passwords outside the checkout.
 
+## Architecture Coverage Status
+
+Persistent VMs are the acceptance path for local package and repository smokes.
+The current fleet is `linux/amd64`/`x86_64` only. Published arm64/aarch64
+repository metadata is therefore treated as a documented deferral until the
+matching guest exists; Docker/QEMU coverage reduces risk, but it does not
+replace a real-host repository smoke.
+
+| Family | Persistent VM coverage | Published non-amd64 coverage | Status |
+|---|---|---|---|
+| Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu` | Apt `arm64` metadata and package assets | Deferred until an arm64 Debian or Ubuntu VM is explicitly provided |
+| Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky` | RPM `aarch64` metadata and package assets | Deferred until an aarch64 Fedora or Rocky VM is explicitly provided |
+| Alpine | `x86_64` on `codex-vm-alpine` | Alpine `aarch64` endpoint smoke through Docker for `v0.1.6` | aarch64 real-host smoke deferred until an aarch64 Alpine VM is explicitly provided |
+| Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux ARM deferred by decision, not by accident |
+
+### ARM VM Runbook Template
+
+When a persistent ARM guest is provided, create an SSH alias under the
+`codex-vm-*` naming pattern and keep credentials out of the repository. The
+guest must use key-based SSH, passwordless `sudo` for the `codex` account, and
+normal distro package-manager tooling. Do not copy GitHub credentials or
+repository signing private keys to the VM.
+
+Required bootstrap checks:
+
+```bash
+ssh codex-vm-<distro>-arm64 'uname -m && sudo -n true'
+ssh codex-vm-<distro>-arm64 'cat /etc/os-release'
+```
+
+Required repository smoke commands after the alias exists:
+
+```bash
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-<debian-or-ubuntu-arm64> --repo-url https://phillipmcmahon.github.io/pwned-check/apt
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-<fedora-or-rocky-aarch64> --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-<alpine-aarch64> --repo-url https://phillipmcmahon.github.io/pwned-check/alpine
+```
+
+Each smoke must prove repository-only install, dry-run enablement, enforcement,
+disable/rollback, package removal, and managed-file cleanup. If the VM is lost
+or unavailable, record the deferral in release notes rather than substituting a
+Docker result for the persistent-VM acceptance gate.
+
 ## Docker Test Commands
 
 Local `linux/amd64` validation is VM-first. Do not run amd64 Docker locally as

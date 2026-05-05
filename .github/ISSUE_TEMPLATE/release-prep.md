@@ -20,6 +20,7 @@ What shipped changes are intended for this release?
 - [ ] changelog entry added or refreshed
 - [ ] docs updated for shipped behavior
 - [ ] local validation passed with `make validate`
+- [ ] pushed `main` CI run monitored to completion with `make github-ci-watch`
 - [ ] release artifacts built by CI
 - [ ] checksums generated or verified
 - [ ] release notes drafted

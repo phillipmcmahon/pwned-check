@@ -164,6 +164,12 @@ This catches scheduled workflow failures that local validation and
 tag-triggered release checks do not see automatically.
 - `fuzz`: scheduled and manual 5m parser fuzz workflow
 
+During release publication, run `make github-ci-watch` immediately after
+pushing the release commit to `main`. That command waits for the GitHub CI run
+for the pushed `HEAD` SHA and streams it to completion with
+`gh run watch --exit-status`; a successful `git push` is not release evidence by
+itself.
+
 Current smoke architecture coverage:
 
 | Area | Local Pre-Push | GitHub CI |

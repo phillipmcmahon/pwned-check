@@ -120,8 +120,18 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 ### 5. Publish
 
 - Push the release commit to `main`.
+- Monitor the pushed `main` CI run to completion before tagging:
+  ```bash
+  make github-ci-watch
+  ```
+  The watcher waits for the CI workflow associated with the pushed `HEAD` SHA
+  and exits non-zero if any required CI job fails.
 - Create and push the tag.
 - Let GitHub Actions build release artifacts.
+- Monitor the tag-triggered release workflow from GitHub Actions until it
+  reaches a terminal success or failure state. A pushed tag is not considered
+  published until the workflow completes successfully and the release assets are
+  visible on the GitHub Release.
 - Verify artifact checksums.
 - Verify release provenance attestation is present for the published checksums.
 - Verify the attestation can be resolved against `SHA256SUMS.txt`.

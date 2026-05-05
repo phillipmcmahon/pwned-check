@@ -9,6 +9,8 @@ HOST="codex-vm-alpine"
 REPO_DIR="$ROOT/dist/alpine-repository"
 REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-native-pam.rsa.pub"
+PUBLIC_KEY_WAS_SET=0
+PUBLIC_KEY_URL="https://phillipmcmahon.github.io/pwned-check/alpine/pwned-check-alpine-production.rsa.pub"
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
 
@@ -38,6 +40,9 @@ Options:
                           installs from this URL instead of a copied repo.
   --public-key <path>    Local RSA public key
                           (default: <repo-dir>/pwned-check-native-pam.rsa.pub)
+  --public-key-url <url> Published public key URL used with --repo-url when
+                          --public-key is not set
+                          (default: project production Alpine RSA key)
   --remote-dir <path>    Remote temporary directory
   --help                 Show this help text
 
@@ -67,6 +72,12 @@ while [ "$#" -gt 0 ]; do
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
+            PUBLIC_KEY_WAS_SET=1
+            shift 2
+            ;;
+        --public-key-url)
+            [ "$#" -ge 2 ] || fail "--public-key-url requires a value"
+            PUBLIC_KEY_URL="$2"
             shift 2
             ;;
         --remote-dir)
@@ -86,6 +97,11 @@ done
 
 if [ -z "$REPO_URL" ]; then
     [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
+fi
+if [ -n "$REPO_URL" ] && [ "$PUBLIC_KEY_WAS_SET" -eq 0 ]; then
+    require_command curl
+    PUBLIC_KEY="$(mktemp "${TMPDIR:-/tmp}/pwned-check-alpine-key.XXXXXX")"
+    curl -fsSL "$PUBLIC_KEY_URL" > "$PUBLIC_KEY" || fail "failed to download public key: $PUBLIC_KEY_URL"
 fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 

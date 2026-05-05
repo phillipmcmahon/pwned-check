@@ -9,6 +9,8 @@ HOST=""
 REPO_DIR="$ROOT/dist/apt-repository"
 REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-archive-key.asc"
+PUBLIC_KEY_WAS_SET=0
+PUBLIC_KEY_URL="https://phillipmcmahon.github.io/pwned-check/pwned-check-openpgp-production.asc"
 SUITE="stable"
 COMPONENT="main"
 REMOTE_DIR=""
@@ -39,6 +41,9 @@ Options:
                           installs from this URL instead of a copied repo.
   --public-key <path>    Local ASCII-armored repository public key
                           (default: <repo-dir>/pwned-check-archive-key.asc)
+  --public-key-url <url> Published public key URL used with --repo-url when
+                          --public-key is not set
+                          (default: project production OpenPGP key)
   --suite <name>         Apt suite/codename (default: stable)
   --component <name>     Apt component (default: main)
   --remote-dir <path>    Remote temporary directory
@@ -70,6 +75,12 @@ while [ "$#" -gt 0 ]; do
         --public-key)
             [ "$#" -ge 2 ] || fail "--public-key requires a value"
             PUBLIC_KEY="$2"
+            PUBLIC_KEY_WAS_SET=1
+            shift 2
+            ;;
+        --public-key-url)
+            [ "$#" -ge 2 ] || fail "--public-key-url requires a value"
+            PUBLIC_KEY_URL="$2"
             shift 2
             ;;
         --suite)
@@ -101,6 +112,11 @@ done
 if [ -z "$REPO_URL" ]; then
     [ -d "$REPO_DIR" ] || fail "repository directory does not exist: $REPO_DIR"
     [ -f "$REPO_DIR/dists/$SUITE/InRelease" ] || fail "repository missing signed InRelease for suite $SUITE"
+fi
+if [ -n "$REPO_URL" ] && [ "$PUBLIC_KEY_WAS_SET" -eq 0 ]; then
+    require_command curl
+    PUBLIC_KEY="$(mktemp "${TMPDIR:-/tmp}/pwned-check-apt-key.XXXXXX")"
+    curl -fsSL "$PUBLIC_KEY_URL" > "$PUBLIC_KEY" || fail "failed to download public key: $PUBLIC_KEY_URL"
 fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
 

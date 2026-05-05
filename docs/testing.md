@@ -65,6 +65,11 @@ clean package state. Local amd64 Docker smoke is not part of the default gate
 because the persistent VMs cover first-wave amd64 distro behavior; local arm64
 Docker smoke runs for Debian, Ubuntu, Fedora, Rocky, and Alpine to reduce the gap with
 GitHub CI.
+Expect the local arm64 Docker stage to take minutes rather than seconds,
+especially on emulated hosts or cold package caches. Recent full validation
+runs have spent roughly 5-10 minutes in the combined arm64 binary and PAM
+Docker smoke stages; network and package-manager cache state can move that
+number noticeably.
 Use `PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh` to exercise
 just the SSH VM stage. Use `PWNED_CHECK_SKIP_VM_SMOKE=1` or
 `PWNED_CHECK_SKIP_ARM64_DOCKER=1` only for deliberate offline work where the

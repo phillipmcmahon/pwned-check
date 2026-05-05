@@ -183,7 +183,6 @@ fi
         docs/security-model.md \
         docs/provider-policy.md \
         docs/checker-contract.md \
-        docs/production-release-gate.md \
         "$DOC_DIR/"
     if [ -n "$PWNED_CHECK_BIN" ]; then
         printf 'pwned-check binary supplied through --pwned-check-bin: %s\n' "$PWNED_CHECK_BIN" > "$PACKAGE_DIR/metadata/pwned-check-go-version.txt"

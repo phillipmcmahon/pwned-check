@@ -174,7 +174,6 @@ fi
 %doc /usr/share/doc/pwned-check/security-model.md
 %doc /usr/share/doc/pwned-check/provider-policy.md
 %doc /usr/share/doc/pwned-check/checker-contract.md
-%doc /usr/share/doc/pwned-check/production-release-gate.md
 /usr/bin/pwned-check
 /usr/sbin/pwned-check-pam-enable-dry-run
 /usr/sbin/pwned-check-pam-enable-enforce

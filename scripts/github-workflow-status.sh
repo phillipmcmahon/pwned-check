@@ -30,6 +30,10 @@ require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
+require_gh_auth() {
+    gh auth status >/dev/null 2>&1 || fail "gh is not authenticated; run 'gh auth login' before using this release helper"
+}
+
 if [ "${1:-}" = "--help" ]; then
     usage
     exit 0
@@ -38,6 +42,7 @@ fi
 
 require_command gh
 require_command jq
+require_gh_auth
 
 failures=0
 

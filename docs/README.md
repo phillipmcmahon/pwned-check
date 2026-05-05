@@ -25,6 +25,7 @@ Use this page as the front door for project and operator documentation. The docs
 | Validate code changes | [Testing](testing.md): local gate, coverage threshold, fuzz schedule, and CI expectations |
 | Validate Linux distro runtime and PAM package integration | [Distro testing runbook](distro-testing.md): persistent VM smoke process and GitHub Docker package smoke behavior |
 | Prepare a release | [Release playbook](release-playbook.md): release validation, Linux artifacts, and failure rule |
+| Check production release readiness | [Production release gate](production-release-gate.md): signing, repository, smoke, rollback, outage, documentation, and board criteria |
 | Plan production package repositories | [Package repositories](package-repositories.md): apt, dnf/yum, Arch, and Alpine repository publication plan |
 | Review native PAM design details | [Native PAM module](native-pam-module.md): Rust/FFI contract, packaging behavior, and test strategy |
 | Review legacy helper integration | [Linux PAM PoC](linux-pam-poc.md): `pam_exec` helper contract and manual password-change test plan |

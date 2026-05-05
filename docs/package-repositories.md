@@ -2,6 +2,8 @@
 
 This plan describes how native PAM package distribution moves from GitHub release assets to signed distro package repositories. The current release target is package files attached to GitHub Releases. Repository publication is the next production deployment track.
 
+Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
+
 ## Current Channel
 
 GitHub Releases are the bootstrap distribution channel for native PAM packages:
@@ -41,7 +43,7 @@ Repository publication should be added in this order:
 | 3 | Arch custom repository | Signed package and repository database | Arch package smoke |
 | 4 | Alpine repository | Signed APK index and trusted public key docs | Alpine Linux-PAM package smoke |
 
-Repository keys must be generated and stored outside the repository and outside persistent test VMs. Public keys can be checked in only after the key-management process is documented.
+Repository keys must be generated and stored outside the repository and outside persistent test VMs. Public keys can be checked in only after the key-management process is documented in the [Production release gate](production-release-gate.md) and the key-rotation story.
 
 ## Signing Inputs
 
@@ -55,6 +57,8 @@ Repository publication needs a signing environment, not ad hoc signing on the te
 | Release provenance inputs | All repositories | Use `SOURCE_DATE_EPOCH` from the release tag timestamp and `make native-pam-release-provenance` after packages are staged |
 
 Public keys may be published in the repository only after their fingerprints, rotation policy, revocation notice path, and operator update steps are documented.
+
+The signing responsibilities and private-key prohibitions are canonical in the [Production release gate](production-release-gate.md#signing-model).
 
 ## Publication Layout
 
@@ -81,6 +85,8 @@ Each repository story must add an install test that uses only repository configu
 | Alpine | Add the public key and repository URL on the Alpine VM, install with `apk add`, run dry-run/enforce/disable on a Linux-PAM service, remove the package, and verify managed files are gone |
 
 The repository smoke must not require GitHub credentials or build tools on the distro host. It should consume only the published repository endpoint, public key material, and normal package manager commands.
+
+The required repository-only smoke gate is defined in [Production release gate](production-release-gate.md#repository-only-smoke-gate).
 
 ## Required Stories
 

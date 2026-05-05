@@ -9,6 +9,7 @@ Use this checklist for public releases. The release process is intentionally sim
 - Keep release notes operator-focused.
 - Do not publish macOS or Windows production artifacts until signing requirements are addressed.
 - Keep live HIBP calls out of release validation.
+- Do not describe native PAM distribution as production-ready until the [Production release gate](production-release-gate.md) passes.
 
 ## Release Tracking
 
@@ -58,6 +59,8 @@ Capture:
 - Docker smoke matrix result
 - CI `lint`, `staticcheck`, `test`, `smoke`, and `package-linux` jobs
 - native PAM package, VM, and Docker validation results when shipping native PAM changes
+
+For production-ready repository releases, also capture the [Production release gate](production-release-gate.md) evidence: signing status, repository-only install smoke, rollback validation, provider-outage validation, key-management documentation, and project board closeout.
 
 ### 4. Build Artifacts
 
@@ -110,6 +113,8 @@ Before the first package repository release, complete the repository-specific si
 - run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch Docker until an Arch VM exists
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
 
+The production signing model is defined in [Production release gate](production-release-gate.md#signing-model). Private keys must not be stored in repo-tracked files, persistent distro VMs, smoke fixtures, or package repositories.
+
 Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish
@@ -120,6 +125,7 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Verify artifact checksums.
 - Verify release provenance attestation is present for the published checksums.
 - Verify the attestation can be resolved against `SHA256SUMS.txt`.
+- For repository-backed releases, verify signed repository metadata and public-key instructions before publishing release notes.
 - Confirm release notes include:
   - highlights
   - operator impact
@@ -135,6 +141,7 @@ git tag -a v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
 ### 6. Close Tracking
 
 - Comment on the release-prep issue with validation and release links.
+- For production-ready repository releases, include the completed production gate evidence or the explicit deferment rationale.
 - Move shipped story/task issues to `Done`.
 - Run the project board audit.
 - Run `make github-workflow-status` to confirm the latest completed `main`

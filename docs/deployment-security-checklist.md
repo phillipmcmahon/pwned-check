@@ -9,6 +9,7 @@ Use this checklist before enabling `pwned-check` in a Linux password-change path
 - Set a provider timeout with `PWNED_CHECK_TIMEOUT`.
 - Set a PAM helper timeout with `pwned-check-pam-helper --timeout`, or a native module timeout with `timeout=<seconds>`.
 - Verify the release package checksum before installation.
+- For repository-backed production releases, verify the repository public key, signed metadata, and production readiness evidence from the [Production release gate](production-release-gate.md).
 - Confirm `pwned-check --version` and `pwned-check-pam-helper --version`.
 - For native PAM deployments, confirm `pam_pwned_check.so` is installed in the distro PAM security module directory and the package rollback helper is present.
 - Review [Provider policy](provider-policy.md), [Security model](security-model.md), and [Logging policy](logging-policy.md).
@@ -35,10 +36,12 @@ Use this checklist before enabling `pwned-check` in a Linux password-change path
 - Know the command to restore the previous PAM file or disable the native PAM package profile/helper.
 - Know how to switch from fail-closed to fail-open during a provider outage.
 - Verify `passwd` reaches the normal password-change flow after rollback.
+- For repository-backed deployments, rehearse package removal and repository disablement before production enforcement.
 
 ## Ongoing Checks
 
 - Count safe validation and failure events during rollout.
 - Investigate repeated provider failures, helper timeouts, or checker config failures.
 - Re-verify package checksums and metadata during upgrades.
+- Track repository key rotation, revocation notices, and operator trust-store updates.
 - Re-run the Docker PAM package smoke and native PAM distro/package tests after packaging or PAM behavior changes.

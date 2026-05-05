@@ -487,6 +487,21 @@ Alpine package smoke should run on `codex-vm-alpine` for release validation. Use
 
 The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises dry-run/enforce/disable through the manual PAM helper wrappers, removes the package, and verifies package-managed files are gone.
 
+Alpine repository smoke:
+
+```bash
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine
+```
+
+Run this after `dist/alpine-repository` has been generated with
+`scripts/build-native-pam-alpine-repository.sh`. The target VM receives only the
+repository files and RSA public key, installs through apk without
+`--allow-untrusted`, exercises packaged dry-run/enforce/disable helpers on a
+disposable Linux-PAM service, removes the package, and verifies managed-file
+cleanup. Each run writes a combined report under
+`.test-output/native-pam-alpine-repo-smoke/<timestamp>-native-pam-alpine-repo-smoke/`
+and updates `.test-output/native-pam-alpine-repo-smoke/latest`.
+
 ## Arch VM Route
 
 Arch package smoke should run on `codex-vm-arch` for local and release

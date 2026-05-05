@@ -110,7 +110,8 @@ Before the first package repository release, complete the repository-specific si
 - publish public key fingerprints and operator trust-bootstrap commands
 - generate repository metadata from the validated release package set; use
   `scripts/build-native-pam-apt-repository.sh` for apt and
-  `scripts/build-native-pam-rpm-repository.sh` for RPM-family repositories
+  `scripts/build-native-pam-rpm-repository.sh` for RPM-family repositories,
+  and `scripts/build-native-pam-alpine-repository.sh` for Alpine repositories
 - sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
 - run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch persistent VMs
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install

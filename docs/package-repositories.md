@@ -210,6 +210,59 @@ managed files are gone:
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
 build tooling, `rpmbuild`, or `createrepo_c` for this repo-only smoke.
 
+## Alpine Repository
+
+The Alpine repository path signs `APKINDEX.tar.gz` with an RSA key. Generate
+metadata from already validated `.apk` artifacts and keep the private key in the
+release signing environment:
+
+```bash
+PWNED_CHECK_ALPINE_SIGNING_KEY="/secure/path/pwned-check-native-pam.rsa" \
+  ./scripts/build-native-pam-alpine-repository.sh \
+    --input-dir dist/release \
+    --output-dir dist/alpine-repository \
+    --public-key-output dist/alpine-repository/pwned-check-native-pam.rsa.pub
+```
+
+The generated repository is split by APK architecture, for example
+`x86_64/APKINDEX.tar.gz` and `aarch64/APKINDEX.tar.gz`. Operator trust
+bootstrap should install the public RSA key under `/etc/apk/keys` and add the
+published repository root to `/etc/apk/repositories`:
+
+```bash
+curl -fsSL https://example.invalid/pwned-check-native-pam.rsa.pub |
+  sudo tee /etc/apk/keys/pwned-check-native-pam.rsa.pub >/dev/null
+echo "https://example.invalid/alpine" |
+  sudo tee -a /etc/apk/repositories >/dev/null
+sudo apk update
+sudo apk add pwned-check-native-pam
+```
+
+Replace `https://example.invalid/alpine` with the published repository endpoint.
+Do not use `--allow-untrusted` for repository-backed production validation.
+Alpine deployments require Linux-PAM; BusyBox-only password tooling is outside
+the native PAM package scope.
+
+Package installation still only places files. Enablement remains explicit:
+
+```bash
+sudo pwned-check-pam-enable-dry-run
+sudo pwned-check-pam-enable-enforce
+sudo pwned-check-pam-disable
+```
+
+Repo-only smoke copies the prepared repository and public key to the Alpine VM,
+configures apk trust, installs from the repository without `--allow-untrusted`,
+exercises dry-run/enforce/disable on a disposable Linux-PAM service, removes the
+package, and verifies managed files are gone:
+
+```bash
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine
+```
+
+The VM does not need GitHub credentials, repository source code, Rust, Go, C
+build tooling, `abuild`, or `apk index` for this repo-only smoke.
+
 ## Required Stories
 
 Create these stories before implementation:

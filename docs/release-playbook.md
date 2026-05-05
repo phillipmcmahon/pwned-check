@@ -150,6 +150,14 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Verify release provenance attestation is present for the published checksums.
 - Verify the attestation can be resolved against `SHA256SUMS.txt`.
 - For repository-backed releases, verify signed repository metadata and public-key instructions before publishing release notes.
+- Archive the release artifacts to the NAS after the GitHub Release assets are
+  visible:
+  ```bash
+  ./scripts/archive-release-to-nas.sh --version v0.1.0
+  ```
+  This writes immutable artifacts to
+  `/volume1/homes/phillipmcmahon/code/pwned-check/archive/<version>/` and resets
+  `/volume1/homes/phillipmcmahon/code/pwned-check/latest/<version>/`.
 - Confirm release notes include:
   - highlights
   - operator impact

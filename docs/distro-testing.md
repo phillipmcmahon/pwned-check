@@ -518,6 +518,26 @@ PWNED_CHECK_VM_SMOKE_HOSTS=codex-vm-arch \
 ./scripts/validate-before-push.sh
 ```
 
+Arch repository smoke:
+
+```bash
+./scripts/native-pam-arch-repo-smoke.sh --host codex-vm-arch
+```
+
+Run this after `dist/arch-repository` has been generated with
+`scripts/build-native-pam-arch-repository.sh`. The target VM receives only the
+repository files and armored public key, imports and locally signs the key in
+the pacman keyring, installs through `pacman -S` from the custom repository,
+exercises packaged dry-run/enforce/disable helpers on a disposable Linux-PAM
+service, removes the package, and verifies managed-file cleanup. Each run
+writes a combined report under
+`.test-output/native-pam-arch-repo-smoke/<timestamp>-native-pam-arch-repo-smoke/`
+and updates `.test-output/native-pam-arch-repo-smoke/latest`.
+
+Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
+ARM coverage is deferred until a maintained Arch Linux ARM builder image or
+persistent VM is selected.
+
 Use the Arch Docker path only for GitHub CI parity or when the VM is
 unavailable:
 

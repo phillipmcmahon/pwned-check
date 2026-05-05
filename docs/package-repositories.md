@@ -210,6 +210,70 @@ managed files are gone:
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
 build tooling, `rpmbuild`, or `createrepo_c` for this repo-only smoke.
 
+## Arch Repository
+
+The Arch repository path signs both the package files and the pacman repository
+database. Generate metadata from already validated `.pkg.tar.zst` artifacts and
+keep the private key in the release signing environment:
+
+```bash
+PWNED_CHECK_ARCH_SIGNING_KEY="release-key-fingerprint" \
+  ./scripts/build-native-pam-arch-repository.sh \
+    --input-dir dist/release \
+    --output-dir dist/arch-repository \
+    --public-key-output dist/arch-repository/pwned-check-native-pam.asc
+```
+
+The generated repository is split by pacman architecture, for example
+`x86_64/pwned-check.db` and `x86_64/pwned-check.files`. Package signatures
+remain next to the packages as `.sig` files, and the repository database is
+signed by `repo-add --sign`.
+
+Operator trust bootstrap should import the public key, locally sign it in the
+pacman keyring, and add the custom repository:
+
+```bash
+curl -fsSL https://example.invalid/pwned-check-native-pam.asc \
+  -o /tmp/pwned-check-native-pam.asc
+sudo pacman-key --add /tmp/pwned-check-native-pam.asc
+sudo pacman-key --lsign-key <release-key-fingerprint>
+sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+
+[pwned-check]
+SigLevel = Required DatabaseRequired
+Server = https://example.invalid/arch/$arch
+EOF
+sudo pacman -Sy pwned-check-native-pam
+```
+
+Replace `https://example.invalid/arch` and `<release-key-fingerprint>` with the
+published repository endpoint and release signing key fingerprint. Do not use
+`SigLevel = Never` or `pacman -U` for repository-backed production validation.
+
+Package installation still only places files. Enablement remains explicit:
+
+```bash
+sudo pwned-check-pam-enable-dry-run
+sudo pwned-check-pam-enable-enforce
+sudo pwned-check-pam-disable
+```
+
+Repo-only smoke copies the prepared repository and public key to the Arch VM,
+configures pacman trust, installs from the repository with `pacman -S`,
+exercises dry-run/enforce/disable on a disposable Linux-PAM service, removes the
+package, and verifies managed files are gone:
+
+```bash
+./scripts/native-pam-arch-repo-smoke.sh --host codex-vm-arch
+```
+
+The VM does not need GitHub credentials, repository source code, Rust, Go, C
+build tooling, `makepkg`, or `repo-add` for this repo-only smoke.
+
+Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
+ARM coverage is deferred until a maintained Arch Linux ARM builder image or
+persistent VM is selected.
+
 ## Alpine Repository
 
 The Alpine repository path signs `APKINDEX.tar.gz` with an RSA key. Generate

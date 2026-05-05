@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-apt-repo-smoke native-pam-rpm-repository native-pam-rpm-repo-smoke native-pam-alpine-repository native-pam-alpine-repo-smoke native-pam-release-provenance github-ci-watch github-workflow-status validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke docker-pam-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-apt-repo-smoke native-pam-rpm-repository native-pam-rpm-repo-smoke native-pam-alpine-repository native-pam-alpine-repo-smoke native-pam-arch-repository native-pam-arch-repo-smoke native-pam-release-provenance github-ci-watch github-workflow-status validate
 
 BIN := dist/pwned-check
 PAM_HELPER_BIN := dist/pwned-check-pam-helper
@@ -7,6 +7,10 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$(VERSION) -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$(VERSION)
 FUZZ_PACKAGE := ./internal/pwned
 FUZZ_TARGET := FuzzParseRangeResponse
+APT_REPO_SMOKE_HOST ?= codex-vm-ubuntu
+RPM_REPO_SMOKE_HOST ?= codex-vm-fedora
+ALPINE_REPO_SMOKE_HOST ?= codex-vm-alpine
+ARCH_REPO_SMOKE_HOST ?= codex-vm-arch
 
 fmt:
 	gofmt -w .
@@ -158,6 +162,12 @@ native-pam-alpine-repository:
 
 native-pam-alpine-repo-smoke:
 	./scripts/native-pam-alpine-repo-smoke.sh --host "$(ALPINE_REPO_SMOKE_HOST)"
+
+native-pam-arch-repository:
+	./scripts/build-native-pam-arch-repository.sh
+
+native-pam-arch-repo-smoke:
+	./scripts/native-pam-arch-repo-smoke.sh --host "$(ARCH_REPO_SMOKE_HOST)"
 
 native-pam-release-provenance:
 	./scripts/native-pam-release-provenance.sh

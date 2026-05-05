@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+. "$ROOT/scripts/lib/release-helpers.sh"
 VERSION=""
 INPUT_DIR="$ROOT/dist/release"
 HOST="${PWNED_CHECK_NAS_HOST:-homestorage}"
@@ -35,15 +36,6 @@ Options:
                              (default: /volume1/homes/phillipmcmahon/code/pwned-check)
   --help                    Show this help text
 EOF
-}
-
-fail() {
-  echo "Error: $*" >&2
-  exit 1
-}
-
-require_command() {
-  command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -101,7 +93,7 @@ require_command git
 require_command scp
 require_command ssh
 if [ "$SOURCE" = "github" ]; then
-  require_command gh
+  require_gh_auth
 fi
 
 VERSION_NO_V="${VERSION#v}"
@@ -121,7 +113,6 @@ stage="$work_dir/$VERSION_TAG"
 mkdir -p "$stage"
 
 if [ "$SOURCE" = "github" ]; then
-  gh auth status >/dev/null
   gh release view "$VERSION_TAG" --repo "$REPO" >/dev/null
   gh release download "$VERSION_TAG" --repo "$REPO" --dir "$stage" --clobber --pattern '*'
   # Match GitHub's UI labels exactly so the NAS mirror is easy to compare

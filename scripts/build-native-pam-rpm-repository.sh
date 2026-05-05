@@ -3,6 +3,7 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+. "$ROOT/scripts/lib/release-helpers.sh"
 INPUT_DIR="$ROOT/dist/release"
 OUTPUT_DIR="$ROOT/dist/rpm-repository"
 SIGNING_KEY="${PWNED_CHECK_RPM_SIGNING_KEY:-}"
@@ -31,15 +32,6 @@ Environment:
   PWNED_CHECK_GPG_PASSPHRASE_FILE  Optional passphrase file for protected
                                    OpenPGP signing keys
 EOF
-}
-
-fail() {
-    echo "Error: $*" >&2
-    exit 1
-}
-
-require_command() {
-    command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
 gpg_base_args() {

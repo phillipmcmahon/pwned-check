@@ -3,6 +3,7 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+. "$ROOT/scripts/lib/release-helpers.sh"
 INPUT_DIR="$ROOT/dist/release"
 OUTPUT_DIR="$ROOT/dist/alpine-repository"
 PRIVATE_KEY="${PWNED_CHECK_ALPINE_SIGNING_KEY:-}"
@@ -25,15 +26,6 @@ Options:
   --public-key-output <path>  Copy/export the public key to this path
   --help                      Show this help text
 EOF
-}
-
-fail() {
-    echo "Error: $*" >&2
-    exit 1
-}
-
-require_command() {
-    command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
 while [ "$#" -gt 0 ]; do

@@ -3,6 +3,7 @@
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+. "$ROOT/scripts/lib/release-helpers.sh"
 OUTPUT_ROOT="${PWNED_CHECK_TEST_OUTPUT_DIR:-$ROOT/.test-output/native-pam-apt-repo-smoke}"
 HOST=""
 REPO_DIR="$ROOT/dist/apt-repository"
@@ -13,23 +14,10 @@ COMPONENT="main"
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
 
-if [ "${PWNED_CHECK_APT_REPO_SMOKE_NO_CAPTURE:-}" != "1" ]; then
-    timestamp="$(date -u '+%Y%m%dT%H%M%SZ')"
-    run_dir="$OUTPUT_ROOT/$timestamp-native-pam-apt-repo-smoke"
-    mkdir -p "$run_dir"
-    log_file="$run_dir/$timestamp-native-pam-apt-repo-smoke.txt"
-    rc_file="$run_dir/exit-code"
-    (
-        set +e
-        PWNED_CHECK_APT_REPO_SMOKE_NO_CAPTURE=1 "$0" "$@"
-        rc=$?
-        printf '%s\n' "$rc" > "$rc_file"
-        exit "$rc"
-    ) 2>&1 | tee "$log_file"
-    rc="$(cat "$rc_file")"
-    ln -sfn "$run_dir" "$OUTPUT_ROOT/latest"
-    printf 'Native PAM apt repository smoke output: %s\n' "$log_file"
-    exit "$rc"
+if capture_or_reexec "$OUTPUT_ROOT" "native-pam-apt-repo-smoke" \
+    "PWNED_CHECK_APT_REPO_SMOKE_NO_CAPTURE" \
+    "Native PAM apt repository smoke output" "$0" "$@"; then
+    :
 fi
 
 usage() {
@@ -60,15 +48,6 @@ Environment:
   PWNED_CHECK_TEST_OUTPUT_DIR  Output root for combined smoke logs
                                (default: .test-output/native-pam-apt-repo-smoke)
 EOF
-}
-
-fail() {
-    echo "Error: $*" >&2
-    exit 1
-}
-
-require_command() {
-    command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
 while [ "$#" -gt 0 ]; do

@@ -1,6 +1,9 @@
 # Package Repositories
 
-This plan describes how native PAM package distribution moves from GitHub release assets to signed distro package repositories. The current release target is package files attached to GitHub Releases. Repository publication is the next production deployment track.
+This document describes the signed distro package repositories for native PAM
+package distribution. GitHub Release assets remain the immutable bootstrap and
+recovery channel; repository-backed package manager installs are the normal
+production-style operator path.
 
 Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
 

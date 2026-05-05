@@ -4,7 +4,11 @@ This runbook covers Linux installation, native PAM enablement, rollback, and eme
 
 ## Native PAM Package Model
 
-Native PAM packages are attached to GitHub Releases until signed package repositories are published. Package installation places files on disk only; it does not enable PAM. Operators explicitly enable `dry_run` first, validate logs and rollback, and only then switch to enforcement.
+Native PAM packages are distributed through signed package repositories for
+production-style installs. GitHub Release package assets remain available as an
+immutable bootstrap and recovery channel. Package installation places files on
+disk only; it does not enable PAM. Operators explicitly enable `dry_run` first,
+validate logs and rollback, and only then switch to enforcement.
 
 All native package families install the same commands:
 
@@ -14,23 +18,44 @@ All native package families install the same commands:
 | `pwned-check-pam-enable-enforce` | Switch an enabled dry-run config to enforcement |
 | `pwned-check-pam-disable` | Restore the recorded PAM or authselect rollback state |
 
-Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine install these commands under `/usr/sbin`; Arch installs them under `/usr/bin`. Prefer calling the command name instead of hard-coding the path.
+Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine install these commands under
+`/usr/sbin`; Arch installs them under `/usr/bin`. Prefer calling the command
+name instead of hard-coding the path.
 
-Native package assets are not repository-signed yet. Verify the downloaded `.sha256` file before installation and treat GitHub Release assets as the bootstrap channel, not the final production repository channel.
-
-When using repository-backed packages, verify the repository public key
-fingerprint before enabling the PAM module. Key rotation, expired-key recovery,
-and compromised-key recovery steps are maintained in
+For repository-backed packages, verify the repository public key fingerprint
+before installation and before enabling the PAM module. Key rotation,
+expired-key recovery, compromised-key recovery, and exact repository setup
+commands are maintained in
 [Package repositories](package-repositories.md#key-rotation-and-revocation).
 
-## Install From GitHub Releases
+## Install From Package Repositories
+
+Use the signed package repositories for normal operator installs:
+
+| Distro family | Repository instructions |
+|---|---|
+| Debian/Ubuntu | [Apt repository](package-repositories.md#apt-repository) |
+| Fedora/RHEL/Rocky | [RPM repository](package-repositories.md#rpm-repository) |
+| Arch Linux | [Arch repository](package-repositories.md#arch-repository) |
+| Alpine Linux-PAM | [Alpine repository](package-repositories.md#alpine-repository) |
+
+After installation, continue with the dry-run, enforcement, disable, and removal
+steps below for the target distro family. The repository path should not require
+GitHub credentials, build tools, private signing keys, or a local checkout on
+the target host.
+
+## Bootstrap From GitHub Releases
 
 Set the version and release URL:
 
 ```bash
-VERSION=0.1.5
+VERSION=0.1.6
 BASE_URL="https://github.com/phillipmcmahon/pwned-check/releases/download/v${VERSION}"
 ```
+
+Use GitHub Release package assets when repository access is unavailable, when
+recovering a host, or when validating immutable release artifacts directly.
+Verify the downloaded `.sha256` file before installation.
 
 ### Debian/Ubuntu
 

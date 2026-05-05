@@ -1,6 +1,9 @@
 # Production Release Gate
 
-This gate defines when native PAM distribution can be described as production-ready. Until every required item is satisfied, GitHub Release assets remain a bootstrap channel and signed package repositories remain a release-readiness track.
+This gate defines when native PAM distribution can be described as
+production-ready. GitHub Release assets remain the immutable bootstrap and
+recovery channel; signed package repositories are the normal production-style
+operator install channel once this gate is satisfied for the release.
 
 ## Required Criteria
 
@@ -16,12 +19,17 @@ This gate defines when native PAM distribution can be described as production-re
 
 Production readiness is blocked if any package repository requires GitHub credentials, build tools, private signing keys, or repository checkout state on the target distro host.
 
-The repository tooling and repo-only smoke suites are implemented for the
-target families. [Issue #39](https://github.com/phillipmcmahon/pwned-check/issues/39)
-tracks production activation with the selected model: GitHub Pages endpoints,
-one maintainer-owned OpenPGP production key for apt/RPM/Arch, one
-maintainer-owned Alpine RSA production key, and recorded smoke evidence for the
-published endpoints before the release may be described as production-ready.
+The repository tooling, production signing keys, GitHub Pages endpoints, and
+repo-only smoke suites are implemented for the target families. Publication
+evidence for the first production endpoint set is recorded in
+[#39](https://github.com/phillipmcmahon/pwned-check/issues/39) and
+`docs/releases/v0.1.6.md`.
+
+Known architecture deferrals must be recorded in release notes before a release
+is called production-ready. For `v0.1.6`, apt `arm64` and RPM `aarch64` metadata
+is published but awaits native VM smoke coverage; Arch remains `x86_64` until an
+Arch Linux ARM builder or VM is selected; Alpine endpoint validation used arm64
+Docker because the persistent Alpine VM is `x86_64`.
 
 ## Signing Model
 

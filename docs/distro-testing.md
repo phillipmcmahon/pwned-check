@@ -581,6 +581,26 @@ Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
 ARM coverage is deferred until a maintained Arch Linux ARM builder image or
 persistent VM is selected.
 
+### Arch Linux ARM Decision
+
+Arch Linux ARM is deferred for the v0.2 readiness path. The project has an
+official Arch Linux `x86_64` VM and an `archlinux:base-devel` Docker path for
+`x86_64`, but it does not have a trusted Arch Linux ARM builder image or a
+persistent Arch Linux ARM VM. Treating a community image as a release builder
+would add a larger supply-chain decision than the current story needs.
+
+User impact: Arch operators on `x86_64` can install and smoke the signed custom
+repository through `pacman -S`; Arch Linux ARM operators must build from source
+or wait for a future package path. Revisit this decision when one of these
+inputs exists:
+
+- an explicitly provisioned `codex-vm-arch-arm64` or equivalent Arch Linux ARM
+  guest with key-based SSH and passwordless sudo
+- a trusted, pinned Arch Linux ARM builder image with clear provenance and a
+  package smoke path
+- a maintainer decision to publish Arch Linux ARM as source-only with no binary
+  repository promise
+
 Use the Arch Docker path only for GitHub CI parity or when the VM is
 unavailable:
 

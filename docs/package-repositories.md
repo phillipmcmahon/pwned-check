@@ -388,6 +388,13 @@ Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
 ARM coverage is deferred until a maintained Arch Linux ARM builder image or
 persistent VM is selected.
 
+Arch Linux ARM is a deliberate deferral for the v0.2 readiness path. The
+project will not publish Arch Linux ARM repository metadata from an unvetted
+community builder image. Support can be reopened when a persistent Arch Linux
+ARM VM is explicitly provided, when a trusted and pinned builder image is
+selected, or when the project records a source-only Arch Linux ARM position
+instead of binary package support.
+
 ## Alpine Repository
 
 The Alpine repository path signs `APKINDEX.tar.gz` with an RSA key. Generate

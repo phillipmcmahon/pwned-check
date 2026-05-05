@@ -8,6 +8,24 @@ The format is intentionally lightweight while the project is pre-production.
 
 - No unreleased changes yet.
 
+## v0.1.7 - 2026-05-05
+
+- Signed apt, RPM, Arch, and Alpine repository publication is now recorded as
+  the preferred production-style native PAM install path, with GitHub Release
+  assets retained as immutable bootstrap and recovery artifacts.
+- Live repository smoke coverage now exercises apt on Ubuntu and Debian, RPM on
+  Fedora and Rocky, Arch on the persistent Arch VM, and records Alpine arm64
+  endpoint validation until matching VM coverage exists.
+- Scheduled repository endpoint monitoring now checks public keys, signed
+  metadata, package visibility, and Alpine package payload availability without
+  mutating any host PAM stack.
+- Release operations now include NAS archive configuration, release helper
+  preflights, VM fleet recovery policy, per-distro VM runbooks, and annual
+  repository key rotation rehearsal guidance.
+- Arch Linux ARM and current ARM VM coverage gaps are explicitly documented as
+  support decisions or release-validation deferrals rather than implicit
+  omissions.
+
 ## v0.1.6 - 2026-05-05
 
 - Release helper scripts now preflight `gh auth status` before querying GitHub Actions, making authentication failures explicit.

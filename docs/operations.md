@@ -49,7 +49,7 @@ the target host.
 Set the version and release URL:
 
 ```bash
-VERSION=0.1.6
+VERSION=0.1.7
 BASE_URL="https://github.com/phillipmcmahon/pwned-check/releases/download/v${VERSION}"
 ```
 

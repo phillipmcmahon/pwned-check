@@ -88,6 +88,68 @@ The repository smoke must not require GitHub credentials or build tools on the d
 
 The required repository-only smoke gate is defined in [Production release gate](production-release-gate.md#repository-only-smoke-gate).
 
+## Apt Repository
+
+The apt repository path is the first Epic 8 repository implementation target.
+Generate metadata from already validated `.deb` artifacts and sign the suite
+metadata with a release signing key that lives outside the repository and
+outside the distro test VMs:
+
+```bash
+PWNED_CHECK_APT_SIGNING_KEY="<key fingerprint>" \
+  ./scripts/build-native-pam-apt-repository.sh \
+    --input-dir dist/release \
+    --output-dir dist/apt-repository \
+    --suite stable \
+    --component main \
+    --public-key-output dist/apt-repository/pwned-check-archive-key.asc
+```
+
+The generated repository contains:
+
+| Path | Purpose |
+|---|---|
+| `pool/main/p/pwned-check-native-pam/*.deb` | Validated package payloads |
+| `dists/<suite>/Release` | Unsigned suite metadata |
+| `dists/<suite>/InRelease` | Inline signed suite metadata used by apt |
+| `dists/<suite>/Release.gpg` | Detached signature for suite metadata |
+| `dists/<suite>/<component>/binary-<arch>/Packages*` | Package index per architecture |
+
+Operator trust bootstrap should install the public key into `/etc/apt/keyrings`
+and scope trust to the pwned-check source list:
+
+```bash
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://example.invalid/pwned-check-native-pam.asc |
+  sudo tee /etc/apt/keyrings/pwned-check-native-pam.asc >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/pwned-check-native-pam.asc] https://example.invalid/apt stable main" |
+  sudo tee /etc/apt/sources.list.d/pwned-check-native-pam.list >/dev/null
+sudo apt update
+sudo apt install pwned-check-native-pam
+```
+
+Replace `https://example.invalid/apt` with the published repository endpoint.
+Package installation still only places files. Enablement remains explicit:
+
+```bash
+sudo pwned-check-pam-enable-dry-run
+sudo pwned-check-pam-enable-enforce
+sudo pwned-check-pam-disable
+```
+
+Repo-only smoke copies the prepared repository and public key to a target VM,
+configures apt from those files, installs the package through apt, exercises
+dry-run/enforce/disable, purges the package, and verifies managed files are
+removed:
+
+```bash
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian
+```
+
+The VM does not need GitHub credentials, repository source code, Rust, Go, or C
+build tooling for this repo-only smoke.
+
 ## Required Stories
 
 Create these stories before implementation:

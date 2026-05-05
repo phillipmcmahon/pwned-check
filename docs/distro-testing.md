@@ -261,6 +261,21 @@ On Debian 13, `pam-auth-update` is installed under `/usr/sbin`, which is not alw
 
 The Debian VM validates the Debian/Ubuntu filesystem layout and native `.deb` package behavior on a real Debian host. The same script names retain `ubuntu` because the package path covers the shared Debian/Ubuntu `pam-auth-update` integration.
 
+Debian/Ubuntu apt repository smoke:
+
+```bash
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian
+```
+
+Run this after `dist/apt-repository` has been generated with
+`scripts/build-native-pam-apt-repository.sh`. The target VM receives only the
+repository files and public key, installs through apt, exercises the packaged
+dry-run/enforce/disable helpers, purges the package, and verifies managed-file
+cleanup. Each run writes a combined report under
+`.test-output/native-pam-apt-repo-smoke/<timestamp>-native-pam-apt-repo-smoke/`
+and updates `.test-output/native-pam-apt-repo-smoke/latest`.
+
 ## Debian Docker Route
 
 The Debian Docker route remains the cheap, disposable coverage path. Run the Debian slices of the binary, helper PAM, and direct native PAM smoke tests:

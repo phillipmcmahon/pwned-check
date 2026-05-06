@@ -24,6 +24,16 @@ Private signing keys, passphrases, GitHub credentials, NAS credentials, and VM
 passwords must not be stored in the repository, copied to persistent distro
 VMs, or embedded in smoke fixtures.
 
+## Tracked Supply-Chain Gaps
+
+These items are explicit follow-ups, not hidden release requirements for the
+current package baseline:
+
+| Gap | Current posture | Evidence needed to close | Tracking decision |
+|---|---|---|---|
+| Reproducible builds | Release artifacts carry checksums, signed provenance, and fixed build timestamps, but independent rebuild equivalence is not yet a release gate. | A documented rebuild procedure that reproduces package payloads from the tagged source and compares normalized package contents across at least one clean maintainer environment. | Track as a future supply-chain hardening task under Epic 12 or a later supply-chain epic. |
+| Transparency log | GitHub Releases, signed checksums, signed repository metadata, and endpoint monitoring provide publication evidence, but release metadata is not written to an append-only external transparency log. | A selected log, submission command, inclusion proof capture, and release-note field that records the log entry for each production release. | Track as a future supply-chain hardening task under Epic 12 or a later supply-chain epic. |
+
 ## 1. Confirm Scope
 
 - Decide which user-visible changes are shipping.

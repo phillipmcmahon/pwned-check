@@ -102,9 +102,14 @@ sync_vm_checkout() {
     goarch="$2"
     prebuilt_bin="$VM_PREBUILT_DIR/pwned-check-$goarch"
 
+    case "$VM_CHECKOUT" in
+        /home/codex/*) ;;
+        *) fail "refusing VM cleanup for unexpected checkout path: $VM_CHECKOUT" ;;
+    esac
+
     echo "sync checkout to $host:$VM_CHECKOUT"
     run_vm "$host" "mkdir -p '$VM_CHECKOUT' '$VM_PREBUILT_DIR'"
-    run_vm "$host" "sudo rm -rf '$VM_CHECKOUT/.venv' '$VM_CHECKOUT/.pytest_cache' '$VM_CHECKOUT/.ruff_cache'"
+    run_vm "$host" "case '$VM_CHECKOUT' in /home/codex/*) sudo rm -rf '$VM_CHECKOUT/.venv' '$VM_CHECKOUT/.pytest_cache' '$VM_CHECKOUT/.ruff_cache' ;; *) echo 'refusing cleanup for unexpected checkout path: $VM_CHECKOUT' >&2; exit 70 ;; esac"
     rsync -az --delete \
         --exclude .git \
         --exclude .test-output \

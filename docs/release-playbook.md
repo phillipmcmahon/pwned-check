@@ -39,7 +39,13 @@ The release issue should track:
 
 ### 2. Prepare Version
 
-- Update version metadata.
+- Update version metadata with the paired release helper:
+  ```bash
+  make prepare-release-version VERSION=v0.1.0
+  ```
+  This updates the native PAM Rust crate version in
+  `native/pam-pwned-check/Cargo.toml`, refreshes `Cargo.lock`, and verifies the
+  two files agree.
 - Confirm the native PAM Rust crate version in `native/pam-pwned-check/Cargo.toml`
   and `Cargo.lock` matches the release tag without the leading `v`.
 - Confirm `pwned-check --version` reports the intended version in the built binary.
@@ -163,12 +169,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
   git push origin v0.1.0
   ```
-  If the release signing key needs a non-interactive passphrase unlock, use a
-  maintainer-local GPG wrapper or agent configuration that reads from private
-  storage outside the repository, for example
-  `~/.pwned-check/signing/keys/pwned-check-openpgp-passphrase.txt`. Never
-  commit passphrases, private keys, or wrapper scripts containing secret paths
-  to the repository.
+  Prefer `gpg-agent` with loopback pinentry enabled for non-interactive release
+  signing. A maintainer-local passphrase file such as
+  `~/.pwned-check/signing/keys/pwned-check-openpgp-passphrase.txt` may be used
+  to unlock the agent or by a temporary local wrapper, but it is not the
+  repository default. Never commit passphrases, private keys, or wrapper
+  scripts containing secret paths to the repository.
 - Let GitHub Actions build release artifacts.
 - Monitor the tag-triggered release workflow from GitHub Actions until it
   reaches a terminal success or failure state. A pushed tag is not considered

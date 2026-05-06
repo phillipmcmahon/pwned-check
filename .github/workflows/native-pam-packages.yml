@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "37 3 * * 2"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   ubuntu-deb-package:
     name: Ubuntu .deb Package

@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-apt-repo-smoke native-pam-rpm-repository native-pam-rpm-repo-smoke native-pam-alpine-repository native-pam-alpine-repo-smoke native-pam-arch-repository native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build prepare-release-version native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-smoke native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-host-package-smoke native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-generic-package-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-linux package-native-pam-debian-artifact package-native-pam-debian package-native-pam-rpm-artifact package-native-pam-rpm package-native-pam-generic package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-apt-repo-smoke native-pam-rpm-repository native-pam-rpm-repo-smoke native-pam-alpine-repository native-pam-alpine-repo-smoke native-pam-arch-repository native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
 
 BIN := dist/pwned-check
 NATIVE_PAM_BIN := dist/pam_pwned_check.so
@@ -38,6 +38,9 @@ staticcheck:
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/pwned-check
+
+prepare-release-version:
+	./scripts/prepare-release-version.sh --version "$(VERSION)"
 
 native-pam-fmt:
 	cargo fmt --check

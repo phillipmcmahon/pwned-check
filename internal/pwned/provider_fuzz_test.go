@@ -6,7 +6,9 @@ import (
 )
 
 const (
-	maxFuzzRangeResponseBytes = 4 * 1024
+	// HIBP padded range responses are commonly tens of KiB. Keep fuzz inputs
+	// representative without letting oversized generated strings dominate runs.
+	maxFuzzRangeResponseBytes = 32 * 1024
 	fuzzRangeResponseSuffix   = "ABC"
 )
 

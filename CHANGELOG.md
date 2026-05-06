@@ -6,6 +6,18 @@ The format is intentionally lightweight while the project is pre-production.
 
 ## Unreleased
 
+## v0.3.0 - 2026-05-06
+
+### Added
+
+- Linux production-baseline closeout tracking for final package and repository readiness.
+- A single operator-facing Linux package install guide covering signed repository setup, install, dry-run, enforcement, rollback, removal, and emergency recovery.
+
+### Changed
+
+- README and documentation index now route first-time Linux users to the package install guide before deeper operations or repository-maintainer references.
+- Native PAM Rust crate metadata is advanced to `0.3.0` with the paired Cargo.toml/Cargo.lock release helper.
+
 ## v0.2.0 - 2026-05-06
 
 ### Added

@@ -115,7 +115,6 @@ rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-enable-dry-run' >/d
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-enable-enforce' >/dev/null || fail "RPM file list missing enforce helper"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-disable' >/dev/null || fail "RPM file list missing disable helper"
 
-PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED=1 \
 PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE="$PROFILE_NAME" \
 PWNED_CHECK_FEDORA_HOST_SMOKE_STATE_DIR="$STATE_DIR" \
     ./scripts/native-pam-fedora-host-package-smoke.sh

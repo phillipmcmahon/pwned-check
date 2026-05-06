@@ -12,9 +12,9 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-rpm-package.sh --version <version> [OPTIONS]
 
-Build a native RPM package for Fedora/RHEL/Rocky systems. The RPM is built from
-the RPM-family filesystem-layout artifact and installs pam_pwned_check.so,
-pwned-check, authselect helpers, documentation, and package metadata.
+Build a native RPM package for Fedora/RHEL/Rocky systems. The builder assembles
+a staging rootfs and installs pam_pwned_check.so, pwned-check, authselect
+helpers, documentation, and package metadata.
 
 Options:
   --version <version>        Version label embedded in package metadata
@@ -185,7 +185,7 @@ fi
 
 %changelog
 * Fri May 01 2026 pwned-check maintainers <noreply@example.invalid> - $RPM_VERSION-1
-- Build native PAM RPM package from filesystem-layout artifact.
+- Build native PAM RPM package from the staging rootfs.
 EOF
 
 rpmbuild \

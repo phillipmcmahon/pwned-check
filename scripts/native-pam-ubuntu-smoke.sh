@@ -682,7 +682,7 @@ CHECKER_EOF
         tar -tzf \"\$package_path\" | grep -F '/rootfs/usr/share/pam-configs/pwned-check' >/dev/null
         rm -rf \"/tmp/\$package_basename\"
         tar -xzf \"\$package_path\" -C /tmp
-        (cd \"/tmp/\$package_basename\" && DESTDIR=\"\$package_root\" ./install.sh)
+        cp -a \"/tmp/\$package_basename/rootfs/.\" \"\$package_root/\"
         test -x \"\$package_root/usr/bin/pwned-check\"
         test -f \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\"
         test \"\$(stat -c '%a' \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\")\" = 644
@@ -693,7 +693,7 @@ CHECKER_EOF
         cp /etc/pam.d/common-password \"\$common_password_backup\"
         rm -rf \"\$pam_state_backup\"
         cp -a /var/lib/pam \"\$pam_state_backup\"
-        (cd \"/tmp/\$package_basename\" && ./install.sh)
+        cp -a \"/tmp/\$package_basename/rootfs/.\" /
         test -x /usr/bin/pwned-check
         test -f \"\$module_dir/pam_pwned_check.so\"
         test \"\$(stat -c '%a' \"\$module_dir/pam_pwned_check.so\")\" = 644

@@ -13,8 +13,8 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-generic-artifact.sh --version <version> [OPTIONS]
 
-Build a generic native PAM filesystem-layout tarball for Linux distributions
-that use explicit PAM file edits rather than pam-auth-update or authselect.
+Build the manual-PAM staging rootfs for Linux distributions that use explicit
+PAM file edits rather than pam-auth-update or authselect.
 
 Options:
   --version <version>        Version label embedded in artifact names
@@ -75,7 +75,7 @@ done
 [ -n "$VERSION" ] || fail "--version is required"
 
 if [ "$(uname -s)" != "Linux" ]; then
-    echo "native PAM generic artifact skipped: Linux host required" >&2
+    echo "native PAM manual-PAM staging rootfs skipped: Linux host required" >&2
     exit 0
 fi
 
@@ -115,10 +115,6 @@ if [ -z "$MODULE_DIR" ]; then
         *) MODULE_DIR="/usr/lib/security" ;;
     esac
 fi
-EXTRA_MODULE_DIR=""
-if [ "$FAMILY" = "alpine" ] && [ "$MODULE_DIR" != "/lib/security" ]; then
-    EXTRA_MODULE_DIR="/lib/security"
-fi
 case "$FAMILY" in
     arch) HELPER_DIR="/usr/bin" ;;
     *) HELPER_DIR="/usr/sbin" ;;
@@ -153,18 +149,12 @@ mkdir -p \
     "$ROOTFS$HELPER_DIR" \
     "$ROOTFS_MODULE_DIR" \
     "$PACKAGE_DIR/metadata"
-if [ -n "$EXTRA_MODULE_DIR" ]; then
-    mkdir -p "$ROOTFS$EXTRA_MODULE_DIR"
-fi
 
 (
     cd "$ROOT"
     make native-pam-build >/dev/null
     [ -f dist/pam_pwned_check.so ] || fail "dist/pam_pwned_check.so was not produced"
     install -m 0644 dist/pam_pwned_check.so "$ROOTFS_MODULE_DIR/pam_pwned_check.so"
-    if [ -n "$EXTRA_MODULE_DIR" ]; then
-        install -m 0644 dist/pam_pwned_check.so "$ROOTFS$EXTRA_MODULE_DIR/pam_pwned_check.so"
-    fi
 
     if [ -n "$PWNED_CHECK_BIN" ]; then
         install -m 0755 "$PWNED_CHECK_BIN" "$ROOTFS/usr/bin/pwned-check"
@@ -342,7 +332,6 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "arch": "$ARTIFACT_ARCH",
   "goarch": "$GOARCH_VALUE",
   "module_path": "$MODULE_DIR/pam_pwned_check.so",
-  "extra_module_path": "$(if [ -n "$EXTRA_MODULE_DIR" ]; then printf '%s/pam_pwned_check.so' "$EXTRA_MODULE_DIR"; fi)",
   "pwned_check_source": "$(if [ -n "$PWNED_CHECK_BIN" ]; then printf prebuilt; else printf built; fi)",
   "build_time": "$BUILD_TIME",
   "manual_enable": "/usr/share/pwned-check/manual-pam/enable-manual-pam.sh",
@@ -353,89 +342,6 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "profile_mode": "dry_run"
 }
 EOF
-
-cat > "$PACKAGE_DIR/README.native-pam-generic.md" <<EOF
-# pwned-check Native PAM Generic Artifact
-
-This filesystem-layout artifact installs the native Linux PAM module and
-checker binary for distributions that use explicit PAM service file edits.
-
-Contents:
-
-- \`/usr/bin/pwned-check\`
-- \`$MODULE_DIR/pam_pwned_check.so\`
-- \`/usr/share/pwned-check/manual-pam/enable-manual-pam.sh\`
-- \`/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh\`
-- \`$HELPER_DIR/pwned-check-pam-enable-dry-run\`
-- \`$HELPER_DIR/pwned-check-pam-enable-enforce\`
-- \`$HELPER_DIR/pwned-check-pam-disable\`
-- \`/usr/share/doc/pwned-check/\`
-
-The enable helper edits \`/etc/pam.d/passwd\` by default, creates a timestamped
-backup under \`/var/lib/pwned-check/pam-backups\`, and records the last backup
-path for rollback. The inserted module line ships with \`dry_run\` enabled.
-
-Install:
-
-\`\`\`sh
-sudo ./install.sh
-\`\`\`
-
-Enable:
-
-\`\`\`sh
-sudo pwned-check-pam-enable-dry-run
-\`\`\`
-
-Switch to enforcement after validating dry-run behavior and rollback:
-
-\`\`\`sh
-sudo pwned-check-pam-enable-enforce
-\`\`\`
-
-Rollback:
-
-\`\`\`sh
-sudo pwned-check-pam-disable
-\`\`\`
-EOF
-
-cat > "$PACKAGE_DIR/install.sh" <<'EOF'
-#!/bin/sh
-set -eu
-
-DESTDIR="${DESTDIR:-}"
-
-copy_tree() {
-    src="$1"
-    dest="$2"
-    find "$src" -type d | while IFS= read -r dir; do
-        rel="${dir#$src}"
-        [ -n "$rel" ] || continue
-        install -d "$dest$rel"
-    done
-    find "$src" -type f | while IFS= read -r file; do
-        rel="${file#$src}"
-        mode="0644"
-        case "$rel" in
-            /usr/bin/pwned-check|*/pwned-check-pam-*|/usr/share/pwned-check/manual-pam/*.sh)
-                mode="0755"
-                ;;
-        esac
-        install -m "$mode" "$file" "$dest$rel"
-    done
-}
-
-copy_tree ./rootfs "$DESTDIR"
-
-if [ -z "$DESTDIR" ]; then
-    /usr/bin/pwned-check --version
-    echo "Installed manual PAM helpers under /usr/share/pwned-check/manual-pam"
-    echo "Run 'sudo pwned-check-pam-enable-dry-run' to enable dry-run mode."
-    echo "Run 'sudo pwned-check-pam-enable-enforce' after validating rollback."
-fi
-EOF
-chmod 0755 "$PACKAGE_DIR/install.sh"
 
 mkdir -p "$OUTPUT_DIR"
 (

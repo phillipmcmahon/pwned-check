@@ -117,7 +117,7 @@ and operator-focused.
 - Native checker runner now preflights path-qualified missing or non-executable checkers and maps them to deterministic exec failures before fork/exec.
 - Alpine native PAM packaging now handles observed Linux-PAM module directory differences across the persistent Alpine VM and the pinned Alpine Docker image.
 - Native PAM package smoke output now prints the selected PAM client, distro identity, and generated PAM service for easier failure triage.
-- Release validation records exact `0.1.0-rc1` native package smoke results across Debian, Fedora, Arch, Alpine, and helper-package Docker paths.
+- Release validation records exact `0.1.0-rc1` native package smoke results across Debian, Fedora, Arch, and Alpine paths.
 - Local pre-push Docker validation now runs only targets without persistent VMs, while Debian, Ubuntu, Fedora, and Alpine release validation remains VM-first.
 
 ## v0.1.0 - 2026-05-02

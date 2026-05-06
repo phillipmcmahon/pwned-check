@@ -4,26 +4,16 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 SERVICE="pwned-check-native-host-package-smoke"
-SMOKE_VERSION="${NATIVE_PAM_HOST_SMOKE_VERSION:-host-smoke}"
-ALLOW_OVERWRITE="${PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE:-}"
-USE_INSTALLED="${PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED:-}"
 
 usage() {
     cat <<'EOF'
 Usage: ./scripts/native-pam-ubuntu-host-package-smoke.sh
 
-Build the Debian/Ubuntu native PAM artifact, install its filesystem layout on
-the current Ubuntu host, exercise pam_pwned_check.so through a disposable PAM
-service, and roll the host back to its pre-test state.
+Exercise the already installed Debian/Ubuntu native PAM package files through a
+disposable PAM service. This is an internal helper for the .deb package smoke.
 
 This does not enable the package profile through pam-auth-update and does not
 edit /etc/pam.d/common-password.
-
-Environment:
-  NATIVE_PAM_HOST_SMOKE_VERSION           Version label for the test artifact
-  PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE  Set to 1 to allow pre-existing files
-  PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED
-                                           Set to 1 to test installed files without building/installing the artifact
 EOF
 }
 
@@ -66,7 +56,6 @@ fi
 require_command cc
 require_command gcc
 require_command make
-require_command tar
 if [ "$(id -u)" -ne 0 ]; then
     require_command sudo
 fi
@@ -76,72 +65,15 @@ MULTIARCH="$(gcc -print-multiarch)"
 MODULE_PATH="/lib/$MULTIARCH/security/pam_pwned_check.so"
 CHECKER_PATH="/usr/bin/pwned-check"
 PROFILE_PATH="/usr/share/pam-configs/pwned-check"
-DOC_DIR="/usr/share/doc/pwned-check"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
 
-managed_paths="$CHECKER_PATH $MODULE_PATH $PROFILE_PATH"
-if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
-    for path in $managed_paths; do
-        [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
-    done
-fi
-
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-host-package.XXXXXX")"
-ARTIFACT_DIR="$TMP/artifact"
-BACKUP_DIR="$TMP/backups"
-mkdir -p "$ARTIFACT_DIR" "$BACKUP_DIR"
-
-backup_existing() {
-    path="$1"
-    if [ -e "$path" ]; then
-        rel="$(printf '%s' "$path" | sed 's,^/,,')"
-        mkdir -p "$BACKUP_DIR/$(dirname "$rel")"
-        as_root cp -a "$path" "$BACKUP_DIR/$rel"
-    fi
-}
-
-restore_or_remove() {
-    path="$1"
-    rel="$(printf '%s' "$path" | sed 's,^/,,')"
-    if [ -e "$BACKUP_DIR/$rel" ]; then
-        as_root install -d "$(dirname "$path")"
-        as_root rm -rf "$path"
-        as_root cp -a "$BACKUP_DIR/$rel" "$path"
-    else
-        as_root rm -rf "$path"
-    fi
-}
 
 cleanup() {
     as_root rm -f "$SERVICE_FILE"
-    if [ -z "$USE_INSTALLED" ]; then
-        restore_or_remove "$CHECKER_PATH"
-        restore_or_remove "$MODULE_PATH"
-        restore_or_remove "$PROFILE_PATH"
-        if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-            as_root rm -rf "$DOC_DIR"
-        fi
-    fi
     rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
-
-if [ -z "$USE_INSTALLED" ]; then
-    backup_existing "$CHECKER_PATH"
-    backup_existing "$MODULE_PATH"
-    backup_existing "$PROFILE_PATH"
-    backup_existing "$DOC_DIR"
-
-    cd "$ROOT"
-    artifact_name="$(./scripts/package-native-pam-debian-artifact.sh --version "$SMOKE_VERSION")"
-    artifact="$ROOT/dist/release/$artifact_name.tar.gz"
-    [ -f "$artifact" ] || fail "artifact was not produced: $artifact"
-    tar -xzf "$artifact" -C "$ARTIFACT_DIR"
-    (
-        cd "$ARTIFACT_DIR/$artifact_name"
-        as_root ./install.sh
-    )
-fi
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
 [ -f "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
@@ -311,21 +243,8 @@ run_case "clean allowed" clean HostPackageClean123 allow
 run_case "pwned rejected" pwned HostPackagePwned123 reject
 
 as_root rm -f "$SERVICE_FILE"
-if [ -z "$USE_INSTALLED" ]; then
-    restore_or_remove "$CHECKER_PATH"
-    restore_or_remove "$MODULE_PATH"
-    restore_or_remove "$PROFILE_PATH"
-    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-        as_root rm -rf "$DOC_DIR"
-    fi
-fi
 
 [ ! -e "$SERVICE_FILE" ] || fail "disposable PAM service still exists after rollback"
-if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
-    [ ! -e "$CHECKER_PATH" ] || fail "checker still installed after rollback: $CHECKER_PATH"
-    [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
-    [ ! -e "$PROFILE_PATH" ] || fail "profile still installed after rollback: $PROFILE_PATH"
-fi
 trap - EXIT INT TERM
 rm -rf "$TMP"
 echo "Native PAM Ubuntu host package smoke passed"

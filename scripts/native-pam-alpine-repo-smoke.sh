@@ -198,8 +198,6 @@ apk info -e "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
 [ -f /usr/lib/security/pam_pwned_check.so ] || fail "PAM module missing after repo install"
 [ "$(stat -c '%a' /usr/lib/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
-[ -f /lib/security/pam_pwned_check.so ] || fail "compatibility PAM module missing after repo install"
-[ "$(stat -c '%a' /lib/security/pam_pwned_check.so)" = "644" ] || fail "compatibility PAM module should be installed mode 0644"
 command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
 command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
 command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"
@@ -234,7 +232,7 @@ as_root apk del "$PACKAGE_NAME"
 if apk info -e "$PACKAGE_NAME" >/dev/null 2>&1; then
     fail "$PACKAGE_NAME is still installed after removal"
 fi
-for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /usr/lib/security/pam_pwned_check.so /lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
+for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
     [ ! -e "$path" ] || fail "package-managed path still exists after removal: $path"
 done
 

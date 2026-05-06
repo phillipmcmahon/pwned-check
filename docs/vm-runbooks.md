@@ -233,8 +233,7 @@ Known quirks:
 - Current published Alpine repository content covers `x86_64` and `aarch64`;
   use `codex-vm-alpine` and `codex-vm-alpine-arm64` for live endpoint install
   smoke.
-- Alpine module placement varies by release; package and dependency checks
-  cover both observed loader paths.
+- Alpine packages install the module under `/usr/lib/security`.
 
 ## Arch
 

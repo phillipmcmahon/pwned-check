@@ -12,10 +12,9 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-debian-package.sh --version <version> [OPTIONS]
 
-Build a native .deb package for Debian/Ubuntu systems. The package is built
-from the Debian-family filesystem-layout artifact and installs
-pam_pwned_check.so, pwned-check, a pam-auth-update profile, documentation, and
-mode helpers, and package metadata.
+Build a native .deb package for Debian/Ubuntu systems. The builder assembles a
+staging rootfs and installs pam_pwned_check.so, pwned-check, a pam-auth-update
+profile, documentation, mode helpers, and package metadata.
 
 Options:
   --version <version>      Version label embedded in package metadata

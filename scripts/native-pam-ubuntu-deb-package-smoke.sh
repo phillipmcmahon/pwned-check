@@ -128,8 +128,7 @@ dpkg -L "$PACKAGE_NAME" | grep -F "$ENABLE_DRY_RUN_HELPER" >/dev/null || fail "p
 dpkg -L "$PACKAGE_NAME" | grep -F "$ENABLE_ENFORCE_HELPER" >/dev/null || fail "package file list missing enforce helper"
 dpkg -L "$PACKAGE_NAME" | grep -F "$DISABLE_HELPER" >/dev/null || fail "package file list missing disable helper"
 
-PWNED_CHECK_UBUNTU_HOST_SMOKE_USE_INSTALLED=1 \
-    ./scripts/native-pam-ubuntu-host-package-smoke.sh
+./scripts/native-pam-ubuntu-host-package-smoke.sh
 
 as_root "$ENABLE_DRY_RUN_HELPER"
 grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "dry-run helper did not update common-password"

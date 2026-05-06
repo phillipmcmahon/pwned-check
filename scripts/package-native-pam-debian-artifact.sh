@@ -6,9 +6,8 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-debian-artifact.sh --version <version> [OPTIONS]
 
-Build a Debian/Ubuntu native PAM filesystem-layout tarball for the current
-Linux architecture. The artifact includes pwned-check, pam_pwned_check.so,
-a pam-auth-update profile, mode helpers, install.sh, docs, and build metadata.
+Build the Debian/Ubuntu native PAM staging rootfs for the current Linux
+architecture. The artifact is consumed by the .deb package builder.
 
 Options:
   --version <version>      Release version, for example 0.1.0 or dev-abcdef12
@@ -265,87 +264,6 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "profile_mode": "dry_run"
 }
 EOF
-
-cat > "$PACKAGE_DIR/README.native-pam-debian.md" <<EOF
-# pwned-check Native PAM Debian/Ubuntu Artifact
-
-This filesystem-layout artifact installs the native Linux PAM module and the
-checker binary for Debian/Ubuntu-style systems.
-
-Contents:
-
-- \`/usr/bin/pwned-check\`
-- \`/lib/$MULTIARCH/security/pam_pwned_check.so\`
-- \`/usr/share/pam-configs/pwned-check\`
-- \`/usr/sbin/pwned-check-pam-enable-dry-run\`
-- \`/usr/sbin/pwned-check-pam-enable-enforce\`
-- \`/usr/sbin/pwned-check-pam-disable\`
-- \`/usr/share/doc/pwned-check/\`
-
-The \`pam-auth-update\` profile is intentionally \`Default: no\` and ships with
-\`dry_run\` enabled. Enabling the profile should be a staged rollout action, not
-a package installation side effect.
-
-Install:
-
-\`\`\`sh
-sudo ./install.sh
-sudo pwned-check-pam-enable-dry-run
-\`\`\`
-
-Switch to enforcement after validating dry-run behavior and rollback:
-
-\`\`\`sh
-sudo pwned-check-pam-enable-enforce
-\`\`\`
-
-Rollback:
-
-\`\`\`sh
-sudo pwned-check-pam-disable
-sudo rm -f /usr/share/pam-configs/pwned-check
-sudo rm -f /lib/$MULTIARCH/security/pam_pwned_check.so
-\`\`\`
-EOF
-
-cat > "$PACKAGE_DIR/install.sh" <<'EOF'
-#!/bin/sh
-set -eu
-
-DESTDIR="${DESTDIR:-}"
-
-copy_tree() {
-    src="$1"
-    dest="$2"
-    find "$src" -type d | while IFS= read -r dir; do
-        rel="${dir#$src}"
-        [ -n "$rel" ] || continue
-        install -d "$dest$rel"
-    done
-    find "$src" -type f | while IFS= read -r file; do
-        rel="${file#$src}"
-        mode="0644"
-        case "$rel" in
-            /usr/bin/pwned-check|/usr/sbin/pwned-check-pam-*|/usr/share/pwned-check/debian-pam/*.sh)
-                mode="0755"
-                ;;
-        esac
-        install -m "$mode" "$file" "$dest$rel"
-    done
-}
-
-copy_tree ./rootfs "$DESTDIR"
-
-if [ -z "$DESTDIR" ]; then
-    /usr/bin/pwned-check --version
-    if command -v pam-auth-update >/dev/null 2>&1; then
-        echo "Installed pam-auth-update profile: /usr/share/pam-configs/pwned-check"
-        echo "Run 'sudo pwned-check-pam-enable-dry-run' to enable dry-run mode."
-        echo "Run 'sudo pwned-check-pam-enable-enforce' after validating rollback."
-    fi
-fi
-EOF
-chmod 0755 "$PACKAGE_DIR/install.sh"
 
 (
     cd "$WORK_DIR"

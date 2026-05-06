@@ -147,7 +147,6 @@ docker exec "$cid" sh -lc "
     apk add --allow-untrusted \"\$apk_path\"
     apk info -e pwned-check-native-pam >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/lib/security/pam_pwned_check.so' >/dev/null
-    apk info -L pwned-check-native-pam | grep -F 'lib/security/pam_pwned_check.so' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/bin/pwned-check' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/share/pwned-check/manual-pam/enable-manual-pam.sh' >/dev/null
     apk info -L pwned-check-native-pam | grep -F 'usr/sbin/pwned-check-pam-enable-dry-run' >/dev/null
@@ -159,7 +158,7 @@ docker exec "$cid" sh -lc "
       echo 'Alpine package still installed after removal' >&2
       exit 1
     fi
-    for path in /usr/bin/pwned-check /usr/lib/security/pam_pwned_check.so /lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
+    for path in /usr/bin/pwned-check /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
       if [ -e \"\$path\" ]; then
         echo \"Alpine package-managed path still exists after removal: \$path\" >&2
         exit 1

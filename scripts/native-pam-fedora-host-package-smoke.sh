@@ -4,34 +4,24 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 SERVICE="pwned-check-native-fedora-host-package-smoke"
-SMOKE_VERSION="${NATIVE_PAM_FEDORA_HOST_SMOKE_VERSION:-fedora-host-smoke}"
 PROFILE_NAME="${PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE:-pwned-check-smoke}"
 STATE_DIR="${PWNED_CHECK_FEDORA_HOST_SMOKE_STATE_DIR:-/var/lib/pwned-check-smoke}"
-ALLOW_OVERWRITE="${PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE:-}"
-PWNED_CHECK_BIN="${PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN:-}"
-USE_INSTALLED="${PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED:-}"
 
 usage() {
     cat <<'EOF'
 Usage: ./scripts/native-pam-fedora-host-package-smoke.sh
 
-Build the RPM-family native PAM artifact, install its filesystem layout on the
-current Fedora/RHEL-family host, exercise pam_pwned_check.so through a
-disposable PAM service, enable the packaged authselect helper, and roll the host
-back to its pre-test state.
+Exercise the already installed RPM-family native PAM package files through a
+disposable PAM service and packaged authselect helpers. This is an internal
+helper for the RPM package smoke.
 
 The authselect helper inserts the module in dry-run mode. This smoke uses a
 dedicated custom authselect profile name and restores the authselect backup
 before exiting.
 
 Environment:
-  NATIVE_PAM_FEDORA_HOST_SMOKE_VERSION      Version label for the test artifact
   PWNED_CHECK_FEDORA_HOST_SMOKE_PROFILE     Custom authselect profile name
   PWNED_CHECK_FEDORA_HOST_SMOKE_STATE_DIR   State directory for authselect backup name
-  PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED
-                                           Set to 1 to test installed files without building/installing the artifact
-  PWNED_CHECK_HOST_SMOKE_ALLOW_OVERWRITE    Set to 1 to allow pre-existing files
-  PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN    Existing Linux pwned-check binary
 EOF
 }
 
@@ -75,9 +65,6 @@ fi
 require_command authselect
 require_command cc
 require_command make
-require_command tar
-[ -z "$PWNED_CHECK_BIN" ] || [ -x "$PWNED_CHECK_BIN" ] || fail "prebuilt pwned-check binary is not executable: $PWNED_CHECK_BIN"
-[ -z "$USE_INSTALLED" ] || [ -z "$PWNED_CHECK_BIN" ] || fail "PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN cannot be combined with PWNED_CHECK_FEDORA_HOST_SMOKE_USE_INSTALLED"
 if [ "$(id -u)" -ne 0 ]; then
     require_command sudo
 fi
@@ -88,46 +75,14 @@ AUTHSELECT_DIR="/usr/share/pwned-check/authselect"
 ENABLE_DRY_RUN_HELPER="/usr/sbin/pwned-check-pam-enable-dry-run"
 ENABLE_ENFORCE_HELPER="/usr/sbin/pwned-check-pam-enable-enforce"
 DISABLE_HELPER="/usr/sbin/pwned-check-pam-disable"
-DOC_DIR="/usr/share/doc/pwned-check"
 SERVICE_FILE="/etc/pam.d/$SERVICE"
 CUSTOM_PROFILE="/etc/authselect/custom/$PROFILE_NAME"
 
-managed_paths="$CHECKER_PATH $MODULE_PATH $AUTHSELECT_DIR $ENABLE_DRY_RUN_HELPER $ENABLE_ENFORCE_HELPER $DISABLE_HELPER"
-if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
-    for path in $managed_paths; do
-        [ ! -e "$path" ] || fail "refusing to overwrite existing host install path: $path"
-    done
-fi
-
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pwned-check-native-pam-fedora-host-package.XXXXXX")"
-ARTIFACT_DIR="$TMP/artifact"
-BACKUP_DIR="$TMP/backups"
-mkdir -p "$ARTIFACT_DIR" "$BACKUP_DIR"
 
 AUTHSELECT_ENABLED=""
 CUSTOM_PROFILE_PREEXISTED=""
 [ ! -e "$CUSTOM_PROFILE" ] || CUSTOM_PROFILE_PREEXISTED=1
-
-backup_existing() {
-    path="$1"
-    if [ -e "$path" ]; then
-        rel="$(printf '%s' "$path" | sed 's,^/,,')"
-        mkdir -p "$BACKUP_DIR/$(dirname "$rel")"
-        as_root cp -a "$path" "$BACKUP_DIR/$rel"
-    fi
-}
-
-restore_or_remove() {
-    path="$1"
-    rel="$(printf '%s' "$path" | sed 's,^/,,')"
-    if [ -e "$BACKUP_DIR/$rel" ]; then
-        as_root install -d "$(dirname "$path")"
-        as_root rm -rf "$path"
-        as_root cp -a "$BACKUP_DIR/$rel" "$path"
-    else
-        as_root rm -rf "$path"
-    fi
-}
 
 cleanup() {
     set +e
@@ -138,39 +93,10 @@ cleanup() {
     if [ -z "$CUSTOM_PROFILE_PREEXISTED" ]; then
         as_root rm -rf "$CUSTOM_PROFILE"
     fi
-    if [ -z "$USE_INSTALLED" ]; then
-        for path in $managed_paths; do
-            restore_or_remove "$path"
-        done
-        if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-            as_root rm -rf "$DOC_DIR"
-        fi
-    fi
     as_root rm -rf "$STATE_DIR"
     rm -rf "$TMP"
 }
 trap cleanup EXIT INT TERM
-
-if [ -z "$USE_INSTALLED" ]; then
-    for path in $managed_paths; do
-        backup_existing "$path"
-    done
-    backup_existing "$DOC_DIR"
-
-    cd "$ROOT"
-    if [ -n "$PWNED_CHECK_BIN" ]; then
-        artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION" --pwned-check-bin "$PWNED_CHECK_BIN")"
-    else
-        artifact_name="$(./scripts/package-native-pam-rpm-artifact.sh --version "$SMOKE_VERSION")"
-    fi
-    artifact="$ROOT/dist/release/$artifact_name.tar.gz"
-    [ -f "$artifact" ] || fail "artifact was not produced: $artifact"
-    tar -xzf "$artifact" -C "$ARTIFACT_DIR"
-    (
-        cd "$ARTIFACT_DIR/$artifact_name"
-        as_root ./install.sh
-    )
-fi
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
 [ -f "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
@@ -384,25 +310,9 @@ as_root rm -f "$SERVICE_FILE"
 if [ -z "$CUSTOM_PROFILE_PREEXISTED" ]; then
     as_root rm -rf "$CUSTOM_PROFILE"
 fi
-if [ -z "$USE_INSTALLED" ]; then
-    for path in $managed_paths; do
-        restore_or_remove "$path"
-    done
-    if [ ! -e "$BACKUP_DIR/$(printf '%s' "$DOC_DIR" | sed 's,^/,,')" ]; then
-        as_root rm -rf "$DOC_DIR"
-    fi
-fi
 as_root rm -rf "$STATE_DIR"
 
 [ ! -e "$SERVICE_FILE" ] || fail "disposable PAM service still exists after rollback"
-if [ -z "$ALLOW_OVERWRITE" ] && [ -z "$USE_INSTALLED" ]; then
-    [ ! -e "$CHECKER_PATH" ] || fail "checker still installed after rollback: $CHECKER_PATH"
-    [ ! -e "$MODULE_PATH" ] || fail "module still installed after rollback: $MODULE_PATH"
-    [ ! -e "$AUTHSELECT_DIR" ] || fail "authselect helpers still installed after rollback: $AUTHSELECT_DIR"
-    [ ! -e "$ENABLE_DRY_RUN_HELPER" ] || fail "dry-run wrapper still installed after rollback: $ENABLE_DRY_RUN_HELPER"
-    [ ! -e "$ENABLE_ENFORCE_HELPER" ] || fail "enforce wrapper still installed after rollback: $ENABLE_ENFORCE_HELPER"
-    [ ! -e "$DISABLE_HELPER" ] || fail "disable wrapper still installed after rollback: $DISABLE_HELPER"
-fi
 
 trap - EXIT INT TERM
 rm -rf "$TMP"

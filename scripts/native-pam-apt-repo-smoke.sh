@@ -192,6 +192,7 @@ esac
 require_command apt-get
 require_command apt-cache
 require_command dpkg
+require_command dpkg-query
 if [ "$(id -u)" -ne 0 ]; then
     require_command sudo
 fi
@@ -215,8 +216,12 @@ as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y "$PACKAGE_NAME"
 
 dpkg -s "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
-multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
-[ -n "$multiarch" ] || fail "could not determine Debian multiarch tuple"
+package_arch="$(dpkg-query -W -f='${Architecture}' "$PACKAGE_NAME")"
+case "$package_arch" in
+    amd64) multiarch="x86_64-linux-gnu" ;;
+    arm64) multiarch="aarch64-linux-gnu" ;;
+    *) fail "unsupported Debian package architecture for PAM module path assertion: $package_arch" ;;
+esac
 module_path="/lib/$multiarch/security/pam_pwned_check.so"
 dpkg -L "$PACKAGE_NAME" | grep -Fx "$module_path" >/dev/null || fail "package file list missing PAM module at $module_path"
 [ -f "$module_path" ] || fail "PAM module missing after repo install at $module_path"

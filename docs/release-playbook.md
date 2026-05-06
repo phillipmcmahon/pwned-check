@@ -187,9 +187,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Verify artifact checksums.
 - Verify release provenance attestation is present for the artifacts listed in
   `SHA256SUMS.txt`.
-- For repository-backed releases, verify signed repository metadata and public-key instructions before publishing release notes.
-- For repository-backed releases, smoke the live repository endpoints from the
-  persistent distro VMs before tagging or promoting release notes:
+- For repository-backed releases, publish signed package repositories from the
+  immutable GitHub Release assets after the tag-triggered release workflow has
+  completed and release assets are visible.
+- Wait for the GitHub Pages deployment for the repository update to complete.
+- Smoke the live repository endpoints from the persistent distro VMs before
+  calling the repository-backed release complete:
   ```bash
   make native-pam-live-repo-smokes
   ```

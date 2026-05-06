@@ -390,7 +390,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const c
   if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
     return PAM_IGNORE;
   }
-  const char *token = getenv("PWNED_CHECK_NATIVE_SMOKE_TOKEN");
+  const char *token = getenv("PWNED_CHECK_TEST_UBUNTU_SMOKE_TOKEN");
   if (token == NULL) {
     return PAM_AUTHTOK_ERR;
   }
@@ -539,7 +539,7 @@ CHECKER_EOF
 
           set +e
           PWNED_CHECK_SHOULD_NOT_LEAK='secret' \
-            PWNED_CHECK_NATIVE_SMOKE_TOKEN=\"\$token\" \
+            PWNED_CHECK_TEST_UBUNTU_SMOKE_TOKEN=\"\$token\" \
             /usr/local/bin/native-pam-smoke-client '$SERVICE' root \"\$token\" >/tmp/native-pam-smoke.out 2>&1
           rc=\"\$?\"
           set -e
@@ -595,7 +595,7 @@ CHECKER_EOF
               exit 1
             fi
             checker_env=\"\$(cat /tmp/native-pam-smoke-checker-env)\"
-            if printf '%s' \"\$checker_env\" | grep -F 'PWNED_CHECK_NATIVE_SMOKE_TOKEN=' >/dev/null ||
+            if printf '%s' \"\$checker_env\" | grep -F 'PWNED_CHECK_TEST_UBUNTU_SMOKE_TOKEN=' >/dev/null ||
                printf '%s' \"\$checker_env\" | grep -F 'PWNED_CHECK_SHOULD_NOT_LEAK=' >/dev/null ||
                printf '%s' \"\$checker_env\" | grep -F 'secret' >/dev/null; then
               echo \"Native PAM case failed: \$name leaked caller environment into checker\" >&2

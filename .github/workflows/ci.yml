@@ -155,61 +155,10 @@ jobs:
           path: |
             dist/pwned-check
 
-  package-linux:
-    name: Package Linux (${{ matrix.goarch }})
-    needs: [lint, staticcheck, test, smoke]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        goarch: [amd64, arm64]
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "1.26"
-          check-latest: true
-
-      - name: Set version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="dev-${GITHUB_SHA::8}"
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Package Linux artifact
-        id: package
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASENAME="$(scripts/package-linux-artifact.sh \
-            --version "${{ steps.version.outputs.version }}" \
-            --goarch "${{ matrix.goarch }}" \
-            --output-dir "$PWD/dist/release")"
-          echo "basename=${BASENAME}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload Linux package
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.package.outputs.basename }}
-          path: |
-            dist/release/${{ steps.package.outputs.basename }}.tar.gz
-            dist/release/${{ steps.package.outputs.basename }}.tar.gz.sha256
-
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [package-linux]
+    needs: [lint, staticcheck, test, smoke]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -242,18 +191,11 @@ jobs:
       - name: Run release parser fuzz
         run: make fuzz-release
 
-      - name: Download packages
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
       - name: Prepare release assets
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release
-          find artifacts -type f -name '*.tar.gz' -exec cp {} release/ \;
-          find artifacts -type f -name '*.tar.gz.sha256' -exec cp {} release/ \;
           SOURCE_EPOCH="$(git log -1 --format=%ct "${GITHUB_REF_NAME}")"
           BUILD_TIME="$(git log -1 --format=%cI "${GITHUB_REF_NAME}")"
           for platform in linux/amd64 linux/arm64; do
@@ -265,7 +207,9 @@ jobs:
               --platform "${platform}"
           done
           cd release
-          sha256sum *.tar.gz > SHA256SUMS.txt
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS.txt
 
       - name: Attest release provenance
         uses: actions/attest@v4

@@ -172,7 +172,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const c
   if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
     return PAM_IGNORE;
   }
-  const char *token = getenv(\"PWNED_CHECK_NATIVE_DISTRO_TOKEN\");
+  const char *token = getenv(\"PWNED_CHECK_TEST_DISTRO_TOKEN\");
   if (token == NULL) {
     return PAM_AUTHTOK_ERR;
   }
@@ -294,7 +294,7 @@ CHECKER_EOF
           printf '%s' \"\$mode\" >/tmp/native-pam-distro-checker-mode
           rm -f /tmp/native-pam-distro-checker-argv /tmp/native-pam-distro-checker-token /tmp/native-pam-distro.out
           set +e
-          PWNED_CHECK_NATIVE_DISTRO_TOKEN=\"\$token\" /usr/local/bin/native-pam-distro-client '$SERVICE' root \"\$token\" >/tmp/native-pam-distro.out 2>&1
+          PWNED_CHECK_TEST_DISTRO_TOKEN=\"\$token\" /usr/local/bin/native-pam-distro-client '$SERVICE' root \"\$token\" >/tmp/native-pam-distro.out 2>&1
           rc=\"\$?\"
           set -e
           if [ \"\$want\" = allow ] && [ \"\$rc\" -ne 0 ]; then

@@ -157,7 +157,6 @@ The GitHub workflow is split into:
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
 - `native-pam`: Rust format check, native PAM unit tests, Valgrind-backed native PAM memory check, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
 - `smoke`: built-binary smoke and Docker distro smoke for `linux/amd64` and `linux/arm64`
-- `package-linux`: Linux release package builds for `amd64` and `arm64`
 - `release`: tagged release publishing with 60s parser fuzz before package publication, including native PAM package files for the supported repository architectures
 
 The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, Arch package smoke, Alpine Docker fallback package smoke, and an arm64 native PAM package smoke for Debian, Fedora, and Alpine package outputs. Debian `.deb` validation, Fedora RPM/SELinux validation, Alpine package validation, and Arch package validation remain documented release gates on persistent VMs because they depend on real package-manager, PAM, or security-module state. Arch package automation is `linux/amd64` only.

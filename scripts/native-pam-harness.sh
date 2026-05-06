@@ -152,7 +152,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const c
   if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
     return PAM_IGNORE;
   }
-  const char *token = getenv("PWNED_CHECK_NATIVE_HARNESS_TOKEN");
+  const char *token = getenv("PWNED_CHECK_TEST_HARNESS_TOKEN");
   if (token == NULL) {
     return PAM_AUTHTOK_ERR;
   }
@@ -256,7 +256,7 @@ run_case() {
     write_service "$checker_path" "$args" "$seed_authtok"
 
     set +e
-    PWNED_CHECK_NATIVE_HARNESS_TOKEN="$token" \
+    PWNED_CHECK_TEST_HARNESS_TOKEN="$token" \
       PWNED_CHECK_SHOULD_NOT_LEAK='secret' \
       "$TMP/native-pam-harness-client" "$SERVICE" root "$token" >"$TMP/case.out" 2>&1
     rc="$?"
@@ -297,7 +297,7 @@ run_case() {
         checker_fail_closed="$(cat "$TMP/checker-fail-closed")"
         [ "$checker_fail_closed" = "$want_fail_closed" ] || fail "native PAM harness case failed: $name fail_closed=$checker_fail_closed want $want_fail_closed"
         checker_env="$(cat "$TMP/checker-env")"
-        if printf '%s' "$checker_env" | grep -F 'PWNED_CHECK_NATIVE_HARNESS_TOKEN=' >/dev/null ||
+        if printf '%s' "$checker_env" | grep -F 'PWNED_CHECK_TEST_HARNESS_TOKEN=' >/dev/null ||
            printf '%s' "$checker_env" | grep -F 'PWNED_CHECK_SHOULD_NOT_LEAK=' >/dev/null ||
            printf '%s' "$checker_env" | grep -F 'secret' >/dev/null; then
             fail "native PAM harness case failed: $name leaked caller environment into checker"

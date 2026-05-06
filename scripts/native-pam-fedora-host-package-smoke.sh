@@ -189,7 +189,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const c
   if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
     return PAM_IGNORE;
   }
-  const char *token = getenv("PWNED_CHECK_NATIVE_FEDORA_HOST_TOKEN");
+  const char *token = getenv("PWNED_CHECK_TEST_FEDORA_HOST_TOKEN");
   if (token == NULL) {
     return PAM_AUTHTOK_ERR;
   }
@@ -246,7 +246,7 @@ run_case() {
     printf '%s' "$mode" >"$TMP/checker-mode"
     rm -f "$TMP/checker-argv" "$TMP/checker-token" "$TMP/case.out"
     set +e
-    PWNED_CHECK_NATIVE_FEDORA_HOST_TOKEN="$token" "$TMP/native-pam-fedora-host-client" "$SERVICE" root "$token" >"$TMP/case.out" 2>&1
+    PWNED_CHECK_TEST_FEDORA_HOST_TOKEN="$token" "$TMP/native-pam-fedora-host-client" "$SERVICE" root "$token" >"$TMP/case.out" 2>&1
     rc="$?"
     set -e
     if [ "$want" = allow ] && [ "$rc" -ne 0 ]; then

@@ -74,7 +74,7 @@ Capture:
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
 - binary smoke test result
 - Docker smoke matrix result
-- CI `lint`, `staticcheck`, `test`, `smoke`, and `package-linux` jobs
+- CI `lint`, `staticcheck`, `test`, and `smoke` jobs
 - native PAM package, VM, and Docker validation results when shipping native PAM changes
 - GitHub Actions run URLs and the commit SHA each run validated
 

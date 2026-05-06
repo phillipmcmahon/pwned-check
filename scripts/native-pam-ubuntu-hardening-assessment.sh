@@ -219,7 +219,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, const c
   if ((flags & PAM_UPDATE_AUTHTOK) == 0) {
     return PAM_IGNORE;
   }
-  const char *token = getenv("PWNED_CHECK_NATIVE_LOCKOUT_TOKEN");
+  const char *token = getenv("PWNED_CHECK_TEST_LOCKOUT_TOKEN");
   if (token == NULL) {
     return PAM_AUTHTOK_ERR;
   }
@@ -271,7 +271,7 @@ EOF
 run_lockout_client() {
     token="$1"
     output="$2"
-    PWNED_CHECK_NATIVE_LOCKOUT_TOKEN="$token" "$TMP/native-pam-lockout-client" "$SERVICE" root "$token" >"$output" 2>&1
+    PWNED_CHECK_TEST_LOCKOUT_TOKEN="$token" "$TMP/native-pam-lockout-client" "$SERVICE" root "$token" >"$output" 2>&1
 }
 
 LOCKOUT_TOKEN="NativePamLockoutDrill123"

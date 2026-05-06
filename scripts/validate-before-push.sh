@@ -104,9 +104,13 @@ sync_vm_checkout() {
 
     echo "sync checkout to $host:$VM_CHECKOUT"
     run_vm "$host" "mkdir -p '$VM_CHECKOUT' '$VM_PREBUILT_DIR'"
+    run_vm "$host" "sudo rm -rf '$VM_CHECKOUT/.venv' '$VM_CHECKOUT/.pytest_cache' '$VM_CHECKOUT/.ruff_cache'"
     rsync -az --delete \
         --exclude .git \
         --exclude .test-output \
+        --exclude .pytest_cache \
+        --exclude .ruff_cache \
+        --exclude .venv \
         --exclude build \
         --exclude dist \
         --exclude target \

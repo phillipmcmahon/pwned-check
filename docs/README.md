@@ -6,8 +6,9 @@ Use this page as the front door for project and operator documentation. The norm
 
 | Need | Start here |
 |---|---|
-| Install and operate the native PAM package | [Operations](operations.md): package install, dry-run, enforcement, disable, removal, and emergency recovery |
-| Configure signed package repositories | [Package repositories](package-repositories.md): apt, dnf/yum, Arch, and Alpine repository setup |
+| Install and operate the native PAM package | [Linux package install](linux-install.md): repository setup, package install, dry-run, enforcement, rollback, removal, and emergency recovery |
+| Plan production operations | [Operations](operations.md): rollout validation, rollback checks, and configuration notes |
+| Review signed repository internals | [Package repositories](package-repositories.md): repository layout, signing, key rotation, and live endpoint checks |
 | Try the CLI checker locally | [Quickstart](quickstart.md): standalone checker examples, fail-open/fail-closed checks, and binary smoke |
 | Prepare a secure rollout | [Deployment security checklist](deployment-security-checklist.md): rollout and recovery controls |
 | Diagnose rollout issues | [Operational troubleshooting](troubleshooting.md): exit codes, module events, and outage checks |
@@ -34,8 +35,7 @@ Use this page as the front door for project and operator documentation. The norm
 
 ## Suggested First-Time Flow
 
-1. Configure the correct signed repository from [Package repositories](package-repositories.md).
-2. Install the native PAM package with [Operations](operations.md).
-3. Review [Deployment security checklist](deployment-security-checklist.md) before enabling enforcement.
-4. Use [Troubleshooting](troubleshooting.md) if package, PAM, or provider checks fail.
-5. Use maintainer docs only when changing code, packaging, release automation, or project-board state.
+1. Install and enable from [Linux package install](linux-install.md).
+2. Review [Deployment security checklist](deployment-security-checklist.md) before production enforcement.
+3. Use [Troubleshooting](troubleshooting.md) if package, PAM, or provider checks fail.
+4. Use maintainer docs only when changing code, packaging, release automation, or project-board state.

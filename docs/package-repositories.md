@@ -1,7 +1,8 @@
 # Package Repositories
 
-This document describes the signed distro package repositories for native PAM
-package distribution. Use these repositories for normal installs.
+This maintainer reference describes signed distro package repositories for
+native PAM package distribution. Operators looking for installation commands
+should start with [Linux package install](linux-install.md).
 
 Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
 

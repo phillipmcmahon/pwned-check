@@ -8,14 +8,16 @@ Only the first 5 characters of the password's SHA-1 hash are sent to the provide
 
 Native Linux PAM packages are the preferred install path. Packages are available for Debian/Ubuntu, Fedora/RHEL/Rocky, Arch Linux, and Alpine Linux-PAM through signed package repositories.
 
-Start here:
+Start with the [Linux package install guide](docs/linux-install.md). It covers
+repository setup, package installation, dry-run, enforcement, rollback, removal,
+and emergency recovery in one place.
 
 | Platform | Install instructions |
 |---|---|
-| Debian/Ubuntu | [Apt repository](docs/package-repositories.md#apt-repository) |
-| Fedora/RHEL/Rocky | [RPM repository](docs/package-repositories.md#rpm-repository) |
-| Arch Linux | [Arch repository](docs/package-repositories.md#arch-repository) |
-| Alpine Linux-PAM | [Alpine repository](docs/package-repositories.md#alpine-repository) |
+| Debian/Ubuntu | [Linux package install](docs/linux-install.md#debian-or-ubuntu) |
+| Fedora/RHEL/Rocky | [Linux package install](docs/linux-install.md#fedora-rhel-or-rocky) |
+| Arch Linux | [Linux package install](docs/linux-install.md#arch-linux) |
+| Alpine Linux-PAM | [Linux package install](docs/linux-install.md#alpine-linux-pam) |
 
 Package installation only places files on disk. Enablement is explicit and should start in dry-run mode:
 
@@ -36,7 +38,8 @@ Rollback is built into the package commands:
 sudo pwned-check-pam-disable
 ```
 
-Read [Operations](docs/operations.md) before production rollout. It covers dry-run validation, enforcement, package removal, and emergency recovery.
+Use [Operations](docs/operations.md) as the deeper runbook when planning a
+production rollout.
 
 ## Standalone Checker
 
@@ -89,8 +92,9 @@ For production PAM integration, prefer package defaults or explicit PAM module c
 
 | Need | Start here |
 |---|---|
-| Install, enable, roll back, or remove the native PAM package | [Operations](docs/operations.md) |
-| Configure signed package repositories | [Package repositories](docs/package-repositories.md) |
+| Install, enable, roll back, or remove the native PAM package | [Linux package install](docs/linux-install.md) |
+| Plan production operations | [Operations](docs/operations.md) |
+| Review signed repository internals | [Package repositories](docs/package-repositories.md) |
 | Prepare a secure rollout | [Deployment security checklist](docs/deployment-security-checklist.md) |
 | Diagnose rollout issues | [Troubleshooting](docs/troubleshooting.md) |
 | Understand checker stdin and exit codes | [Checker contract](docs/checker-contract.md) |

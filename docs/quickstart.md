@@ -1,6 +1,6 @@
 # Quickstart
 
-This guide validates the standalone checker from a local checkout. It is useful for development and quick CLI checks. To install the supported Linux password-change integration, use [Operations](operations.md) instead.
+This guide validates the standalone checker from a local checkout. It is useful for development and quick CLI checks. To install the supported Linux password-change integration, use [Linux package install](linux-install.md) instead.
 
 ## Build
 
@@ -81,6 +81,6 @@ This starts an in-process HIBP-compatible test server and verifies that the bina
 
 ## Next Steps
 
-- For normal Linux installs, start with [Operations](operations.md).
+- For normal Linux installs, start with [Linux package install](linux-install.md).
 - For package repository setup, use [Package repositories](package-repositories.md).
 - Read [Deployment security checklist](deployment-security-checklist.md) before enforcing password changes.

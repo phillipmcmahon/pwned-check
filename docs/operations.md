@@ -1,6 +1,8 @@
 # Operations
 
-This runbook covers Linux installation, native PAM enablement, rollback, and emergency recovery. The supported operator path is the native PAM package installed from a signed distro repository.
+This runbook covers production rollout checks and operational recovery for the
+native Linux PAM package. For first-time installation commands, start with
+[Linux package install](linux-install.md).
 
 ## Native PAM Package Model
 
@@ -29,18 +31,10 @@ commands are maintained in
 
 ## Install From Package Repositories
 
-Use the signed package repositories for normal operator installs:
-
-| Distro family | Repository instructions |
-|---|---|
-| Debian/Ubuntu | [Apt repository](package-repositories.md#apt-repository) |
-| Fedora/RHEL/Rocky | [RPM repository](package-repositories.md#rpm-repository) |
-| Arch Linux | [Arch repository](package-repositories.md#arch-repository) |
-| Alpine Linux-PAM | [Alpine repository](package-repositories.md#alpine-repository) |
-
-After installation, continue with dry-run, enforcement, disable, and package
-removal. The repository path should not require GitHub credentials, build
-tools, private signing keys, or a local checkout on the target host.
+Use [Linux package install](linux-install.md) for the repository setup and
+package installation commands. The repository path should not require GitHub
+credentials, build tools, private signing keys, or a local checkout on the
+target host.
 
 ## Enable Dry-Run
 

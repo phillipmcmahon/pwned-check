@@ -1,187 +1,127 @@
 # Native PAM Module
 
-This document describes the design and contract for the native Linux PAM module, `pam_pwned_check.so`. The module performs the default any-hit rejection check, with optional count-based thresholding through the shared checker contract.
+This document defines the current contract for `pam_pwned_check.so`, the native
+Linux PAM module shipped by the distro packages. Operator installation steps
+live in [Linux install](linux-install.md); release and repository procedures
+live in [Release playbook](release-playbook.md) and
+[Package repositories](package-repositories.md).
 
-The current implementation is a Rust `cdylib` under `native/pam-pwned-check`. The crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the module through `pam_chauthtok`.
-
-The Rust implementation is split into focused modules: `config.rs` owns module argument parsing, `checker.rs` owns checker fork/exec and timeout handling, `events.rs` owns decision mapping and structured log event formatting, `pam_ffi.rs` owns PAM symbols and libc/PAM FFI, and `lib.rs` remains the small public surface plus unit-test host.
+The implementation is a Rust `cdylib` under `native/pam-pwned-check`.
+Provider logic stays in the `pwned-check` checker process and is reached only
+through the shared [Checker contract](checker-contract.md).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Passwd["passwd / chpasswd / sshd / gdm"] --> PAM["libpam"]
+    App["passwd / chpasswd / sshd / gdm"] --> PAM["libpam"]
     PAM --> Module["pam_pwned_check.so"]
-    Module -->|"fork+exec, stdin pipe, hard timeout"| Checker["pwned-check --stdin [--min-count n]"]
-    Checker --> Provider{"Provider boundary"}
-    Provider --> HIBP["Live HIBP range API"]
-    Module --> Conv["pam_error / pam_info"]
-    Module --> Log["journald / syslog"]
+    Module -->|"stdin pipe, timeout"| Checker["pwned-check --stdin [--min-count n]"]
+    Checker --> Provider["HIBP range API"]
+    Module --> Conv["PAM conversation"]
+    Module --> Log["syslog / journald"]
 ```
 
-The module is the PAM-facing runtime component. Provider logic stays in the checker process, not in the PAM module.
-
-## Intent
-
-The native module exists to:
-
-- integrate cleanly with distro PAM management tools such as `pam-auth-update` on Debian and Ubuntu, and `authselect` on Fedora and RHEL
-- surface user-facing rejection messages through PAM conversation functions
-- provide the packaging shape that distro maintainers expect for a PAM integration
-
-The native module does not exist to:
-
-- move provider HTTP logic into privileged PAM-using processes
-- replace the stdin-based checker contract
-- ship a long-running daemon by default
-- link the checker as an in-process library
+The Rust crate is split by responsibility: `config.rs` parses PAM arguments,
+`checker.rs` owns checker execution, `events.rs` formats decisions and log
+events, `pam_ffi.rs` owns PAM/libc FFI, and `lib.rs` remains the public surface
+plus unit-test host.
 
 ## Scope
 
-In scope:
+The module is a password-change screening component. It implements
+`pam_sm_chauthtok`, retrieves or obtains `PAM_AUTHTOK`, invokes
+`pwned-check --stdin`, supports fail-open/fail-closed, dry-run, timeout, debug,
+and `min_count`, and ships through Debian/Ubuntu, Fedora/Rocky, Arch, and
+Alpine packages.
 
-- a Rust `cdylib` that builds `pam_pwned_check.so`
-- meaningful implementation of `pam_sm_chauthtok` for password-change enforcement
-- fork and exec of the existing `pwned-check --stdin` checker, with optional documented policy flags such as `--min-count`
-- explicit timeout handling around the checker process
-- explicit fail-open and fail-closed configuration passed to the checker
-- dry-run mode for staged rollout
-- structured syslog or journald-compatible events aligned with the current logging policy
-- Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine package paths with documented enablement and rollback
-- unit, host PAM harness, persistent Ubuntu, Docker, VM, package, dependency, AppArmor, SELinux, and memory-check validation paths
+It does not authenticate users, estimate password strength, enforce password
+history, cache provider results, contact HIBP directly, run as a daemon, or
+support non-Linux PAM implementations.
 
-Out of scope:
+## Security Rules
 
-- a long-running checker daemon
-- an offline cache or mirror provider
-- macOS or Windows native integrations
-- linking provider logic or HTTP clients into the PAM process
-- a long-running daemon or in-process provider lookup
+The module runs inside privileged PAM-using processes, so it keeps a deliberately
+small runtime surface:
 
-## Design Principles
+- non-password PAM service functions return `PAM_IGNORE`
+- Rust uses `panic = "abort"` and must never unwind across PAM or libc
+  boundaries
+- candidate material is copied only into module-owned zeroizing memory
+- PAM-owned token memory is never modified
+- candidate material is never logged, printed, put in argv, or put in
+  environment
+- provider HTTP and parsing logic stays out of the PAM process
+- checker child processes receive a clean, explicit environment
+- inherited file descriptors are closed with `close_range(2)` where available
+  and an fd-walk fallback elsewhere
+- checker stderr diagnostics are captured through a bounded pipe, not through
+  `/tmp`
+- the module does not call `setuid`, `setgid`, register signal handlers, or
+  retry failed checker calls
 
-The native module inherits the project principles in [Security Model](security-model.md). The important constraints are:
+The release dependency allowlist for `pam_pwned_check.so` is intentionally small:
+platform PAM and C/runtime libraries such as `libpam`, `libc` or musl,
+`libgcc_s`, `libdl`, `libpthread`, `libm`, and target PAM runtime dependencies
+such as `libaudit`, `libcap-ng`, or Fedora's `libeconf`. Dependency checks fail
+on unexpected additions.
 
-- implement password-change behavior only; all non-password PAM service functions return `PAM_IGNORE`
-- keep provider logic outside the PAM process by invoking `pwned-check --stdin`
-- treat [Checker contract](checker-contract.md) as the only checker API
-- build as a Rust `cdylib` with `panic = "abort"` and a narrow, documented FFI boundary
-- never unwind across PAM or libc boundaries
-- never log, print, persist, or expose the candidate password through argv or environment
-- copy candidate material only into module-owned zeroizing memory and never mutate PAM-owned memory
-- avoid async runtimes, signal handlers, threads, retries, or identity changes inside the PAM module
-- keep failure behavior explicit and recoverable through dry-run and rollback wrappers
-
-The module runs inside privileged PAM-using processes. It must keep its behavior smaller and stricter than an ordinary CLI program:
-
-- do not call `setuid`, `setgid`, or otherwise change identity
-- do not register signal handlers
-- do not create threads
-- do not retry the checker on failure
-- close inherited file descriptors above stderr in the child before `execve`
-- pass an explicit minimal environment to the checker
-- avoid loading additional shared libraries beyond libpam, the platform C library, and libraries required by the Rust runtime/build target
-- keep provider access out of the module process
-
-The release defines an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist includes only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libc.musl-*`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI and smoke tests run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
-
-If the module implements dump suppression, it must treat it as a process-wide control: store the prior value, call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory, and restore the prior value before returning unless a later design decision documents why leaving dumpability disabled is safer for host processes.
-
-The module must make failure behavior explicit.
-
-The module should pass fail-open or fail-closed configuration to the checker rather than trying to infer provider failure from checker logs. If the checker returns the accepted outcome from [Checker contract](checker-contract.md), the module treats it as success. If provider failure should reject, the checker must be invoked in fail-closed mode so it returns the documented provider-failure outcome.
-
-Configuration errors, timeouts, exec failures, and unexpected checker exits are conservative rejections outside dry-run mode.
-
-A misconfigured module must be recoverable.
-
-The module should avoid `PAM_ABORT` for ordinary configuration, provider, timeout, or checker failures. Recommended stack placement must keep `pam_rootok.so`, single-user recovery, and documented rescue paths unaffected.
-
-Dry-run mode must be available before production enforcement so operators can observe would-be decisions without risking lockout.
-
-## Module Contract
-
-### Service Functions
+## PAM Contract
 
 | Function | Behavior |
 |---|---|
-| `pam_sm_chauthtok` with `PAM_PRELIM_CHECK` | Return `PAM_SUCCESS` without touching `PAM_AUTHTOK`. The candidate is not yet available. |
-| `pam_sm_chauthtok` with `PAM_UPDATE_AUTHTOK` | Retrieve `PAM_AUTHTOK`, invoke checker, map result. |
+| `pam_sm_chauthtok` with `PAM_PRELIM_CHECK` | Return `PAM_SUCCESS`; the candidate is not available yet. |
+| `pam_sm_chauthtok` with `PAM_UPDATE_AUTHTOK` | Retrieve candidate, run checker, map result. |
 | `pam_sm_authenticate` | Return `PAM_IGNORE`. |
 | `pam_sm_setcred` | Return `PAM_IGNORE`. |
 | `pam_sm_acct_mgmt` | Return `PAM_IGNORE`. |
 | `pam_sm_open_session` | Return `PAM_IGNORE`. |
 | `pam_sm_close_session` | Return `PAM_IGNORE`. |
 
-The module reads `PAM_AUTHTOK` with `pam_get_item` and never modifies it. Downstream modules using `use_authtok` must see the same value the user supplied.
+The module reads `PAM_AUTHTOK` with `pam_get_item`. If no token is present
+during `PAM_UPDATE_AUTHTOK`, it calls `pam_get_authtok` so it can work without a
+separate quality module pre-populating the token. It never calls
+`pam_set_item(PAM_AUTHTOK, ...)`, so downstream modules using `use_authtok` see
+the original candidate.
 
 ### Return Mapping
 
-The checker exit-code meanings are defined only in [Checker contract](checker-contract.md). The native module maps those outcomes to PAM as follows:
+The checker exit-code meanings are canonical only in
+[Checker contract](checker-contract.md). The native module maps those outcomes
+to PAM like this:
 
-| Outcome class | Module return | Meaning |
+| Checker outcome | PAM return | Meaning |
 |---|---|---|
-| Accepted by checker, including provider failure when checker fail-open is configured | `PAM_SUCCESS` | The module has no objection. The stack continues. |
-| Pwned at or above threshold | `PAM_AUTHTOK_ERR` | Password rejected. User-facing message is sent through PAM conversation. |
-| Checker configuration error | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as misconfiguration. |
-| Provider failure when checker fail-closed is configured | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as provider failure. |
-| Timeout | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as timeout. |
-| Exec failure | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as exec failure. |
-| Unexpected checker exit | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged with the checker exit code. |
+| Accepted | `PAM_SUCCESS` | This module has no objection; the stack continues. |
+| Pwned at or above threshold | `PAM_AUTHTOK_ERR` | Reject and show the pwned-password message. |
+| Checker configuration error | `PAM_AUTHTOK_ERR` | Reject and log misconfiguration. |
+| Provider failure in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log provider failure. |
+| Timeout | `PAM_AUTHTOK_ERR` | Reject and log timeout. |
+| Exec failure | `PAM_AUTHTOK_ERR` | Reject and log exec failure. |
+| Unexpected checker exit | `PAM_AUTHTOK_ERR` | Reject and log the exit code. |
 
-Checker configuration failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
+`PAM_SUCCESS` from `pam_pwned_check.so` does not mean the system accepts the
+password. It means only that this module allows later PAM `password` modules to
+continue.
 
-The checker's fail-open behavior can short-circuit `min_count`: if the provider cannot return a breach count and fail-open is configured, the canonical checker contract returns the accepted outcome, so the module allows the stack to continue.
+Dry-run mode logs would-be rejections and returns `PAM_SUCCESS` for runtime
+checker outcomes. Module configuration errors remain visible and conservative.
 
-`PAM_SUCCESS` from this module does not mean the password is accepted by the system. It means only that `pam_pwned_check.so` has no objection and the rest of the PAM `password` stack should continue. Length, complexity, history, account state, and final password storage remain the responsibility of downstream modules.
+## Stack Placement
 
-## Stack Placement And Composition
+`pam_pwned_check.so` should run early in the `password` stack, before expensive
+or state-changing modules such as password hashing, history checks, and account
+backend updates. The recommended control is `requisite`, so a pwned-password
+rejection stops the password-change flow immediately.
 
-The module is a screening module. It performs one check, HIBP corpus membership, and defers every other password policy concern to other PAM modules in the same stack.
+Length, dictionary, complexity, history, storage, and account policy remain the
+responsibility of existing PAM modules such as `pam_pwquality`, `pam_passwdqc`,
+`pam_pwhistory`, `pam_unix`, or site-specific account backends.
 
-The responsibility boundaries below are recommendations for a simple, composable deployment. Some sites legitimately consolidate complexity, history, and storage policy into a custom module; `pam_pwned_check.so` should still remain focused on breach-corpus screening.
-
-| Concern | Recommended owner |
-|---|---|
-| HIBP corpus membership | `pam_pwned_check.so` |
-| Length, complexity, dictionary checks, and character-class policy | `pam_pwquality`, `pam_passwdqc`, or site policy module |
-| Password history | `pam_pwhistory` or site policy module |
-| Password hashing and `/etc/shadow` updates | `pam_unix` or distro/account backend |
-| Account state and authentication policy | Existing account/auth PAM modules |
-
-### Composition Contract
-
-The module honors this contract so it can compose with other PAM `password` modules:
-
-- read `PAM_AUTHTOK` with `pam_get_item`, falling back to `pam_get_authtok` when the token is absent, and never modify it
-- never call `pam_set_item(PAM_AUTHTOK, ...)`, `pam_set_item(PAM_OLDAUTHTOK, ...)`, or any other PAM item-setting function
-- never prompt the user directly outside PAM's own conversation helpers
-- return `PAM_SUCCESS` to mean "this module has no objection," not "the password is accepted"
-- return `PAM_AUTHTOK_ERR` only for documented rejection reasons
-- avoid `PAM_ABORT`, `PAM_USER_UNKNOWN`, and other return codes outside the mapping table
-- behave the same regardless of whether it is placed before or after `pam_pwquality`, `pam_pwhistory`, `pam_passwdqc`, `pam_unix`, or other password modules
-
-If `PAM_AUTHTOK` is absent during `PAM_UPDATE_AUTHTOK`, the module asks PAM to obtain it with `pam_get_authtok`. If PAM cannot obtain a usable token, the module returns `PAM_AUTHTOK_ERR` and lets the surrounding stack control the user-facing retry behavior.
-
-The module intentionally does not pre-fetch HIBP results during `PAM_PRELIM_CHECK`. That keeps the module stateless across PAM phases and avoids caching candidate-derived material inside the host process.
-
-### Recommended Placement
-
-The module should run early in the `password` stack, before modules that perform expensive work such as hashing, file writes, history comparisons, and dictionary scoring. Rejecting a pwned candidate before `pam_unix` hashes it avoids unnecessary work and avoids touching `/etc/shadow` for a doomed attempt.
-
-The recommended control is `requisite`:
-
-- success continues to later password modules
-- failure stops immediately and returns failure to the application
-
-`required` is less suitable for this screening use case because the stack continues after a pwned-password rejection and may ask the user to satisfy quality or history rules for a password that cannot be accepted. `requisite` gives clearer feedback and avoids unnecessary downstream work.
-
-### Debian And Ubuntu Example
-
-The `pam-auth-update` profile shipped by the package should place the module at the top of the `Password` block. A resulting `/etc/pam.d/common-password` stack may look like:
+Example Debian/Ubuntu shape:
 
 ```text
-password    requisite                       pam_pwned_check.so
+password    requisite                       pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open
 password    requisite                       pam_pwquality.so retry=3
 password    required                        pam_pwhistory.so remember=5 use_authtok
 password    [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass yescrypt
@@ -189,39 +129,31 @@ password    requisite                       pam_deny.so
 password    required                        pam_permit.so
 ```
 
-In this stack, `pam_pwned_check.so` rejects known-pwned candidates first. Clean candidates continue to quality, history, and storage modules. Later modules using `use_authtok` see the original candidate because the module uses PAM's token item and does not modify it. The module can also run in a simpler stack without `pam_pwquality`; in that case it obtains the candidate through `pam_get_authtok` and passes the same token onward to `pam_unix.so use_authtok`.
+The module also works in simpler stacks without `pam_pwquality`; in that case it
+obtains the candidate through `pam_get_authtok` and leaves the token available
+for later modules.
 
-The example uses `yescrypt`, which is the Debian 12 and Ubuntu 24.04-era default. Older support targets such as Debian 11 may use `sha512`; package examples should match the oldest supported distro in the release support matrix.
+## Arguments
 
-Fedora and RHEL stacks have the same shape with different module arguments and distro-managed placement through `authselect`. The default quality module is usually `pam_pwquality`; hardened deployments may use `pam_passwdqc` or a custom policy module instead.
-
-This design is Linux PAM-specific. Solaris, FreeBSD/OpenPAM, macOS PAM/OpenPAM, and other PAM-like systems have different packaging and control-syntax details. They are outside the first native module support matrix.
-
-### Module Arguments
-
-Arguments are parsed from `argv` in the PAM stack line. They are root-controlled configuration and must never contain secrets.
+Arguments are root-controlled PAM stack configuration and must never contain
+secrets.
 
 | Argument | Default | Meaning |
 |---|---|---|
-| `checker=<path>` | `/usr/local/bin/pwned-check` | Path to the `pwned-check` binary. |
-| `timeout=<seconds>` | `3` | Hard timeout for the checker process. |
-| `fail_open` | unset | Configure checker provider failures to allow the password change. |
-| `fail_closed` | unset | Configure checker provider failures to reject the password change. |
-| `dry_run` | unset | Run the checker, log the would-be outcome, and always return `PAM_SUCCESS` unless the module cannot parse its own configuration. |
-| `debug` | unset | Emit additional structured logs. Never log candidate material. |
-| `min_count=<n>` | unset | Pass `--min-count <n>` to the checker. `n` must be at least `1`; when unset, the checker default of `1` preserves any-hit rejection. |
+| `checker=<path>` | `/usr/local/bin/pwned-check` | Checker binary path. |
+| `timeout=<seconds>` | `3` | Whole-second checker timeout. |
+| `fail_open` | unset | Configure provider failures to allow. |
+| `fail_closed` | unset | Configure provider failures to reject. |
+| `dry_run` | unset | Log would-be decisions and allow runtime outcomes. |
+| `debug` | unset | Emit extra safe configuration logs. |
+| `min_count=<n>` | unset | Pass `--min-count <n>` to the checker; `n >= 1`. |
 
-If neither `fail_open` nor `fail_closed` is set, the module should use the checker's default provider-failure behavior and log that the policy was inherited.
+Unknown arguments and conflicting `fail_open`/`fail_closed` settings are
+configuration errors. `min_count` is enforced by the checker contract, not by
+parsing checker logs. If fail-open short-circuits a provider failure, the module
+sees the accepted checker outcome and lets the stack continue.
 
-Native module timeouts are whole seconds in PAM configuration. Sub-second values are intentionally not exposed unless a later operator need justifies adding duration syntax.
-
-If both `fail_open` and `fail_closed` are set, the module must treat the configuration as invalid.
-
-Unknown arguments must be treated as configuration errors. A typo such as `fail_clsoed` must not silently change security posture. In enforcement mode, invalid module configuration returns `PAM_AUTHTOK_ERR`; in dry-run mode, invalid runtime outcomes may allow, but invalid module configuration should still be visible and fail closed unless a later decision explicitly changes this.
-
-`min_count=<n>` is implemented by the checker contract rather than by parsing checker stderr: the module invokes `pwned-check --stdin --min-count <n>`, and the checker returns the pwned-password outcome only when the breach count is greater than or equal to `n`.
-
-### Checker Invocation
+## Checker Execution
 
 The module invokes:
 
@@ -229,143 +161,94 @@ The module invokes:
 pwned-check --stdin
 ```
 
-When `min_count=<n>` is configured, the module invokes:
+With `min_count=<n>`:
 
 ```text
 pwned-check --stdin --min-count <n>
 ```
 
-The candidate is supplied only over stdin. The checker path, timeout, and fail policy are configuration values and may appear in module argv or environment.
+The candidate is supplied only over stdin. Fail policy is passed explicitly with
+`PWNED_CHECK_FAIL_CLOSED=true` or `PWNED_CHECK_FAIL_CLOSED=false`; inherited
+process environment is cleared.
 
-The module should pass fail policy to the checker explicitly, for example with `PWNED_CHECK_FAIL_CLOSED=true` or `PWNED_CHECK_FAIL_CLOSED=false`, rather than relying on inherited process environment.
+Execution flow:
 
-The checker stderr may be captured for bounded diagnostics. The diagnostic excerpt must be length-limited and must not influence policy decisions.
+1. Create stdin and bounded stderr pipes.
+2. Spawn the checker with stdout redirected to `/dev/null`.
+3. In the child, start a new process group and close inherited fds.
+4. In the parent, write the candidate to stdin and close the pipe.
+5. Wait with a hard timeout.
+6. On timeout, send `SIGTERM`, wait briefly, then send `SIGKILL`.
+7. Map the checker outcome to the PAM contract and emit safe events.
 
-### Fork And Exec Flow
+## Conversation Messages
 
-The first release uses fork and exec:
-
-1. The module creates a pipe for checker stdin and a separate pipe for bounded checker stderr capture.
-2. The module sets close-on-exec on file descriptors that should not survive into the child.
-3. The module forks.
-4. The child connects the stdin pipe read end to stdin, redirects stdout to `/dev/null`, connects stderr to the bounded capture pipe, closes inherited file descriptors above stderr with `close_range(2)` where available and an fd-walk fallback elsewhere, and calls `execve` with the configured checker and the documented checker arguments.
-5. The child receives a clean environment containing only documented checker/provider variables.
-6. The parent writes the candidate to the checker stdin pipe, closes the write end, and relies on zeroizing module-owned memory when the candidate buffer is dropped.
-7. The parent waits with a hard timeout.
-8. On timeout, the parent sends `SIGTERM`, waits a short grace period, then sends `SIGKILL` if the checker has not exited.
-9. The parent reads the checker exit status, maps it to a PAM return value, and emits a safe event.
-
-A long-running daemon over a Unix socket remains a future option. Adding that IPC path must not change the module argument contract or the user-facing message contract.
-
-### Conversation Messages
-
-On pwned-password rejection, the module sends a fixed, bounded `PAM_ERROR_MSG` through the PAM conversation function:
+The pwned-password message is fixed:
 
 ```text
 This password appears in a known breach corpus. Choose a different password.
 ```
 
-Provider, config, timeout, and exec failures may use a different fixed message:
+Provider, configuration, timeout, and exec failures use:
 
 ```text
 Password breach check failed. Try again later or contact your administrator.
 ```
 
-Dry-run mode must not show rejection messages to the user.
+Dry-run mode does not show rejection messages.
 
 ## Logging
 
-The module should log structured events consistent with [Logging policy](logging-policy.md). Logs must use low-cardinality fields and must not include plaintext passwords, usernames unless explicitly justified, full hashes, hash suffixes, or provider response bodies.
-
-Module-specific event names:
+Logs follow [Logging policy](logging-policy.md). They use the stable syslog
+identifier `pwned-check` and low-cardinality fields.
 
 | Event | Meaning |
 |---|---|
-| `pam_module_result` | Final allow, reject, or dry-run outcome. |
-| `pam_module_failure` | Module configuration, exec, timeout, provider, or unexpected checker failure. |
-| `pam_module_config` | Optional debug-only configuration summary with no secrets. |
+| `pam_module_result` | Final allow, reject, or dry-run result. |
+| `pam_module_failure` | Configuration, exec, timeout, provider, or checker failure. |
+| `pam_module_config` | Debug-only safe configuration summary. |
 
-Example lines:
+Examples:
 
 ```text
 event=pam_module_result result=allow
 event=pam_module_result result=reject reason=pwned
 event=pam_module_result result=allow mode=dry_run would=reject reason=pwned
 event=pam_module_failure reason=timeout timeout=3s
-event=pam_module_failure reason=checker_config code=2
 event=pam_module_failure reason=checker_provider code=3
 event=pam_module_failure reason=checker_exit code=9
-event=pam_module_failure reason=exec error="permission denied"
 ```
 
-Logs use syslog with the stable identifier `pwned-check` so operators can query with tools like:
-
-```bash
-journalctl -t pwned-check
-```
-
-The module must never log:
-
-- the candidate password
-- the full SHA-1 hash or suffix
-- provider response bodies
-- user account names as primary identifiers
-
-`PAM_USER` may be included only when debug logging is explicitly enabled, and only as a non-sensitive correlation field on a separate low-cardinality event.
+The module must never log the candidate password, full SHA-1 hash, hash suffix,
+provider response body, or high-cardinality user identifiers.
 
 ## Package Shape
 
-Package installation places files on disk only. Enabling the module remains an
-explicit operator action, starts in `dry_run` mode, and records enough state to
-roll back without hand-editing generated PAM files.
+Package installation places files on disk only. Enabling the module is an
+explicit operator action and starts in dry-run mode.
 
-Expected module placement:
-
-| Platform family | Module path |
+| Family | Module path |
 |---|---|
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` |
-| Fedora/RHEL | `/lib64/security/pam_pwned_check.so` |
+| Fedora/Rocky | `/lib64/security/pam_pwned_check.so` |
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` |
-| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` |
+| Alpine Linux-PAM | `/usr/lib/security/pam_pwned_check.so` |
 
-Expected package contents:
+Packages include:
 
 - `pam_pwned_check.so`
 - `pwned-check`
-- operator documentation under `/usr/share/doc/pwned-check/`
-- Debian `pam-auth-update` profile under `/usr/share/pam-configs/pwned-check`
-- Fedora/RHEL/Rocky authselect wrapper scripts
-- Arch Linux service-file wrapper scripts
-- Alpine Linux-PAM service-file wrapper scripts
-- rollback and emergency recovery instructions
+- operator docs under `/usr/share/doc/pwned-check/`
+- enable, enforce, disable, and rollback helpers
+- Debian `pam-auth-update`, Fedora/Rocky `authselect`, or service-file wrapper
+  integration
 
-Production repository publication, signing, provenance, package architecture
-coverage, and release smoke gates are described in [Package repositories](package-repositories.md)
-and [Release playbook](release-playbook.md). The module design doc intentionally
-does not duplicate those release procedures.
+## Testing
 
-## Testing Strategy
+Automated tests must not depend on the live HIBP API. Coverage includes Rust
+unit tests, host PAM harness tests, package smokes, no-secret-output checks,
+dependency allowlist and exported-symbol checks, and Valgrind-backed native argv
+parser memory checks on Linux CI.
 
-The native module must not rely on the live HIBP API in automated tests. The
-test boundary is:
-
-- unit tests for argument parsing, checker outcome mapping, event formatting,
-  FFI edge cases, and safe conversation strings from [Logging policy](logging-policy.md)
-- host-level PAM harness tests for module loading and conversation behavior
-- package smokes that install, enable dry-run, switch to enforcement, disable,
-  remove the package, and verify managed-file cleanup
-- no-secret-output checks for module logs, conversation messages, checker argv,
-  and diagnostics
-- dependency allowlist checks for `pam_pwned_check.so`
-- Valgrind-backed native argv parser memory checks on Linux CI
-
-The current Docker, persistent VM, architecture, and release-gate matrix is
-documented in [Testing](testing.md) and [Distro testing runbook](distro-testing.md).
-
-## Non-Goals
-
-- The module does not perform password strength estimation.
-- The module does not enforce password history.
-- The module does not cache results.
-- The module does not contact the provider directly.
-- The module does not reduce the security posture of the host's PAM stack.
+The current VM, Docker, architecture, and release-gate matrix is documented in
+[Testing](testing.md) and [Distro testing](distro-testing.md).

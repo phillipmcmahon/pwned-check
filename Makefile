@@ -94,10 +94,10 @@ native-pam-distro-smoke:
 	./scripts/native-pam-distro-smoke.sh
 
 native-pam-arch-package-smoke:
-	./scripts/native-pam-arch-package-smoke.sh
+	./scripts/native-pam-container-package-smoke.sh --distro arch
 
 native-pam-alpine-package-smoke:
-	./scripts/native-pam-alpine-package-smoke.sh
+	./scripts/native-pam-container-package-smoke.sh --distro alpine
 
 smoke: build
 	go run ./scripts/smoke_binary.go $(BIN)

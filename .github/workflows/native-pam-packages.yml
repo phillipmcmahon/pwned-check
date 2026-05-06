@@ -59,10 +59,10 @@ jobs:
         run: ./scripts/native-pam-distro-smoke.sh --platform linux/amd64
 
       - name: Run Arch package smoke
-        run: ./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
+        run: ./scripts/native-pam-container-package-smoke.sh --distro arch --platform linux/amd64
 
       - name: Run Alpine package smoke
-        run: ./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64
+        run: ./scripts/native-pam-container-package-smoke.sh --distro alpine --platform linux/amd64
 
       - name: Run native PAM arm64 release asset smoke
         run: |

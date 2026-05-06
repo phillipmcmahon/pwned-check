@@ -302,7 +302,7 @@ case "$PLATFORM" in
         echo "::group::[build+smoke:arch:$PLATFORM] package smoke"
         NATIVE_PAM_ARCH_PACKAGE_SMOKE_VERSION="$VERSION" \
         NATIVE_PAM_ARCH_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
-            "$ROOT/scripts/native-pam-arch-package-smoke.sh" --platform "$PLATFORM"
+            "$ROOT/scripts/native-pam-container-package-smoke.sh" --distro arch --platform "$PLATFORM"
         echo "::endgroup::"
         ;;
     *)
@@ -313,7 +313,7 @@ esac
 echo "::group::[build+smoke:alpine:$PLATFORM] package smoke"
 NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION="$VERSION" \
 NATIVE_PAM_ALPINE_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
-    "$ROOT/scripts/native-pam-alpine-package-smoke.sh" --platform "$PLATFORM"
+    "$ROOT/scripts/native-pam-container-package-smoke.sh" --distro alpine --platform "$PLATFORM"
 echo "::endgroup::"
 
 echo "::group::[verify] package metadata versions"

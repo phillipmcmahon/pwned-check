@@ -111,6 +111,8 @@ unsafe fn get_authtok(pamh: *mut PamHandle) -> Result<Zeroizing<Vec<u8>>, c_int>
     // valid for this PAM transaction. We copy it immediately into owned memory.
     let token = unsafe { CStr::from_ptr(item) };
     let token_bytes = token.to_bytes();
+    // Allocate exact capacity before copying so the Zeroizing<Vec<u8>> does not
+    // reallocate and leave an earlier candidate copy behind.
     let mut candidate = Zeroizing::new(Vec::with_capacity(token_bytes.len()));
     candidate.extend_from_slice(token_bytes);
     Ok(candidate)

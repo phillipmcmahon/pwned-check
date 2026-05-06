@@ -16,6 +16,18 @@ APT_URL="${PWNED_CHECK_APT_REPO_URL:-https://phillipmcmahon.github.io/pwned-chec
 RPM_URL="${PWNED_CHECK_RPM_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/rpm}"
 ARCH_URL="${PWNED_CHECK_ARCH_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/arch}"
 ALPINE_URL="${PWNED_CHECK_ALPINE_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/alpine}"
+EXPECTED_VERSION="${PWNED_CHECK_EXPECTED_PACKAGE_VERSION:-}"
+
+if [ -z "$EXPECTED_VERSION" ]; then
+    EXPECTED_VERSION="$(awk -F' *= *' '
+        $1 == "version" {
+            gsub(/"/, "", $2)
+            print $2
+            exit
+        }
+    ' "$ROOT/native/pam-pwned-check/Cargo.toml")"
+fi
+[ -n "$EXPECTED_VERSION" ] || fail "could not determine expected package version"
 
 APT_HOSTS="${PWNED_CHECK_APT_REPO_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64}"
 RPM_HOSTS="${PWNED_CHECK_RPM_REPO_SMOKE_HOSTS:-codex-vm-fedora codex-vm-fedora-arm64 codex-vm-rocky codex-vm-rocky-arm64}"
@@ -31,7 +43,7 @@ run_for_hosts() {
     [ -n "$hosts" ] || fail "$label live repository smoke host list is empty"
     for host in $hosts; do
         echo "::group::[live-repo:$label] $host"
-        "$script" --host "$host" --repo-url "$url"
+        "$script" --host "$host" --repo-url "$url" --expected-version "$EXPECTED_VERSION"
         echo "::endgroup::"
     done
 }

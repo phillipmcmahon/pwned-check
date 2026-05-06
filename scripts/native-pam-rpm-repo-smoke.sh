@@ -13,6 +13,7 @@ PUBLIC_KEY_WAS_SET=0
 PUBLIC_KEY_URL="https://phillipmcmahon.github.io/pwned-check/pwned-check-openpgp-production.asc"
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
+EXPECTED_VERSION="${PWNED_CHECK_EXPECTED_PACKAGE_VERSION:-}"
 
 if capture_or_reexec "$OUTPUT_ROOT" "native-pam-rpm-repo-smoke" \
     "PWNED_CHECK_RPM_REPO_SMOKE_NO_CAPTURE" \
@@ -43,6 +44,8 @@ Options:
   --public-key-url <url> Published public key URL used with --repo-url when
                           --public-key is not set
                           (default: project production OpenPGP key)
+  --expected-version <v> Assert installed pwned-check reports this version
+                          (or PWNED_CHECK_EXPECTED_PACKAGE_VERSION)
   --remote-dir <path>    Remote temporary directory
   --help                 Show this help text
 
@@ -78,6 +81,11 @@ while [ "$#" -gt 0 ]; do
         --public-key-url)
             [ "$#" -ge 2 ] || fail "--public-key-url requires a value"
             PUBLIC_KEY_URL="$2"
+            shift 2
+            ;;
+        --expected-version)
+            [ "$#" -ge 2 ] || fail "--expected-version requires a value"
+            EXPECTED_VERSION="$2"
             shift 2
             ;;
         --remote-dir)
@@ -121,7 +129,7 @@ if [ -z "$REPO_URL" ]; then
 fi
 scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/RPM-GPG-KEY-pwned-check-native-pam.asc"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' EXPECTED_VERSION='$EXPECTED_VERSION' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -214,11 +222,14 @@ pkg_tool install --disablerepo='*' --enablerepo=pwned-check-native-pam "$PACKAGE
 
 rpm -q "$PACKAGE_NAME" >/dev/null
 rpm -ql "$PACKAGE_NAME" | grep -F '/lib64/security/pam_pwned_check.so' >/dev/null || fail "package file list missing PAM module"
-command -v pwned-check >/dev/null || fail "pwned-check command missing after repo install"
+[ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
 command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
 command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
 command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"
-pwned-check --version >/dev/null
+actual_version="$(/usr/bin/pwned-check --version | awk '{print $2}')"
+if [ -n "$EXPECTED_VERSION" ] && [ "$actual_version" != "$EXPECTED_VERSION" ]; then
+    fail "installed pwned-check version $actual_version, expected $EXPECTED_VERSION"
+fi
 
 before="$(mktemp)"
 authselect current -r > "$before" 2>/dev/null || true

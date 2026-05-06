@@ -109,7 +109,7 @@ Provider parser fuzzing runs at three depths:
 
 | Scope | Command | Fuzz time | Purpose |
 |---|---|---:|---|
-| Normal CI and pre-push | `make fuzz-smoke` | `5s` | Fast regression signal for everyday changes |
+| Normal CI and pre-push | `make fuzz-smoke` | `1000 executions` | Fast deterministic regression signal for everyday changes |
 | Release validation | `make fuzz-release` | `60s` | Longer parser robustness check before publishing |
 | Scheduled workflow | `make fuzz-nightly` | `5m` | Deeper recurring search for rare provider parsing bugs |
 

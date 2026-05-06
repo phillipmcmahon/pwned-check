@@ -22,7 +22,7 @@ coverage:
 	./scripts/coverage-threshold.sh
 
 fuzz-smoke:
-	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=5s
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=1000x
 
 fuzz-release:
 	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=60s

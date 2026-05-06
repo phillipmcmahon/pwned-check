@@ -6,6 +6,8 @@ The format is intentionally lightweight while the project is pre-production.
 
 ## Unreleased
 
+## v0.2.0 - 2026-05-06
+
 ### Added
 
 - arm64 persistent VM coverage for Debian, Ubuntu, Fedora, Rocky, and Alpine native PAM smoke validation.

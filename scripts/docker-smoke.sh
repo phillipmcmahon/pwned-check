@@ -95,20 +95,19 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
-LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION"
+LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION"
 
 echo "Building Linux smoke artifacts for $PLATFORM"
 CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -ldflags "$LDFLAGS" -o "$SMOKE_DIR/pwned-check" ./cmd/pwned-check
-CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -ldflags "$LDFLAGS" -o "$SMOKE_DIR/pwned-check-pam-helper" ./cmd/pwned-check-pam-helper
 CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -o "$SMOKE_DIR/container-smoke" ./scripts/container-smoke
 
-for artifact in pwned-check pwned-check-pam-helper container-smoke; do
+for artifact in pwned-check container-smoke; do
     [ -x "$SMOKE_DIR/$artifact" ] || fail "missing smoke artifact: $SMOKE_DIR/$artifact"
 done
 
 for image in $IMAGES; do
     echo "Docker smoke: $image ($PLATFORM)"
-    cid="$(docker create --platform "$PLATFORM" -w /smoke "$image" /smoke/container-smoke /smoke/pwned-check /smoke/pwned-check-pam-helper)"
+    cid="$(docker create --platform "$PLATFORM" -w /smoke "$image" /smoke/container-smoke /smoke/pwned-check)"
     docker cp "$SMOKE_DIR/." "$cid:/smoke"
     if ! docker start -a "$cid"; then
         status="$(docker inspect -f '{{.State.ExitCode}}' "$cid" 2>/dev/null || echo unknown)"

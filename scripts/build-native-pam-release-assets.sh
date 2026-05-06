@@ -130,12 +130,12 @@ PREBUILT_CHECKER="$WORK_DIR/pwned-check"
 if [ "$GOARCH_VALUE" = "amd64" ]; then
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64="${GOAMD64:-v1}" \
         go build -trimpath \
-        -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION" \
+        -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION" \
         -o "$PREBUILT_CHECKER" "$ROOT/cmd/pwned-check"
 else
     CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH_VALUE" \
         go build -trimpath \
-        -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION" \
+        -ldflags "-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION" \
         -o "$PREBUILT_CHECKER" "$ROOT/cmd/pwned-check"
 fi
 

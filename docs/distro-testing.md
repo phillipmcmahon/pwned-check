@@ -96,14 +96,12 @@ unavailable.
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ```
 
 Local `linux/arm64` validation uses Docker to reduce the gap with GitHub CI:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
-./scripts/docker-pam-smoke.sh --platform linux/arm64 --images "debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22"
 ```
 
 The default amd64 Docker matrix used by GitHub CI is:

@@ -6,8 +6,8 @@ usage() {
   cat <<'EOF'
 Usage: scripts/package-linux-artifact.sh --version <version> --goarch <arch> [OPTIONS]
 
-Build a Linux release tarball containing pwned-check, pwned-check-pam-helper,
-install.sh, README.md, LICENSE, and build metadata.
+Build a Linux release tarball containing pwned-check, install.sh, README.md,
+LICENSE, and build metadata.
 
 Options:
   --version <version>      Release version, for example 0.1.0 or dev-abcdef12
@@ -94,7 +94,7 @@ BASENAME="pwned-check_${VERSION}_${GOOS_VALUE}_${GOARCH_VALUE}"
 PACKAGE_DIR="$WORK_DIR/$BASENAME"
 mkdir -p "$PACKAGE_DIR/metadata"
 
-LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION"
+LDFLAGS="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION"
 GOAMD64_VALUE=""
 if [ "$GOARCH_VALUE" = "amd64" ]; then
   GOAMD64_VALUE="${GOAMD64:-v1}"
@@ -103,10 +103,8 @@ fi
 (
   cd "$ROOT"
   CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -trimpath -ldflags "$LDFLAGS" -o "$PACKAGE_DIR/pwned-check" ./cmd/pwned-check
-  CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" GOAMD64="$GOAMD64_VALUE" go build -trimpath -ldflags "$LDFLAGS" -o "$PACKAGE_DIR/pwned-check-pam-helper" ./cmd/pwned-check-pam-helper
   cp README.md LICENSE "$PACKAGE_DIR/"
   go version -m "$PACKAGE_DIR/pwned-check" > "$PACKAGE_DIR/metadata/pwned-check-go-version.txt"
-  go version -m "$PACKAGE_DIR/pwned-check-pam-helper" > "$PACKAGE_DIR/metadata/pwned-check-pam-helper-go-version.txt"
   go list -m all > "$PACKAGE_DIR/metadata/go-modules.txt"
 )
 
@@ -130,14 +128,10 @@ ARCH="$GOARCH_VALUE"
 
 mkdir -p "\$INSTALL_ROOT" "\$BIN_DIR"
 install -m 0755 ./pwned-check "\$INSTALL_ROOT/pwned-check_\${VERSION}_linux_\${ARCH}"
-install -m 0755 ./pwned-check-pam-helper "\$INSTALL_ROOT/pwned-check-pam-helper_\${VERSION}_linux_\${ARCH}"
 ln -sfn "\$INSTALL_ROOT/pwned-check_\${VERSION}_linux_\${ARCH}" "\$INSTALL_ROOT/current"
-ln -sfn "\$INSTALL_ROOT/pwned-check-pam-helper_\${VERSION}_linux_\${ARCH}" "\$INSTALL_ROOT/current-pam-helper"
 ln -sfn "\$INSTALL_ROOT/current" "\$BIN_DIR/pwned-check"
-ln -sfn "\$INSTALL_ROOT/current-pam-helper" "\$BIN_DIR/pwned-check-pam-helper"
 
 "\$BIN_DIR/pwned-check" --version
-"\$BIN_DIR/pwned-check-pam-helper" --version
 EOF
 chmod 0755 "$PACKAGE_DIR/install.sh"
 

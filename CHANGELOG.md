@@ -6,7 +6,19 @@ The format is intentionally lightweight while the project is pre-production.
 
 ## Unreleased
 
-- No unreleased changes yet.
+### Added
+
+- arm64 persistent VM coverage for Debian, Ubuntu, Fedora, Rocky, and Alpine native PAM smoke validation.
+
+### Changed
+
+- Documentation is reorganized around package-first native PAM installation from signed repositories.
+- Alpine repository smoke uses the corrected public-key filename path.
+- Arch repository endpoint checks now extract package descriptions from the repository metadata.
+
+### Removed
+
+- `pwned-check-pam-helper` and the old `pam_exec.so expose_authtok` integration path. The native PAM module is now the only supported PAM integration.
 
 ## v0.1.7 - 2026-05-05
 

@@ -24,8 +24,7 @@ make validate
 
 This checks formatting, tests, vet, build, and binary smoke behavior.
 It also runs Staticcheck via the module-pinned tool dependency.
-The validation gate mirrors CI and includes the Docker smoke matrix.
-It also installs the Linux package into minimal distro containers and validates PAM outcomes through `pam_exec.so expose_authtok`.
+The validation gate mirrors CI and includes the Docker checker smoke matrix.
 It also builds Linux release packages for `amd64` and `arm64`.
 
 For Linux runtime compatibility checks across minimal distro images:
@@ -34,11 +33,8 @@ For Linux runtime compatibility checks across minimal distro images:
 make docker-smoke
 ```
 
-For Linux PAM package integration checks across minimal distro images:
-
-```bash
-make docker-pam-smoke
-```
+Native PAM package integration is validated through the distro VM and package
+smoke targets documented in `docs/distro-testing.md`.
 
 ## Git Hooks
 

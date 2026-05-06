@@ -45,7 +45,7 @@ VM_PREBUILT_DIR="/tmp/pwned-check-vm-prebuilt"
 VM_PREBUILT_BIN="$VM_PREBUILT_DIR/pwned-check"
 VM_CHECKOUT="/home/codex/pwned-check"
 VERSION="$(git describe --tags --dirty --always 2>/dev/null || printf 'dev')"
-LDFLAGS_VALUE="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION -X github.com/phillipmcmahon/pwned-check/internal/pamhelper.Version=$VERSION"
+LDFLAGS_VALUE="-X github.com/phillipmcmahon/pwned-check/internal/pwned.Version=$VERSION"
 REMOVE_DEB_PACKAGE="if dpkg -s pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo env DEBIAN_FRONTEND=noninteractive dpkg -r pwned-check-native-pam; fi"
 REMOVE_RPM_PACKAGE="if rpm -q pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo rpm -e pwned-check-native-pam; fi"
 REMOVE_APK_PACKAGE="if apk info -e pwned-check-native-pam >/dev/null 2>&1; then if command -v pwned-check-pam-disable >/dev/null 2>&1; then sudo pwned-check-pam-disable || true; fi; sudo apk del pwned-check-native-pam; fi"
@@ -189,9 +189,6 @@ run_arm64_docker_smoke_stage() {
 
     echo "make docker-smoke (local arm64 CI-parity targets: $ARM64_DOCKER_IMAGES)"
     DOCKER_SMOKE_IMAGES="$ARM64_DOCKER_IMAGES" DOCKER_SMOKE_PLATFORM=linux/arm64 make docker-smoke
-
-    echo "make docker-pam-smoke (local arm64 CI-parity targets: $ARM64_DOCKER_IMAGES)"
-    DOCKER_PAM_SMOKE_IMAGES="$ARM64_DOCKER_IMAGES" DOCKER_PAM_SMOKE_PLATFORM=linux/arm64 make docker-pam-smoke
 }
 
 if [ "${PWNED_CHECK_VM_SMOKE_ONLY:-}" = "1" ]; then
@@ -254,9 +251,6 @@ run_vm_smoke_stage
 if [ -n "$NO_VM_DOCKER_IMAGES" ]; then
     echo "make docker-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
     DOCKER_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-smoke
-
-    echo "make docker-pam-smoke (no-VM targets: $NO_VM_DOCKER_IMAGES)"
-    DOCKER_PAM_SMOKE_IMAGES="$NO_VM_DOCKER_IMAGES" make docker-pam-smoke
 else
     echo "no local Docker-only smoke targets configured"
 fi

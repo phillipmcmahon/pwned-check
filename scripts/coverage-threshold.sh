@@ -4,7 +4,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 THRESHOLD="${COVERAGE_THRESHOLD:-85}"
-PACKAGES="${COVERAGE_PACKAGES:-./internal/pwned ./internal/pamhelper}"
+PACKAGES="${COVERAGE_PACKAGES:-./internal/pwned}"
 
 usage() {
     cat <<'EOF'

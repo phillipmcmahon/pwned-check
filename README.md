@@ -6,7 +6,11 @@ Only the first 5 characters of the password's SHA-1 hash are sent to the provide
 
 ## Quick Install
 
-Native Linux PAM packages are the preferred install path. Packages are available for Debian/Ubuntu, Fedora/RHEL/Rocky, Arch Linux, and Alpine Linux-PAM through signed package repositories.
+Native Linux PAM packages are the production-supported install path as of
+v0.3.0. Packages are available for Debian/Ubuntu, Fedora/RHEL/Rocky, Arch
+Linux, and Alpine Linux-PAM through signed package repositories. The production
+gate evidence is recorded in
+[v0.3.0 production gate evidence](docs/releases/v0.3.0-production-gate.md).
 
 Start with the [Linux package install guide](docs/linux-install.md). It covers
 repository setup, package installation, dry-run, enforcement, rollback, removal,

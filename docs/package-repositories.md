@@ -4,7 +4,11 @@ This maintainer reference describes signed distro package repositories for
 native PAM package distribution. Operators looking for installation commands
 should start with [Linux package install](linux-install.md).
 
-Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
+Repository-backed releases must satisfy the
+[Production release gate](production-release-gate.md) before they are described
+as production-ready. v0.3.0 is the Linux production baseline; its gate evidence
+is recorded in
+[v0.3.0 production gate evidence](releases/v0.3.0-production-gate.md).
 
 ## Repository Status
 

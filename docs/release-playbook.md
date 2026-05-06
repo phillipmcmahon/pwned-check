@@ -1,6 +1,7 @@
 # Release Playbook
 
-Use this checklist for public releases. The release process is intentionally simple while the project is pre-production.
+Use this checklist for public releases. Keep the process simple, evidence-led,
+and operator-focused.
 
 ## Rules
 
@@ -9,7 +10,10 @@ Use this checklist for public releases. The release process is intentionally sim
 - Keep release notes operator-focused.
 - Do not publish macOS or Windows production artifacts until signing requirements are addressed.
 - Keep live HIBP calls out of release validation.
-- Do not describe native PAM distribution as production-ready until the [Production release gate](production-release-gate.md) passes.
+- Describe native PAM distribution as production-ready only for releases that
+  pass the [Production release gate](production-release-gate.md). macOS and
+  Windows production artifacts remain deferred until their signing and
+  platform-security requirements are addressed.
 
 ## Release Tracking
 

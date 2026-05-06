@@ -1,6 +1,8 @@
 # Documentation Index
 
-Use this page as the front door for project and operator documentation. The normal operator path is package based: install the native PAM package from a signed repository, enable dry-run, validate, then switch to enforcement.
+Use this page as the front door for project and operator documentation. The
+Linux production path is package based: install the native PAM package from a
+signed repository, enable dry-run, validate, then switch to enforcement.
 
 ## Operator Path
 
@@ -30,6 +32,7 @@ Use this page as the front door for project and operator documentation. The norm
 | Rebuild or refresh release validation VMs | [VM runbooks](vm-runbooks.md): per-distro bootstrap packages, smoke commands, recovery checks, and known quirks |
 | Prepare a release | [Release playbook](release-playbook.md): release validation, Linux artifacts, and failure rule |
 | Check production release readiness | [Production release gate](production-release-gate.md): signing, repository, smoke, rollback, outage, documentation, and board criteria |
+| Review the Linux production baseline | [Linux production baseline](linux-production-baseline.md): EP11 closeout evidence and remaining non-Linux scope |
 | Maintain package repositories | [Package repositories](package-repositories.md): repository layout, signing, key rotation, and live endpoint checks |
 | Review native PAM design details | [Native PAM module](native-pam-module.md): Rust/FFI contract and PAM placement |
 

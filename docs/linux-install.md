@@ -4,6 +4,11 @@ This is the normal operator path for `pwned-check` on Linux: add the signed
 repository, install `pwned-check-native-pam`, enable dry-run, validate, then
 switch to enforcement.
 
+This guide describes the Linux production baseline introduced in v0.3.0. Use
+signed repository packages for production installs. GitHub Release package
+assets are immutable release artifacts for inspection, recovery, and repository
+publication, not the normal operator install path.
+
 Package installation only places files on disk. It does not change PAM until
 you run an enable command.
 

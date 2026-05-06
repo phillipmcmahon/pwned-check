@@ -1,8 +1,7 @@
 # Changelog
 
-All notable project changes should be recorded here.
-
-The format is intentionally lightweight while the project is pre-production.
+All notable project changes should be recorded here. Keep the format lightweight
+and operator-focused.
 
 ## Unreleased
 
@@ -12,6 +11,9 @@ The format is intentionally lightweight while the project is pre-production.
 
 - Linux production-baseline closeout tracking for final package and repository readiness.
 - A single operator-facing Linux package install guide covering signed repository setup, install, dry-run, enforcement, rollback, removal, and emergency recovery.
+- v0.3.0 is the Linux production baseline after signed release publication,
+  repository publication, live repository install smokes, rollback validation,
+  and project-board closeout.
 
 ### Changed
 

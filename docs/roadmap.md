@@ -174,4 +174,8 @@ Deliverables:
 
 ## Current Recommendation
 
-Keep the native PAM package path healthy while preparing release candidates. New work should focus on release readiness, signing/provenance, production feedback from supported Linux distros, and the macOS/Windows feasibility tracks. Keep all breach-checking logic in the Go checker binary.
+Keep the native PAM package path healthy as the Linux production baseline. New
+Linux work should focus on repository maintenance, operational feedback, and
+targeted hardening. macOS and Windows remain feasibility tracks under Epic 7
+until their signing and platform-security requirements are designed and
+validated. Keep all breach-checking logic in the Go checker binary.

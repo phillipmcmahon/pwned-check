@@ -33,7 +33,7 @@ production install channel.
 | Debian/Ubuntu | Apt `amd64` and `arm64` |
 | Fedora/RHEL/Rocky | DNF/Yum `x86_64` and `aarch64` |
 | Arch Linux | Pacman `x86_64` |
-| Alpine Linux-PAM | APK `aarch64` |
+| Alpine Linux-PAM | APK `x86_64` and `aarch64` |
 
 Arch Linux ARM is not targeted because it is a separate downstream ecosystem.
 Alpine support requires Linux-PAM; BusyBox-only authentication is outside scope.

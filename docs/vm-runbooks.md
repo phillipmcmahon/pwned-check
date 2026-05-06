@@ -195,7 +195,7 @@ Host aliases: `codex-vm-alpine` (`x86_64`) and `codex-vm-alpine-arm64`
 (`arm64`)
 
 Purpose: Alpine Linux-PAM package behavior, package rollback, and
-Alpine repository smoke for published `aarch64` content.
+Alpine repository smoke for published `x86_64` and `aarch64` content.
 
 Bootstrap packages:
 
@@ -215,6 +215,7 @@ PWNED_CHECK_VM_SMOKE_HOSTS=codex-vm-alpine-arm64 PWNED_CHECK_VM_SMOKE_ONLY=1 ./s
 Repository smoke:
 
 ```bash
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine --repo-url https://phillipmcmahon.github.io/pwned-check/alpine
 ./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/alpine
 ```
 
@@ -229,10 +230,9 @@ Known quirks:
 
 - Alpine support is for Linux-PAM deployments, not BusyBox-only authentication
   paths.
-- Current published Alpine repository content is `aarch64`; use
-  `codex-vm-alpine-arm64` for live endpoint install smoke. The `x86_64` VM
-  remains useful for package-script and loader-path regression checks when a
-  matching local APK is built.
+- Current published Alpine repository content covers `x86_64` and `aarch64`;
+  use `codex-vm-alpine` and `codex-vm-alpine-arm64` for live endpoint install
+  smoke.
 - Alpine module placement varies by release; package and dependency checks
   cover both observed loader paths.
 

@@ -5,6 +5,14 @@ and operator-focused.
 
 ## Unreleased
 
+### Fixed
+
+- Alpine native PAM APK release assets now include the APK architecture in the
+  exported filename so `x86_64` and `aarch64` packages can coexist in one
+  release asset directory and repository publication can index both.
+- Alpine repository endpoint validation now checks both published APK indexes:
+  `x86_64` and `aarch64`.
+
 ## v0.3.2 - 2026-05-06
 
 ### Fixed

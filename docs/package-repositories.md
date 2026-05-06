@@ -26,7 +26,7 @@ the production keys.
 | Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs, including arm64 guests, with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`/`arm64` |
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs, including arm64 guests, with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`/`aarch64` |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM is a separate downstream ecosystem and is not targeted |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | Linux-PAM deployments only; BusyBox-only auth is outside scope |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine` and `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | Linux-PAM deployments only; BusyBox-only auth is outside scope |
 
 GitHub Pages endpoints:
 
@@ -48,7 +48,7 @@ Published repository architecture status:
 | Apt | `amd64`, `arm64` | `amd64` and `arm64` on Ubuntu and Debian VMs | None |
 | DNF/Yum | `x86_64`, `aarch64` | `x86_64` and `aarch64` on Fedora and Rocky VMs | None |
 | Arch | `x86_64` | `x86_64` on the Arch VM | None; Arch Linux ARM is not targeted |
-| Alpine | `aarch64` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
+| Alpine | `x86_64`, `aarch64` | `x86_64` on `codex-vm-alpine`; `aarch64` on `codex-vm-alpine-arm64` | None |
 
 All native package families expose the same operator commands after installation:
 
@@ -179,8 +179,9 @@ make native-pam-live-repo-smokes
 ```
 
 The wrapper runs apt, RPM, Arch, and Alpine live endpoint smokes on persistent
-VMs where architecture coverage exists. The default Alpine endpoint host is
-`codex-vm-alpine-arm64`, matching the currently published `aarch64` APK index.
+VMs where architecture coverage exists. The default Alpine endpoint hosts are
+`codex-vm-alpine` and `codex-vm-alpine-arm64`, covering the published `x86_64`
+and `aarch64` APK indexes.
 
 For continuous availability monitoring, the scheduled `Repository Endpoints`
 GitHub Actions workflow runs:
@@ -429,17 +430,18 @@ exercises dry-run/enforce/disable on a disposable Linux-PAM service, removes the
 package, and verifies managed files are gone:
 
 ```bash
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine
 ./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine-arm64
 ```
 
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
 build tooling, `abuild`, or `apk index` for this repo-only smoke.
 
-### Alpine x86_64 Status
+### Alpine Architecture Status
 
-Alpine `x86_64` package publication remains deferred until a release includes a
-signed x86_64 APK and matching `x86_64/APKINDEX.tar.gz`. The Alpine live
-endpoint is currently validated on `codex-vm-alpine-arm64`.
+Alpine repository publication covers both `x86_64` and `aarch64`. Keep both
+APK indexes signed and smoke-tested before promoting a repository-backed
+release.
 
 ## Publication Rules
 

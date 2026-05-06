@@ -18,7 +18,7 @@ enable command is run.
 | Debian/Ubuntu | Apt | `amd64`, `arm64` |
 | Fedora/RHEL/Rocky | DNF/Yum | `x86_64`, `aarch64` |
 | Arch Linux | Pacman | `x86_64` |
-| Alpine Linux-PAM | APK | `aarch64` |
+| Alpine Linux-PAM | APK | `x86_64`, `aarch64` |
 
 Arch Linux ARM is not targeted. Alpine requires Linux-PAM; BusyBox-only
 authentication is outside scope.

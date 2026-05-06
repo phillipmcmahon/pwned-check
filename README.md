@@ -24,7 +24,7 @@ Supported package repositories:
 | Debian/Ubuntu | `amd64`, `arm64` |
 | Fedora/RHEL/Rocky | `x86_64`, `aarch64` |
 | Arch Linux | `x86_64` |
-| Alpine Linux-PAM | `aarch64` |
+| Alpine Linux-PAM | `x86_64`, `aarch64` |
 
 Package installation does not change PAM. Enablement is explicit and should
 start in dry-run mode:

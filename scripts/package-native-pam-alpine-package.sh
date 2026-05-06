@@ -171,7 +171,9 @@ apk_path="$(
     } | sort | tail -n 1
 )"
 [ -n "$apk_path" ] || fail "Alpine package was not produced"
-apk_name="$(basename "$apk_path")"
+apk_arch="$(tar -xzOf "$apk_path" .PKGINFO | awk -F' = ' '/^arch/ {print $2; exit}')"
+[ -n "$apk_arch" ] || fail "could not determine APK architecture for $apk_path"
+apk_name="$(basename "$apk_path" .apk)-$apk_arch.apk"
 cp "$apk_path" "$OUTPUT_DIR/$apk_name"
 
 metadata="$OUTPUT_DIR/$apk_name.build-metadata.json"

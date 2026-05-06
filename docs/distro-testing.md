@@ -56,7 +56,7 @@ repository smoke.
 |---|---|---|---|
 | Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu`; `arm64` on `codex-vm-debian-arm64` and `codex-vm-ubuntu-arm64` | Apt `arm64` metadata and package assets | Covered by persistent apt package/repository VM smokes |
 | Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky`; `arm64` on `codex-vm-fedora-arm64` and `codex-vm-rocky-arm64` | RPM `aarch64` metadata and package assets | Covered by persistent Fedora and Rocky RPM package/repository VM smokes |
-| Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `aarch64` endpoint and package assets | Covered by persistent Alpine package/repository VM smokes |
+| Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `x86_64` and `aarch64` endpoint and package assets | Covered by persistent Alpine package/repository VM smokes |
 | Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux is `x86_64` only for this project |
 
 ### ARM VM Runbook Template

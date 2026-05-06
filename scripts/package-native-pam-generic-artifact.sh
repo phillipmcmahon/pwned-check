@@ -13,7 +13,7 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-generic-artifact.sh --version <version> [OPTIONS]
 
-Build the manual-PAM staging rootfs for Linux distributions that use explicit
+Build the service-file wrapper staging rootfs for Linux distributions that use explicit
 PAM file edits rather than pam-auth-update or authselect.
 
 Options:
@@ -75,7 +75,7 @@ done
 [ -n "$VERSION" ] || fail "--version is required"
 
 if [ "$(uname -s)" != "Linux" ]; then
-    echo "native PAM manual-PAM staging rootfs skipped: Linux host required" >&2
+    echo "native PAM service-file wrapper staging rootfs skipped: Linux host required" >&2
     exit 0
 fi
 
@@ -139,12 +139,12 @@ BASENAME="pwned-check-native-pam_${VERSION}_${FAMILY}_${ARTIFACT_ARCH}"
 PACKAGE_DIR="$WORK_DIR/$BASENAME"
 ROOTFS="$PACKAGE_DIR/rootfs"
 DOC_DIR="$ROOTFS/usr/share/doc/pwned-check"
-MANUAL_DIR="$ROOTFS/usr/share/pwned-check/manual-pam"
+SERVICE_DIR="$ROOTFS/usr/share/pwned-check/service-pam"
 ROOTFS_MODULE_DIR="$ROOTFS$MODULE_DIR"
 
 mkdir -p \
     "$DOC_DIR" \
-    "$MANUAL_DIR" \
+    "$SERVICE_DIR" \
     "$ROOTFS/usr/bin" \
     "$ROOTFS$HELPER_DIR" \
     "$ROOTFS_MODULE_DIR" \
@@ -183,13 +183,13 @@ mkdir -p \
     fi
 )
 
-cat > "$MANUAL_DIR/enable-manual-pam.sh" <<'EOF'
+cat > "$SERVICE_DIR/enable-service-pam.sh" <<'EOF'
 #!/bin/sh
 set -eu
 
 SERVICE_PATH="${PWNED_CHECK_PAM_SERVICE_PATH:-/etc/pam.d/passwd}"
 BACKUP_DIR="${PWNED_CHECK_BACKUP_DIR:-/var/lib/pwned-check/pam-backups}"
-STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/manual-pam-last-backup}"
+STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/service-pam-last-backup}"
 INSERT_AFTER_PATTERN="${PWNED_CHECK_INSERT_AFTER_PATTERN:-}"
 PROFILE_MODE="${PWNED_CHECK_PAM_MODE:-dry_run}"
 
@@ -271,13 +271,13 @@ rm -f "$tmp"
 echo "Enabled pwned-check in PAM service: $SERVICE_PATH"
 echo "Backup stored at: $(cat "$STATE_FILE")"
 EOF
-chmod 0755 "$MANUAL_DIR/enable-manual-pam.sh"
+chmod 0755 "$SERVICE_DIR/enable-service-pam.sh"
 
 cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/service-pam/enable-service-pam.sh
 EOF
 chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run"
 
@@ -285,7 +285,7 @@ cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
+PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/service-pam/enable-service-pam.sh
 EOF
 chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce"
 
@@ -293,23 +293,23 @@ cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-disable" <<'EOF'
 #!/bin/sh
 set -eu
 
-/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh "$@"
+/usr/share/pwned-check/service-pam/rollback-service-pam.sh "$@"
 EOF
 chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-disable"
 
-cat > "$MANUAL_DIR/rollback-manual-pam.sh" <<'EOF'
+cat > "$SERVICE_DIR/rollback-service-pam.sh" <<'EOF'
 #!/bin/sh
 set -eu
 
-STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/manual-pam-last-backup}"
+STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/service-pam-last-backup}"
 BACKUP_PATH="${1:-}"
 if [ -z "$BACKUP_PATH" ] && [ -f "$STATE_FILE" ]; then
     BACKUP_PATH="$(cat "$STATE_FILE")"
 fi
 
 [ -n "$BACKUP_PATH" ] || {
-    echo "usage: rollback-manual-pam.sh <backup-path>" >&2
-    echo "or keep $STATE_FILE from enable-manual-pam.sh" >&2
+    echo "usage: rollback-service-pam.sh <backup-path>" >&2
+    echo "or keep $STATE_FILE from enable-service-pam.sh" >&2
     exit 2
 }
 [ -f "$BACKUP_PATH" ] || {
@@ -323,7 +323,7 @@ service_path="${PWNED_CHECK_PAM_SERVICE_PATH:-/etc/pam.d/$service_name}"
 install -m 0644 "$BACKUP_PATH" "$service_path"
 echo "Restored PAM service from backup: $service_path"
 EOF
-chmod 0755 "$MANUAL_DIR/rollback-manual-pam.sh"
+chmod 0755 "$SERVICE_DIR/rollback-service-pam.sh"
 
 cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
 {
@@ -334,8 +334,8 @@ cat > "$PACKAGE_DIR/metadata/build.json" <<EOF
   "module_path": "$MODULE_DIR/pam_pwned_check.so",
   "pwned_check_source": "$(if [ -n "$PWNED_CHECK_BIN" ]; then printf prebuilt; else printf built; fi)",
   "build_time": "$BUILD_TIME",
-  "manual_enable": "/usr/share/pwned-check/manual-pam/enable-manual-pam.sh",
-  "manual_rollback": "/usr/share/pwned-check/manual-pam/rollback-manual-pam.sh",
+  "service_enable": "/usr/share/pwned-check/service-pam/enable-service-pam.sh",
+  "service_rollback": "/usr/share/pwned-check/service-pam/rollback-service-pam.sh",
   "enable_dry_run_helper": "$HELPER_DIR/pwned-check-pam-enable-dry-run",
   "enable_enforce_helper": "$HELPER_DIR/pwned-check-pam-enable-enforce",
   "disable_helper": "$HELPER_DIR/pwned-check-pam-disable",

@@ -207,7 +207,7 @@ if [ -n "$EXPECTED_VERSION" ] && [ "$actual_version" != "$EXPECTED_VERSION" ]; t
 fi
 
 service="/etc/pam.d/pwned-check-repo-smoke"
-state_file="$REMOTE_DIR/manual-pam-last-backup"
+state_file="$REMOTE_DIR/service-pam-last-backup"
 backup_dir="$REMOTE_DIR/pam-backups"
 [ ! -e "$service" ] || fail "test PAM service already exists: $service"
 as_root sh -c "printf '%s\n' 'password required pam_unix.so' > '$service'"
@@ -232,7 +232,7 @@ as_root apk del "$PACKAGE_NAME"
 if apk info -e "$PACKAGE_NAME" >/dev/null 2>&1; then
     fail "$PACKAGE_NAME is still installed after removal"
 fi
-for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/manual-pam; do
+for path in /usr/bin/pwned-check /usr/sbin/pwned-check-pam-enable-dry-run /usr/sbin/pwned-check-pam-enable-enforce /usr/sbin/pwned-check-pam-disable /usr/lib/security/pam_pwned_check.so /usr/share/pwned-check/service-pam; do
     [ ! -e "$path" ] || fail "package-managed path still exists after removal: $path"
 done
 

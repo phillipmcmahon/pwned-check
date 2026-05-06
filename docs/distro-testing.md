@@ -468,7 +468,7 @@ ssh codex-vm-alpine 'cd /home/codex/pwned-check &&
   if apk info -e pwned-check-native-pam >/dev/null 2>&1; then sudo apk del pwned-check-native-pam; fi &&
   apk_name="$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin /tmp/pwned-check-alpine-prebuilt/pwned-check)" &&
   sudo apk add --allow-untrusted "dist/release/$apk_name" &&
-  ./scripts/native-pam-manual-installed-smoke.sh &&
+  ./scripts/native-pam-service-installed-smoke.sh &&
   sudo apk del pwned-check-native-pam'
 ```
 

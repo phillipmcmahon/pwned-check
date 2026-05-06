@@ -148,11 +148,11 @@ run_vm_smoke() {
             ;;
         codex-vm-alpine | codex-vm-alpine-arm64)
             sync_vm_checkout "$host" "$goarch"
-            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_APK_PACKAGE && apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo apk del pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo apk add --allow-untrusted \"dist/release/\$apk_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo apk del pwned-check-native-pam && trap - EXIT INT TERM"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_APK_PACKAGE && apk_name=\"\$(./scripts/package-native-pam-alpine-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo apk del pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo apk add --allow-untrusted \"dist/release/\$apk_name\" && ./scripts/native-pam-service-installed-smoke.sh && sudo apk del pwned-check-native-pam && trap - EXIT INT TERM"
             ;;
         codex-vm-arch)
             sync_vm_checkout "$host" "$goarch"
-            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_ARCH_PACKAGE && pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo pacman -Rns --noconfirm pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo pacman -U --noconfirm \"dist/release/\$pkg_name\" && ./scripts/native-pam-manual-installed-smoke.sh && sudo pacman -Rns --noconfirm pwned-check-native-pam && trap - EXIT INT TERM"
+            run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_ARCH_PACKAGE && pkg_name=\"\$(./scripts/package-native-pam-arch-package.sh --version 0.0.0 --pwned-check-bin '$VM_PREBUILT_BIN')\" && trap 'sudo pacman -Rns --noconfirm pwned-check-native-pam >/dev/null 2>&1 || true' EXIT INT TERM && sudo pacman -U --noconfirm \"dist/release/\$pkg_name\" && ./scripts/native-pam-service-installed-smoke.sh && sudo pacman -Rns --noconfirm pwned-check-native-pam && trap - EXIT INT TERM"
             ;;
         *)
             fail "unknown VM smoke host: $host"

@@ -2,7 +2,7 @@
 
 set -eu
 
-ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 VERSION=""
 OUTPUT_DIR="$ROOT/dist/release"
 BUILD_TIME="${SOURCE_DATE_EPOCH:-}"
@@ -10,10 +10,10 @@ PWNED_CHECK_BIN=""
 
 usage() {
     cat <<'EOF'
-Usage: scripts/package-native-pam-rpm-artifact.sh --version <version> [OPTIONS]
+Usage: scripts/lib/package-native-pam-rpm-rootfs.sh --version <version> [OPTIONS]
 
-Build an RPM-family native PAM filesystem-layout tarball for the current
-Linux architecture. The artifact includes pwned-check, pam_pwned_check.so,
+Build an RPM-family native PAM staging rootfs tarball for the current
+Linux architecture. The tarball includes pwned-check, pam_pwned_check.so,
 authselect enable/rollback helpers, docs, and build metadata.
 
 Options:
@@ -65,7 +65,7 @@ done
 [ -n "$VERSION" ] || fail "--version is required"
 
 if [ "$(uname -s)" != "Linux" ]; then
-    echo "native PAM RPM-family artifact skipped: Linux host required" >&2
+    echo "native PAM RPM-family rootfs skipped: Linux host required" >&2
     exit 0
 fi
 

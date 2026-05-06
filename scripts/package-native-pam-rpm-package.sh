@@ -109,9 +109,9 @@ ARTIFACT_OUT="$WORK_DIR/artifacts"
 mkdir -p "$ARTIFACT_OUT" "$OUTPUT_DIR"
 
 if [ -n "$PWNED_CHECK_BIN" ]; then
-    artifact_name="$(cd "$ROOT" && ./scripts/package-native-pam-rpm-artifact.sh --version "$VERSION" --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME" --pwned-check-bin "$PWNED_CHECK_BIN")"
+    artifact_name="$(cd "$ROOT" && ./scripts/lib/package-native-pam-rpm-rootfs.sh --version "$VERSION" --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME" --pwned-check-bin "$PWNED_CHECK_BIN")"
 else
-    artifact_name="$(cd "$ROOT" && ./scripts/package-native-pam-rpm-artifact.sh --version "$VERSION" --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME")"
+    artifact_name="$(cd "$ROOT" && ./scripts/lib/package-native-pam-rpm-rootfs.sh --version "$VERSION" --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME")"
 fi
 artifact="$ARTIFACT_OUT/$artifact_name.tar.gz"
 [ -f "$artifact" ] || fail "artifact was not produced: $artifact"

@@ -12,8 +12,8 @@ usage() {
     cat <<'EOF'
 Usage: scripts/package-native-pam-arch-package.sh --version <version> [OPTIONS]
 
-Build an Arch Linux package from the generic native PAM filesystem-layout
-artifact and the PKGBUILD template under packaging/arch/.
+Build an Arch Linux package from the shared service-file native PAM rootfs
+tarball and the PKGBUILD template under packaging/arch/.
 
 Options:
   --version <version>        Version label embedded in package metadata
@@ -95,10 +95,12 @@ ARTIFACT_OUT="$WORK_DIR/artifacts"
 BUILD_DIR="$WORK_DIR/build"
 mkdir -p "$ARTIFACT_OUT" "$BUILD_DIR" "$OUTPUT_DIR"
 
+# Arch and Alpine intentionally share the service-file rootfs builder because
+# both package families install the same explicit PAM service-file wrappers.
 if [ -n "$PWNED_CHECK_BIN" ]; then
-    artifact_name="$(cd "$ROOT" && ./scripts/package-native-pam-generic-artifact.sh --version "$VERSION" --family arch --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME" --pwned-check-bin "$PWNED_CHECK_BIN")"
+    artifact_name="$(cd "$ROOT" && ./scripts/lib/package-native-pam-service-rootfs.sh --version "$VERSION" --family arch --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME" --pwned-check-bin "$PWNED_CHECK_BIN")"
 else
-    artifact_name="$(cd "$ROOT" && ./scripts/package-native-pam-generic-artifact.sh --version "$VERSION" --family arch --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME")"
+    artifact_name="$(cd "$ROOT" && ./scripts/lib/package-native-pam-service-rootfs.sh --version "$VERSION" --family arch --output-dir "$ARTIFACT_OUT" --build-time "$BUILD_TIME")"
 fi
 artifact="$ARTIFACT_OUT/$artifact_name.tar.gz"
 [ -f "$artifact" ] || fail "artifact was not produced: $artifact"

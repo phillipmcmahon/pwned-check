@@ -4,10 +4,10 @@ set -eu
 
 usage() {
     cat <<'EOF'
-Usage: scripts/package-native-pam-debian-artifact.sh --version <version> [OPTIONS]
+Usage: scripts/lib/package-native-pam-debian-rootfs.sh --version <version> [OPTIONS]
 
 Build the Debian/Ubuntu native PAM staging rootfs for the current Linux
-architecture. The artifact is consumed by the .deb package builder.
+architecture. The tarball is consumed by the .deb package builder.
 
 Options:
   --version <version>      Release version, for example 0.1.0 or dev-abcdef12
@@ -27,7 +27,7 @@ require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
-ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 VERSION=""
 OUTPUT_DIR="$ROOT/dist/release"
 BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -67,7 +67,7 @@ done
 
 [ -n "$VERSION" ] || fail "--version is required"
 [ "$(uname -s)" = "Linux" ] || {
-    echo "native PAM Debian artifact skipped: Linux host required"
+    echo "native PAM Debian rootfs skipped: Linux host required"
     exit 0
 }
 

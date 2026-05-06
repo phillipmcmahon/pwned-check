@@ -2,7 +2,7 @@
 
 set -eu
 
-ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 VERSION=""
 OUTPUT_DIR="$ROOT/dist/release"
 BUILD_TIME="${SOURCE_DATE_EPOCH:-}"
@@ -11,10 +11,10 @@ FAMILY="generic"
 
 usage() {
     cat <<'EOF'
-Usage: scripts/package-native-pam-generic-artifact.sh --version <version> [OPTIONS]
+Usage: scripts/lib/package-native-pam-service-rootfs.sh --version <version> [OPTIONS]
 
-Build the service-file wrapper staging rootfs for Linux distributions that use explicit
-PAM file edits rather than pam-auth-update or authselect.
+Build the shared service-file wrapper staging rootfs for Linux distributions
+that use explicit PAM file edits rather than pam-auth-update or authselect.
 
 Options:
   --version <version>        Version label embedded in artifact names
@@ -100,7 +100,7 @@ case "$(uname -m)" in
         GOARCH_VALUE="arm64"
         ;;
     *)
-        fail "unsupported generic native PAM architecture: $(uname -m)"
+        fail "unsupported service-file native PAM architecture: $(uname -m)"
         ;;
 esac
 

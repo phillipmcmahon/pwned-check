@@ -29,7 +29,7 @@ Use labels to classify entries:
 - `area: cli`: checker CLI behavior.
 - `area: linux`: Linux/PAM integration.
 - `area: provider`: live HIBP provider behavior and mocked provider tests.
-- `area: release`: packaging, artifacts, and release automation.
+- `area: release`: packaging, package outputs, and release automation.
 - `area: security`: threat model, logging, operational controls.
 - `area: macos`: macOS-specific work.
 - `area: windows`: Windows-specific work.
@@ -49,7 +49,7 @@ Why the work matters and what constraints shape it.
 - As a ..., I want ..., so that ...
 
 ## Deliverables
-- Concrete artifact, behavior, or decision.
+- Concrete package output, behavior, or decision.
 
 ## Acceptance Criteria
 - Observable criteria that must be true before the epic is Done.

@@ -4,9 +4,7 @@ This is the complete user guide for Linux. It describes the application as it
 is today: install the native PAM package from a signed repository, enable
 dry-run, validate logs and rollback, then switch to enforcement.
 
-GitHub Release assets are build artifacts for inspection and repository
-publication. Operators should install from the package repository for their
-distro family.
+Operators should install from the package repository for their distro family.
 
 Package installation only places files on disk. PAM is not changed until an
 enable command is run.

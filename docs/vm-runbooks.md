@@ -223,7 +223,7 @@ Recovery checks:
 
 - `sudo pwned-check-pam-disable || true`
 - `sudo apk del pwned-check-native-pam || true`
-- verify the disposable Linux-PAM service used by manual package smokes has been
+- verify the disposable Linux-PAM service used by package smokes has been
   removed or restored
 
 Known quirks:
@@ -260,7 +260,7 @@ Recovery checks:
 
 - `sudo pwned-check-pam-disable || true`
 - `sudo pacman -Rns --noconfirm pwned-check-native-pam || true`
-- verify the disposable Linux-PAM service used by manual package smokes has been
+- verify the disposable Linux-PAM service used by package smokes has been
   removed or restored
 
 Known quirks:

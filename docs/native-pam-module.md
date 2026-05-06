@@ -92,9 +92,12 @@ If the checker contract changes, the module can change to match it. The native m
 
 ### Rust FFI Discipline
 
-The module should be implemented in Rust because it provides a better safety profile than C while still producing a native PAM-loadable shared object.
-
-C remains an acceptable fallback if Rust packaging into target distributions becomes a blocker. Go must not be used for the PAM module. The Go runtime's signal handling, scheduler, and memory model are not appropriate for a shared object loaded into `sshd`, `sudo`, `passwd`, `gdm`, and similar processes. Go remains the checker language.
+The module is implemented in Rust because it provides a better safety profile
+than C while still producing a native PAM-loadable shared object. Go must not
+be used for the PAM module. The Go runtime's signal handling, scheduler, and
+memory model are not appropriate for a shared object loaded into `sshd`,
+`sudo`, `passwd`, `gdm`, and similar processes. Go remains the checker
+language.
 
 The FFI boundary must stay narrow:
 
@@ -404,8 +407,8 @@ Expected package contents:
 - operator documentation under `/usr/share/doc/pwned-check/`
 - Debian `pam-auth-update` profile under `/usr/share/pam-configs/pwned-check`
 - Fedora/RHEL/Rocky authselect wrapper scripts
-- Arch Linux manual-PAM wrapper scripts
-- Alpine Linux-PAM manual-PAM wrapper scripts
+- Arch Linux service-file wrapper scripts
+- Alpine Linux-PAM service-file wrapper scripts
 - rollback and emergency recovery instructions
 
 | Family | Module path | Package build | Package smoke | Enablement and rollback notes |
@@ -432,7 +435,7 @@ Native package release candidates must also run:
 make native-pam-release-provenance
 ```
 
-This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM artifacts. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
+This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM package files. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
 
 Signed apt, dnf/yum, Arch, and Alpine repositories are the normal operator install channel for native PAM packages. Repository layout, signing, and trust-bootstrap instructions live in [Package repositories](package-repositories.md).
 

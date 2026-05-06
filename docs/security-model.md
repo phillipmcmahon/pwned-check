@@ -14,7 +14,7 @@ Primary assets:
 Secondary assets:
 
 - live HIBP range API availability
-- release artifact integrity
+- release package integrity
 - PAM or platform integration configuration
 
 ## Trust Boundaries
@@ -90,7 +90,7 @@ Offline cache or mirror providers are future considerations. If added, they must
 
 ## Release Integrity
 
-Release artifacts should include:
+Release packages should include:
 
 - versioned binaries
 - SHA256 checksums

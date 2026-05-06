@@ -44,7 +44,7 @@ Debian-family, Fedora, Rocky, and Alpine. Arch Linux is targeted as `x86_64`
 only; Arch Linux ARM is a separate downstream ecosystem and is not part of the
 current VM fleet plan.
 
-Docker/QEMU coverage remains useful for CI parity and package-asset confidence,
+Docker/QEMU coverage remains useful for CI parity and package confidence,
 but it is not a replacement for a persistent real-host repository smoke.
 
 ## Recovery Expectations
@@ -65,7 +65,7 @@ RTO target: a lost amd64/x86_64 VM should be recreated within one maintainer
 working session before a release is promoted. ARM VMs follow the same target.
 
 RPO target: persistent VM state has no release-data value beyond the latest
-smoke output. Repository artifacts, signing material, and release notes must be
+smoke output. Repository files, signing material, and release notes must be
 recoverable from GitHub Releases, the repository, and maintainer-controlled
 backup storage, not from VM disks.
 
@@ -77,8 +77,8 @@ Before adding another distro or architecture, confirm:
   runs without starving existing VMs
 - the new VM has a clear owner, SSH alias, and entry in [VM runbooks](vm-runbooks.md)
 - release gates identify whether the VM is mandatory or best-effort
-- Docker fallback coverage is documented separately from real-host acceptance
+- Docker CI-parity coverage is documented separately from real-host acceptance
 
 If the fleet becomes too large for one maintainer to run comfortably, prefer
-native CI runners or a smaller supported-distro matrix over hidden manual
+native CI runners or a smaller supported-distro matrix over untracked local
 dependencies.

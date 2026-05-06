@@ -6,9 +6,7 @@ should start with [Linux package install](linux-install.md).
 
 Repository-backed releases must satisfy the
 [Production release gate](production-release-gate.md) before they are described
-as production-ready. v0.3.0 is the Linux production baseline; its gate evidence
-is recorded in
-[v0.3.0 production gate evidence](releases/v0.3.0-production-gate.md).
+as production-ready.
 
 ## Repository Status
 
@@ -39,7 +37,7 @@ GitHub Pages endpoints:
 
 Current release automation builds Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine
 native PAM packages for `amd64`/`x86_64` and `arm64`/`aarch64`. Arch package
-assets are `x86_64` only.
+files are `x86_64` only.
 
 Published repository architecture status:
 
@@ -196,7 +194,7 @@ without installing packages or mutating PAM state.
 
 ## Apt Repository
 
-Generate metadata from already validated `.deb` artifacts and sign the suite
+Generate metadata from already validated `.deb` packages and sign the suite
 metadata with a release signing key that lives outside the repository and
 outside the distro test VMs:
 
@@ -259,7 +257,7 @@ build tooling for this repo-only smoke.
 ## RPM Repository
 
 The RPM-family repository path signs package headers and repository metadata.
-Generate metadata from already validated `.rpm` artifacts and sign with a key
+Generate metadata from already validated `.rpm` packages and sign with a key
 held in the release signing environment:
 
 ```bash
@@ -320,7 +318,7 @@ build tooling, `rpmbuild`, or `createrepo_c` for this repo-only smoke.
 ## Arch Repository
 
 The Arch repository path signs both the package files and the pacman repository
-database. Generate metadata from already validated `.pkg.tar.zst` artifacts and
+database. Generate metadata from already validated `.pkg.tar.zst` packages and
 keep the private key in the release signing environment:
 
 ```bash
@@ -384,7 +382,7 @@ so the project does not publish Arch Linux ARM binary repository metadata.
 ## Alpine Repository
 
 The Alpine repository path signs `APKINDEX.tar.gz` with an RSA key. Generate
-metadata from already validated `.apk` artifacts and keep the private key in the
+metadata from already validated `.apk` packages and keep the private key in the
 release signing environment:
 
 ```bash

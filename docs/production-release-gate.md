@@ -2,8 +2,6 @@
 
 This gate defines when native PAM distribution can be described as
 production-ready. Signed package repositories are the operator install channel.
-v0.3.0 is the first Linux production baseline release; completed evidence is
-recorded in [v0.3.0 production gate evidence](releases/v0.3.0-production-gate.md).
 
 ## Required Criteria
 
@@ -14,15 +12,13 @@ recorded in [v0.3.0 production gate evidence](releases/v0.3.0-production-gate.md
 | Smoke validation | Repository-only install smoke passes for every supported distro family using public repository configuration and public keys only. |
 | Rollback validation | Every repository smoke covers dry-run enablement, enforcement, disable, package removal, and restoration of the affected PAM or authselect state. |
 | Provider outage behavior | Fail-open and fail-closed behavior is validated through mocked provider outage tests before release, and operator docs explain how to switch posture during an outage. |
-| Documentation | Operations, troubleshooting, repository setup, key rotation, revocation, and release notes describe the shipped channel accurately. |
-| Board closeout | Epic 8 repository publication stories are closed or explicitly deferred with a rationale and linked production impact. |
+| Documentation | The Linux install guide, repository setup, key rotation, revocation, and release notes describe the shipped package channel accurately. |
+| Board closeout | Repository publication stories are closed or explicitly deferred with a rationale and linked release impact. |
 
 Production readiness is blocked if any package repository requires GitHub credentials, build tools, private signing keys, or repository checkout state on the target distro host.
 
 The repository tooling, production signing keys, GitHub Pages endpoints, and
-repo-only smoke suites are implemented for the target families. The Linux
-production baseline evidence is recorded in
-[v0.3.0 production gate evidence](releases/v0.3.0-production-gate.md).
+repo-only smoke suites are implemented for the target families.
 
 Known architecture deferrals must be recorded in release notes before a release
 is called production-ready. Apt `arm64`, RPM `aarch64`, and Alpine `aarch64`
@@ -71,4 +67,4 @@ the project has persistent VMs today.
 
 ## Release Decision
 
-A release may be called production-ready only when this gate passes and the release playbook records the evidence. If a criterion is deferred, the release notes must describe the affected path as pre-production and link to the relevant open story.
+A release may be called production-ready only when this gate passes and the release playbook records the evidence. If a criterion is deferred, the release notes must describe the affected package path and link to the relevant open story.

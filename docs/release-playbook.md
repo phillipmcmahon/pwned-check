@@ -8,11 +8,11 @@ and operator-focused.
 - Release from a clean `main` tree only.
 - Validate from the actual release tree.
 - Keep release notes operator-focused.
-- Do not publish macOS or Windows production artifacts until signing requirements are addressed.
+- Do not publish macOS or Windows production packages until signing requirements are addressed.
 - Keep live HIBP calls out of release validation.
 - Describe native PAM distribution as production-ready only for releases that
   pass the [Production release gate](production-release-gate.md). macOS and
-  Windows production artifacts remain deferred until their signing and
+  Windows production packages remain deferred until their signing and
   platform-security requirements are addressed.
 
 ## Release Tracking
@@ -25,7 +25,7 @@ The release issue should track:
 - version metadata
 - changelog entry
 - validation results
-- artifact names
+- package filenames
 - checksum generation
 - project board reconciliation
 
@@ -45,7 +45,7 @@ The release issue should track:
 
 - Update version metadata with the paired release helper:
   ```bash
-  make prepare-release-version VERSION=v0.1.0
+  make prepare-release-version VERSION=vX.Y.Z
   ```
   This updates the native PAM Rust crate version in
   `native/pam-pwned-check/Cargo.toml`, refreshes `Cargo.lock`, and verifies the
@@ -80,41 +80,34 @@ Capture:
 
 For production-ready repository releases, also capture the [Production release gate](production-release-gate.md) evidence: signing status, repository-only install smoke, rollback validation, provider-outage validation, key-management documentation, and project board closeout.
 
-### 4. Build Artifacts
+### 4. Build Packages
 
-Expected Linux artifacts:
+Native PAM package releases build:
 
-- `pwned-check_<version>_linux_amd64.tar.gz`
-- `pwned-check_<version>_linux_amd64.tar.gz.sha256`
-- `pwned-check_<version>_linux_arm64.tar.gz`
-- `pwned-check_<version>_linux_arm64.tar.gz.sha256`
-- `SHA256SUMS.txt` on published GitHub releases
-
-Build local packages:
+- Debian/Ubuntu `.deb` packages for `amd64` and `arm64`
+- Fedora/RHEL/Rocky `.rpm` packages for `x86_64` and `aarch64`
+- Arch pacman packages for `x86_64`
+- Alpine APK packages for `x86_64` and `aarch64`
+- native PAM checksums, build metadata, and provenance
 
 ```bash
-make package-linux
+make package-native-pam-debian
+make package-native-pam-rpm
+make package-native-pam-arch
+make package-native-pam-alpine
 ```
 
-Each standalone checker archive contains:
+Release automation builds the same package families through
+`scripts/build-native-pam-release-assets.sh`.
 
-- `pwned-check`
-- `install.sh`
-- `README.md`
-- `LICENSE`
-- build and dependency metadata under `metadata/`
+Native PAM package releases must:
 
-Native PAM packaging currently includes Debian/Ubuntu `.deb`, Fedora/RHEL `.rpm`, Arch pacman, and Alpine APK package paths. Release automation builds native PAM packages for `linux/amd64` and `linux/arm64` where the target distro publishes a suitable container builder.
-
-Native PAM package releases must additionally:
-
-- build the native package artifacts for Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine where supported
-- build native PAM `linux/amd64` and `linux/arm64` release artifacts where supported; Arch is `linux/amd64` only
+- build the native package files for each supported repository architecture
 - set `SOURCE_DATE_EPOCH` from the release tag timestamp before package builds
-- run `make native-pam-release-provenance` after native package artifacts are staged under `dist/release`
+- run `make native-pam-release-provenance` after native packages are staged under `dist/release`
 - sign `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` with `PWNED_CHECK_RELEASE_SIGNING_KEY` when release signing keys are available
-- sign `.rpm` artifacts with `rpm --addsign` in the release signing environment
-- sign or publish `.deb` artifacts through the project Debian repository/release signing process
+- sign `.rpm` packages with `rpm --addsign` in the release signing environment
+- sign or publish `.deb` packages through the project Debian repository/release signing process
 - attach checksum, provenance, and signature files alongside native PAM packages
 - keep private signing keys outside the repository and outside test VMs
 - publish production repositories through GitHub Pages under
@@ -154,9 +147,9 @@ Release tag signing starts with the next release prepared after this convention
 was adopted. Do not rewrite an already-published GitHub Release tag only to add
 a missing tag signature; ship the process improvement in the next release
 instead. Rewriting a published tag changes release identity, can retrigger
-release automation, and may fail if immutable release assets already exist.
+release automation, and may fail if immutable release package files already exist.
 
-Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
+Do not publish macOS or Windows packages until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish
 
@@ -179,17 +172,17 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   to unlock the agent or by a temporary local wrapper, but it is not the
   repository default. Never commit passphrases, private keys, or wrapper
   scripts containing secret paths to the repository.
-- Let GitHub Actions build release artifacts.
+- Let GitHub Actions build release packages.
 - Monitor the tag-triggered release workflow from GitHub Actions until it
   reaches a terminal success or failure state. A pushed tag is not considered
-  published until the workflow completes successfully and the release assets are
+  published until the workflow completes successfully and the release packages are
   visible on the GitHub Release.
-- Verify artifact checksums.
-- Verify release provenance attestation is present for the artifacts listed in
+- Verify package checksums.
+- Verify release provenance attestation is present for the packages listed in
   `SHA256SUMS.txt`.
 - For repository-backed releases, publish signed package repositories from the
-  immutable GitHub Release assets after the tag-triggered release workflow has
-  completed and release assets are visible.
+  immutable GitHub Release package files after the tag-triggered release workflow has
+  completed and release packages are visible.
 - Wait for the GitHub Pages deployment for the repository update to complete.
 - Smoke the live repository endpoints from the persistent distro VMs before
   calling the repository-backed release complete:
@@ -197,7 +190,7 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   make native-pam-live-repo-smokes
   ```
   This runs apt on Ubuntu and Debian, RPM on Fedora and Rocky, Arch on the
-  persistent Arch VM, and Alpine on the persistent Alpine arm64 VM.
+  persistent Arch VM, and Alpine on the persistent Alpine VMs.
 - Confirm the non-mutating published endpoint monitor passes, or use it for
   focused endpoint diagnosis:
   ```bash
@@ -206,12 +199,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   This is the same check run by the scheduled `Repository Endpoints` GitHub
   Actions workflow. It verifies public keys, signed metadata, indexes, and
   package visibility without installing packages or changing PAM state.
-- Archive the release artifacts to the NAS after the GitHub Release assets are
+- Archive the release packages to the NAS after the GitHub Release package files are
   visible:
   ```bash
   ./scripts/archive-release-to-nas.sh --version vX.Y.Z
   ```
-  This downloads the immutable GitHub Release assets, adds the GitHub source
+  This downloads the immutable GitHub Release package files, adds the GitHub source
   archives for the tag, writes them to the configured NAS release root, and
   resets its `latest/<version>/` directory.
 

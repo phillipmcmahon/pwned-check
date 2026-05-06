@@ -4,7 +4,7 @@ Thank you for contributing to `pwned-check`.
 
 ## Design Bias
 
-Prefer simple, explicit contracts over compatibility shims. The project has no production users yet, so breaking changes are acceptable when they make the model clearer, safer, or easier to operate.
+Prefer simple, explicit contracts over transition layers. The project has no production users yet, so breaking changes are acceptable when they make the model clearer, safer, or easier to operate.
 
 Security-sensitive behavior should be easy to explain:
 
@@ -60,7 +60,7 @@ The public contract is the operator and integration surface:
 - exit codes
 - environment variables
 - logs
-- release artifacts
+- release package files
 - future PAM integration behavior
 
 Go packages under `internal/` are implementation details.

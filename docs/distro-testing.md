@@ -47,16 +47,15 @@ Do not check VM passwords, IP addresses, or generated private keys into the repo
 
 Persistent VMs are the acceptance path for local package and repository smokes.
 The current fleet includes `linux/amd64`/`x86_64` guests plus Debian-family,
-Fedora, Rocky, and Alpine `linux/arm64` guests. Published arm64/aarch64
-repository metadata without a matching guest remains a documented deferral;
-Docker/QEMU coverage reduces risk, but it does not replace a real-host
-repository smoke.
+Fedora, Rocky, and Alpine `linux/arm64` guests. Docker/QEMU coverage is CI
+parity coverage; it does not replace a real-host repository smoke where a VM
+exists.
 
 | Family | Persistent VM coverage | Published non-amd64 coverage | Status |
 |---|---|---|---|
-| Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu`; `arm64` on `codex-vm-debian-arm64` and `codex-vm-ubuntu-arm64` | Apt `arm64` metadata and package assets | Covered by persistent apt package/repository VM smokes |
-| Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky`; `arm64` on `codex-vm-fedora-arm64` and `codex-vm-rocky-arm64` | RPM `aarch64` metadata and package assets | Covered by persistent Fedora and Rocky RPM package/repository VM smokes |
-| Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `x86_64` and `aarch64` endpoint and package assets | Covered by persistent Alpine package/repository VM smokes |
+| Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu`; `arm64` on `codex-vm-debian-arm64` and `codex-vm-ubuntu-arm64` | Apt `arm64` metadata and packages | Covered by persistent apt package/repository VM smokes |
+| Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky`; `arm64` on `codex-vm-fedora-arm64` and `codex-vm-rocky-arm64` | RPM `aarch64` metadata and packages | Covered by persistent Fedora and Rocky RPM package/repository VM smokes |
+| Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `x86_64` and `aarch64` endpoint and packages | Covered by persistent Alpine package/repository VM smokes |
 | Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux is `x86_64` only for this project |
 
 ### ARM VM Runbook Template
@@ -473,14 +472,11 @@ ssh codex-vm-alpine 'cd /home/codex/pwned-check &&
   sudo apk del pwned-check-native-pam'
 ```
 
-Alpine Linux-PAM module placement varies by release. The persistent Alpine VM
-loads from `/usr/lib/security`, while the pinned `alpine:3.22` Docker image
-loads from `/lib/security`. The Alpine package installs `pam_pwned_check.so`
-in both locations so current supported Alpine targets can load it:
+The Alpine package installs `pam_pwned_check.so` in the canonical Linux-PAM
+module directory used by the supported Alpine package path:
 
 ```text
 /usr/lib/security
-/lib/security
 ```
 
 The dependency allowlist must accept musl's libc name:
@@ -516,9 +512,9 @@ and updates `.test-output/native-pam-alpine-repo-smoke/latest`.
 
 Arch package smoke should run on `codex-vm-arch` for local and release
 validation. The pre-push hook syncs the checkout to the VM, removes any
-previous `pwned-check-native-pam` install, builds the Arch package with
-`makepkg`, installs it with `pacman -U`, runs the installed native PAM manual
-smoke, removes the package, and verifies rollback and managed-file cleanup.
+existing `pwned-check-native-pam` install, builds the Arch package with
+`makepkg`, installs it with `pacman -U`, runs the installed package smoke,
+removes the package, and verifies rollback and managed-file cleanup.
 
 To run the Arch VM package smoke manually:
 
@@ -692,6 +688,6 @@ and updates `.test-output/native-pam-rpm-repo-smoke/latest`.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect dry-run/enforce switching, package rollback, removal, and managed-file cleanup.
 - Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the RPM package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security`.
-- Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
+- Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, packaged dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
 - Arch local validation now runs on `codex-vm-arch`; Docker coverage remains for direct native PAM loading and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal in CI/fallback contexts. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
 - Debian Docker coverage remains available for binary smoke and direct native PAM loading against `debian:stable-slim`.

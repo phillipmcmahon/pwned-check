@@ -15,7 +15,7 @@ Start here:
 - [Linux install and operations guide](docs/linux-install.md)
 
 That guide covers repository setup, package installation, dry-run, enforcement,
-rollback, removal, and the standalone CLI.
+rollback, removal, and the checker CLI installed by the package.
 
 Supported package repositories:
 
@@ -46,9 +46,9 @@ Rollback is built into the package commands:
 sudo pwned-check-pam-disable
 ```
 
-## CLI
+## Checker CLI
 
-The package also installs the standalone checker:
+The package also installs `pwned-check` for direct checks and diagnostics:
 
 ```bash
 printf 'password\n' | pwned-check --stdin

@@ -34,16 +34,11 @@ release work, architecture, design, testing, and roadmap tracking.
 | Review VM inventory and recovery expectations | [VM fleet](vm-fleet.md) |
 | Rebuild or refresh release validation VMs | [VM runbooks](vm-runbooks.md) |
 | Track issues and board workflow | [Project board workflow](project-board-workflow.md) |
-| Review Linux production baseline evidence | [Linux production baseline](linux-production-baseline.md) |
 
 ## Release Notes
 
-Release notes in this repository start at the production package era. Earlier
-history remains available through Git tags and GitHub Releases.
+Release notes in this repository document the current package/repository line.
 
 | Release | Notes |
 |---|---|
-| v0.3.0 | [Production package baseline](releases/v0.3.0.md) |
-| v0.3.0 | [Production gate evidence](releases/v0.3.0-production-gate.md) |
-| v0.3.1 | [Apt multiarch correction](releases/v0.3.1.md) |
 | v0.3.2 | [Package repository refresh](releases/v0.3.2.md) |

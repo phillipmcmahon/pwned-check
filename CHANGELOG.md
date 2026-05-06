@@ -20,6 +20,14 @@ The format is intentionally lightweight while the project is pre-production.
 
 - `pwned-check-pam-helper` and the old `pam_exec.so expose_authtok` integration path. The native PAM module is now the only supported PAM integration.
 
+### Migration Notes
+
+- If a pre-v0.2 test host still has a hand-written PAM line that invokes
+  `pwned-check-pam-helper`, remove that `pam_exec.so expose_authtok` line
+  before enabling the native package. Then install the native PAM package,
+  run `sudo pwned-check-pam-enable-dry-run`, validate logs and rollback, and
+  switch to enforcement with `sudo pwned-check-pam-enable-enforce`.
+
 ## v0.1.7 - 2026-05-05
 
 - Signed apt, RPM, Arch, and Alpine repository publication is now recorded as

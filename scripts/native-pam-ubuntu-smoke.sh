@@ -684,7 +684,8 @@ CHECKER_EOF
         tar -xzf \"\$package_path\" -C /tmp
         (cd \"/tmp/\$package_basename\" && DESTDIR=\"\$package_root\" ./install.sh)
         test -x \"\$package_root/usr/bin/pwned-check\"
-        test -x \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\"
+        test -f \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\"
+        test \"\$(stat -c '%a' \"\$package_root/lib/\$(gcc -print-multiarch)/security/pam_pwned_check.so\")\" = 644
         grep -F 'Default: no' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
         grep -F 'dry_run' \"\$package_root/usr/share/pam-configs/pwned-check\" >/dev/null
         \"\$package_root/usr/bin/pwned-check\" --version >/dev/null
@@ -694,7 +695,8 @@ CHECKER_EOF
         cp -a /var/lib/pam \"\$pam_state_backup\"
         (cd \"/tmp/\$package_basename\" && ./install.sh)
         test -x /usr/bin/pwned-check
-        test -x \"\$module_dir/pam_pwned_check.so\"
+        test -f \"\$module_dir/pam_pwned_check.so\"
+        test \"\$(stat -c '%a' \"\$module_dir/pam_pwned_check.so\")\" = 644
         test -f /usr/share/pam-configs/pwned-check
         DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package
         grep -F 'pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run' /etc/pam.d/common-password >/dev/null

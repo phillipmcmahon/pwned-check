@@ -174,7 +174,8 @@ run_in_container() {
 
         module_dir=\"\$(module_dir)\"
         test -x /usr/bin/pwned-check
-        test -x \"\$module_dir/pam_pwned_check.so\"
+        test -f \"\$module_dir/pam_pwned_check.so\"
+        test \"\$(stat -c '%a' \"\$module_dir/pam_pwned_check.so\")\" = 644
         test -x /usr/share/pwned-check/manual-pam/enable-manual-pam.sh
         test -x /usr/share/pwned-check/manual-pam/rollback-manual-pam.sh
         test -x \"\$helper_dir/pwned-check-pam-enable-dry-run\"

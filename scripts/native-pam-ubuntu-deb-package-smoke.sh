@@ -120,6 +120,8 @@ INSTALLED=1
 
 dpkg -s "$PACKAGE_NAME" >/dev/null
 dpkg -L "$PACKAGE_NAME" | grep -F "$MODULE_PATH" >/dev/null || fail "package file list missing PAM module"
+[ -f "$MODULE_PATH" ] || fail "PAM module missing after package install"
+[ "$(stat -c '%a' "$MODULE_PATH")" = "644" ] || fail "PAM module should be installed mode 0644"
 dpkg -L "$PACKAGE_NAME" | grep -F "$CHECKER_PATH" >/dev/null || fail "package file list missing checker"
 dpkg -L "$PACKAGE_NAME" | grep -F "$PROFILE_PATH" >/dev/null || fail "package file list missing pam-auth-update profile"
 dpkg -L "$PACKAGE_NAME" | grep -F "$ENABLE_DRY_RUN_HELPER" >/dev/null || fail "package file list missing dry-run helper"

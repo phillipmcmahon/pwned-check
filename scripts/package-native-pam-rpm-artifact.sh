@@ -114,7 +114,7 @@ mkdir -p \
     cd "$ROOT"
     make native-pam-build >/dev/null
     [ -f dist/pam_pwned_check.so ] || fail "dist/pam_pwned_check.so was not produced"
-    install -m 0755 dist/pam_pwned_check.so "$MODULE_DIR/pam_pwned_check.so"
+    install -m 0644 dist/pam_pwned_check.so "$MODULE_DIR/pam_pwned_check.so"
 
     if [ -n "$PWNED_CHECK_BIN" ]; then
         install -m 0755 "$PWNED_CHECK_BIN" "$ROOTFS/usr/bin/pwned-check"
@@ -400,7 +400,7 @@ copy_tree() {
         rel="${file#$src}"
         mode="0644"
         case "$rel" in
-            /usr/bin/pwned-check|/usr/sbin/pwned-check-pam-*|/lib64/security/pam_pwned_check.so|/usr/share/pwned-check/authselect/*.sh)
+            /usr/bin/pwned-check|/usr/sbin/pwned-check-pam-*|/usr/share/pwned-check/authselect/*.sh)
                 mode="0755"
                 ;;
         esac

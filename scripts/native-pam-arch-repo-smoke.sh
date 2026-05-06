@@ -213,6 +213,8 @@ CONF
 as_root pacman -Sy --noconfirm "$PACKAGE_NAME"
 pacman -Q "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
+[ -f /usr/lib/security/pam_pwned_check.so ] || fail "PAM module missing after repo install"
+[ "$(stat -c '%a' /usr/lib/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
 command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
 command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
 command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"

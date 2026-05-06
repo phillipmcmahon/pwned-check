@@ -107,6 +107,8 @@ INSTALLED=1
 
 rpm -q "$PACKAGE_NAME" >/dev/null
 rpm -ql "$PACKAGE_NAME" | grep -F '/lib64/security/pam_pwned_check.so' >/dev/null || fail "RPM file list missing PAM module"
+[ -f /lib64/security/pam_pwned_check.so ] || fail "PAM module missing after package install"
+[ "$(stat -c '%a' /lib64/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/bin/pwned-check' >/dev/null || fail "RPM file list missing checker"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/share/pwned-check/authselect/enable-authselect.sh' >/dev/null || fail "RPM file list missing authselect enable helper"
 rpm -ql "$PACKAGE_NAME" | grep -F '/usr/sbin/pwned-check-pam-enable-dry-run' >/dev/null || fail "RPM file list missing dry-run helper"

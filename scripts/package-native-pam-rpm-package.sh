@@ -154,7 +154,8 @@ test -x %{buildroot}/usr/bin/pwned-check
 test -x %{buildroot}/usr/sbin/pwned-check-pam-enable-dry-run
 test -x %{buildroot}/usr/sbin/pwned-check-pam-enable-enforce
 test -x %{buildroot}/usr/sbin/pwned-check-pam-disable
-test -x %{buildroot}/lib64/security/pam_pwned_check.so
+test -f %{buildroot}/lib64/security/pam_pwned_check.so
+test ! -x %{buildroot}/lib64/security/pam_pwned_check.so
 test -x %{buildroot}/usr/share/pwned-check/authselect/enable-authselect.sh
 test -x %{buildroot}/usr/share/pwned-check/authselect/rollback-authselect.sh
 test -f %{buildroot}/usr/share/doc/pwned-check/operations.md

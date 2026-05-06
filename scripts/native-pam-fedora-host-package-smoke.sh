@@ -173,7 +173,8 @@ if [ -z "$USE_INSTALLED" ]; then
 fi
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
-[ -x "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
+[ -f "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
+[ "$(stat -c '%a' "$MODULE_PATH")" = "644" ] || fail "PAM module should be installed mode 0644"
 [ -x "$AUTHSELECT_DIR/enable-authselect.sh" ] || fail "authselect enable helper was not installed"
 [ -x "$AUTHSELECT_DIR/rollback-authselect.sh" ] || fail "authselect rollback helper was not installed"
 [ -x "$ENABLE_DRY_RUN_HELPER" ] || fail "authselect dry-run wrapper was not installed"

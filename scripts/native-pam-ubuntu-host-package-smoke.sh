@@ -144,7 +144,8 @@ if [ -z "$USE_INSTALLED" ]; then
 fi
 
 [ -x "$CHECKER_PATH" ] || fail "checker was not installed at $CHECKER_PATH"
-[ -x "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
+[ -f "$MODULE_PATH" ] || fail "module was not installed at $MODULE_PATH"
+[ "$(stat -c '%a' "$MODULE_PATH")" = "644" ] || fail "PAM module should be installed mode 0644"
 [ -f "$PROFILE_PATH" ] || fail "pam-auth-update profile was not installed at $PROFILE_PATH"
 "$CHECKER_PATH" --version >/dev/null
 

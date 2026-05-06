@@ -215,6 +215,10 @@ as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y "$PACKAGE_NAME"
 
 dpkg -s "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
+module_path="$(dpkg -L "$PACKAGE_NAME" | awk '/\/security\/pam_pwned_check\.so$/ { print; exit }')"
+[ -n "$module_path" ] || fail "package file list missing PAM module"
+[ -f "$module_path" ] || fail "PAM module missing after repo install"
+[ "$(stat -c '%a' "$module_path")" = "644" ] || fail "PAM module should be installed mode 0644"
 command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
 command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
 command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"

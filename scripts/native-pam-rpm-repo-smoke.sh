@@ -222,6 +222,8 @@ pkg_tool install --disablerepo='*' --enablerepo=pwned-check-native-pam "$PACKAGE
 
 rpm -q "$PACKAGE_NAME" >/dev/null
 rpm -ql "$PACKAGE_NAME" | grep -F '/lib64/security/pam_pwned_check.so' >/dev/null || fail "package file list missing PAM module"
+[ -f /lib64/security/pam_pwned_check.so ] || fail "PAM module missing after repo install"
+[ "$(stat -c '%a' /lib64/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
 command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
 command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"

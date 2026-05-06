@@ -26,9 +26,9 @@ evidence for the first production endpoint set is recorded in
 `docs/releases/v0.1.6.md`.
 
 Known architecture deferrals must be recorded in release notes before a release
-is called production-ready. Apt `arm64` now has native Debian/Ubuntu VM smoke
-coverage, and Alpine `aarch64` now has native Alpine VM smoke coverage. RPM
-`aarch64` metadata still awaits native VM smoke coverage; Arch remains `x86_64`
+is called production-ready. Apt `arm64`, RPM `aarch64` on Fedora, and Alpine
+`aarch64` now have native VM smoke coverage. RHEL-compatible `aarch64` remains
+deferred until a matching Rocky-family VM is available; Arch remains `x86_64`
 until an Arch Linux ARM builder or VM is selected.
 
 ## Signing Model
@@ -68,9 +68,8 @@ The release-time wrapper is:
 make native-pam-live-repo-smokes
 ```
 
-It runs the live published endpoint smokes for apt, RPM, and Arch where the
-project has persistent VMs today. Alpine is emitted as an explicit deferral
-unless a matching Alpine repository-smoke host is configured.
+It runs the live published endpoint smokes for apt, RPM, Arch, and Alpine where
+the project has persistent VMs today.
 
 ## Release Decision
 

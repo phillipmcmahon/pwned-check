@@ -18,7 +18,7 @@ ARCH_URL="${PWNED_CHECK_ARCH_REPO_URL:-https://phillipmcmahon.github.io/pwned-ch
 ALPINE_URL="${PWNED_CHECK_ALPINE_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/alpine}"
 
 APT_HOSTS="${PWNED_CHECK_APT_REPO_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64}"
-RPM_HOSTS="${PWNED_CHECK_RPM_REPO_SMOKE_HOSTS:-codex-vm-fedora codex-vm-rocky}"
+RPM_HOSTS="${PWNED_CHECK_RPM_REPO_SMOKE_HOSTS:-codex-vm-fedora codex-vm-fedora-arm64 codex-vm-rocky}"
 ARCH_HOSTS="${PWNED_CHECK_ARCH_REPO_SMOKE_HOSTS:-codex-vm-arch}"
 ALPINE_HOSTS="${PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS:-codex-vm-alpine-arm64}"
 

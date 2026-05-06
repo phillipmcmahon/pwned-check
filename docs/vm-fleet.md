@@ -26,6 +26,7 @@ repaired, recreated, or made available again through its `codex-vm-*` SSH path.
 | `codex-vm-ubuntu-arm64` | Ubuntu package and apt repository smoke | `arm64` |
 | `codex-vm-debian-arm64` | Debian package and apt repository smoke | `arm64` |
 | `codex-vm-fedora` | Fedora RPM, authselect, SELinux, and repository smoke | `x86_64` |
+| `codex-vm-fedora-arm64` | Fedora RPM, authselect, SELinux, and repository smoke | `arm64` |
 | `codex-vm-rocky` | RHEL-compatible RPM, authselect, SELinux, and repository smoke | `x86_64` |
 | `codex-vm-alpine` | Alpine Linux-PAM package smoke | `x86_64` |
 | `codex-vm-alpine-arm64` | Alpine Linux-PAM package and repository smoke | `arm64` |
@@ -37,12 +38,13 @@ credentials belong in maintainer-local storage.
 
 ## Missing Capacity
 
-The current persistent fleet includes Debian-family ARM guests. The following
-coverage remains explicitly deferred until matching VMs are provided:
+The current persistent fleet includes Debian-family, Fedora, and Alpine ARM
+guests. The following coverage remains explicitly deferred until matching VMs
+are provided:
 
 | Needed guest | Unlocks |
 |---|---|
-| aarch64 Fedora or Rocky | RPM `aarch64` repository-only smoke |
+| aarch64 Rocky | RHEL-compatible `aarch64` repository-only smoke |
 | Arch Linux ARM | Arch Linux ARM package/repository decision and smoke |
 
 Docker/QEMU coverage remains useful for CI parity and package-asset confidence,

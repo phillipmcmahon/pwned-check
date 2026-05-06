@@ -27,7 +27,7 @@ artifact source and bootstrap fallback.
 | Family | Repository generation | Published repo smoke | Current limitation |
 |---|---|---|---|
 | Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs, including arm64 guests, with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`/`arm64` |
-| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`; `aarch64` metadata is published and intentionally deferred until an explicitly provisioned aarch64 Fedora or Rocky VM is available |
+| DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs, including Fedora arm64, with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`/`aarch64`; RHEL-compatible aarch64 remains deferred until a matching Rocky-family VM is available |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM support is deferred until a persistent Arch Linux ARM VM or trusted builder path is selected |
 | Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
 
@@ -64,7 +64,7 @@ build support when a matching persistent VM does not exist:
 | Family | Published architectures | Real-host repository smoke | Deferred repository smoke |
 |---|---|---|---|
 | Apt | `amd64`, `arm64` | `amd64` and `arm64` on Ubuntu and Debian VMs | None |
-| DNF/Yum | `x86_64`, `aarch64` | `x86_64` on Fedora and Rocky VMs | `aarch64` until an aarch64 Fedora or Rocky VM is provided |
+| DNF/Yum | `x86_64`, `aarch64` | `x86_64` on Fedora and Rocky VMs; `aarch64` on the Fedora arm64 VM | RHEL-compatible `aarch64` until a matching Rocky-family VM is provided |
 | Arch | `x86_64` | `x86_64` on the Arch VM | Arch Linux ARM until the project selects a builder or VM |
 | Alpine | `aarch64` for `v0.1.6` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
 

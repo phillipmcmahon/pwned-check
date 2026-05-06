@@ -118,7 +118,8 @@ Known quirks:
 
 ## Fedora
 
-Host alias: `codex-vm-fedora`
+Host aliases: `codex-vm-fedora` (`x86_64`) and `codex-vm-fedora-arm64`
+(`arm64`)
 
 Purpose: Fedora RPM package behavior, authselect mode switching, SELinux
 assessment, and RPM repository smoke.
@@ -127,13 +128,16 @@ Bootstrap packages:
 
 ```bash
 ssh codex-vm-fedora 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools rpmlint tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
+ssh codex-vm-fedora-arm64 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools rpmlint tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
 ```
 
 Primary smokes:
 
 ```bash
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment'
+ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment'
 ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
 ```
 
 Recovery checks:

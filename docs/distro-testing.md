@@ -39,7 +39,7 @@ The first-wave distro set is:
 |---|---|---|---|
 | Debian | Debian stable | `debian:stable-slim` | `codex-vm-debian` (Debian 13), `codex-vm-debian-arm64` |
 | Ubuntu | Ubuntu 24.04 | `ubuntu:24.04` | `codex-vm-ubuntu`, `codex-vm-ubuntu-arm64` |
-| Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora` |
+| Fedora | Fedora current | `fedora:latest` | `codex-vm-fedora`, `codex-vm-fedora-arm64` |
 | RHEL-compatible | Rocky Linux 10 | `rockylinux/rockylinux:10.1` for arm64 CI parity only | `codex-vm-rocky` |
 | Arch Linux | Rolling | `archlinux:base-devel` | `codex-vm-arch` |
 | Alpine Linux | Alpine with Linux-PAM | `alpine:3.22` | `codex-vm-alpine`, `codex-vm-alpine-arm64` |
@@ -49,15 +49,15 @@ Do not check VM passwords, IP addresses, or generated private keys into the repo
 ## Architecture Coverage Status
 
 Persistent VMs are the acceptance path for local package and repository smokes.
-The current fleet includes `linux/amd64`/`x86_64` guests plus Debian-family
-`linux/arm64` guests. Published arm64/aarch64 repository metadata without a
-matching guest remains a documented deferral; Docker/QEMU coverage reduces
-risk, but it does not replace a real-host repository smoke.
+The current fleet includes `linux/amd64`/`x86_64` guests plus Debian-family,
+Fedora, and Alpine `linux/arm64` guests. Published arm64/aarch64 repository
+metadata without a matching guest remains a documented deferral; Docker/QEMU
+coverage reduces risk, but it does not replace a real-host repository smoke.
 
 | Family | Persistent VM coverage | Published non-amd64 coverage | Status |
 |---|---|---|---|
 | Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu`; `arm64` on `codex-vm-debian-arm64` and `codex-vm-ubuntu-arm64` | Apt `arm64` metadata and package assets | Covered by persistent apt package/repository VM smokes |
-| Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky` | RPM `aarch64` metadata and package assets | Deferred until an aarch64 Fedora or Rocky VM is explicitly provided |
+| Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky`; `arm64` on `codex-vm-fedora-arm64` | RPM `aarch64` metadata and package assets | Covered by persistent Fedora RPM package/repository VM smokes; Rocky aarch64 remains deferred until a matching VM exists |
 | Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `aarch64` endpoint and package assets | Covered by persistent Alpine package/repository VM smokes |
 | Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux ARM deferred by decision, not by accident |
 
@@ -351,12 +351,14 @@ Install dependencies:
 
 ```bash
 ssh codex-vm-fedora 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools rpmlint tar gzip xz findutils diffutils jq docker moby-engine podman policycoreutils selinux-policy-devel setools-console'
+ssh codex-vm-fedora-arm64 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools rpmlint tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
 ```
 
 Core native PAM and RPM-family package gates:
 
 ```bash
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
+ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
 ```
 
 Host package and authselect smoke:
@@ -371,6 +373,7 @@ RPM package smoke:
 
 ```bash
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-package-smoke'
+ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-package-smoke'
 ```
 
 The RPM package smoke builds a native `pwned-check-native-pam` RPM through `rpmbuild`, installs it through `dnf` or `rpm`, verifies the RPM file list, exercises the installed files through the Fedora host smoke in installed-file mode, removes the RPM, and verifies package-managed files are gone.
@@ -391,6 +394,7 @@ SELinux assessment:
 
 ```bash
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment'
+ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment'
 ```
 
 The assessment records a combined text report under:
@@ -677,7 +681,7 @@ Smoke architecture coverage is split by runner capability:
 |---|---|---|---|---|
 | Debian | `codex-vm-debian` and `codex-vm-debian-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Debian native PAM package asset smoke |
 | Ubuntu | `codex-vm-ubuntu` and `codex-vm-ubuntu-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; `.deb` smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64`; `.deb` smoke on `ubuntu-24.04` runner | Covered by Debian-family package asset path |
-| Fedora | `codex-vm-fedora` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Fedora native PAM package asset smoke |
+| Fedora | `codex-vm-fedora` and `codex-vm-fedora-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Fedora native PAM package asset smoke |
 | Rocky | `codex-vm-rocky` over SSH | VM is `linux/amd64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/arm64` using `rockylinux/rockylinux:10.1`; amd64 Rocky acceptance is VM-first | Covered by Fedora/RHEL-family package scripts, plus arm64 Docker smoke for runtime/PAM parity |
 | Alpine | `codex-vm-alpine` and `codex-vm-alpine-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; APK smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Alpine native PAM package asset smoke |
 | Arch | `codex-vm-arch` over SSH | VM is `linux/amd64`; pacman smoke runs from clean package state | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | No arm64 Arch smoke until an Arch Linux ARM image or VM is selected |
@@ -716,6 +720,7 @@ ssh codex-vm-ubuntu-arm64 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:
 ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
 ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
+ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ssh codex-vm-alpine-arm64 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
@@ -727,6 +732,7 @@ Fedora/Rocky RPM repository smoke:
 
 ```bash
 ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-fedora-arm64
 ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky
 ```
 

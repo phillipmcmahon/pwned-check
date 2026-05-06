@@ -105,14 +105,12 @@ Deliverables:
 - Logging policy.
 - Parser fuzz tests.
 - Timeout behavior tests.
-- Deployment security checklist.
-- Operational troubleshooting guide.
+- Package-first Linux install and operations guide.
 
 Current implementation notes:
 - [Security model](security-model.md) documents current trust boundaries and failure modes.
 - [Logging policy](logging-policy.md) documents safe event fields and rollout counters.
-- [Deployment security checklist](deployment-security-checklist.md) captures rollout and rollback controls.
-- [Operational troubleshooting](troubleshooting.md) maps checker exit codes, native module events, and repository trust symptoms to operator actions.
+- [Linux install and operations guide](linux-install.md) captures install, dry-run, enforcement, rollback, removal, and operator troubleshooting.
 - Parser fuzz coverage exists in `internal/pwned/provider_fuzz_test.go`.
 
 ## Epic 6: Native Linux PAM Module Delivery

@@ -58,9 +58,6 @@ jobs:
       - name: Run direct native PAM distro smoke
         run: ./scripts/native-pam-distro-smoke.sh --platform linux/amd64
 
-      - name: Run generic native package smoke
-        run: ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64
-
       - name: Run Arch package smoke
         run: ./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
 

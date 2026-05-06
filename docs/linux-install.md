@@ -1,18 +1,17 @@
-# Linux Package Install
+# Linux Install And Operations Guide
 
-This is the normal operator path for `pwned-check` on Linux: add the signed
-repository, install `pwned-check-native-pam`, enable dry-run, validate, then
-switch to enforcement.
+This is the complete user guide for Linux. It describes the application as it
+is today: install the native PAM package from a signed repository, enable
+dry-run, validate logs and rollback, then switch to enforcement.
 
-This guide describes the Linux production baseline introduced in v0.3.0. Use
-signed repository packages for production installs. GitHub Release package
-assets are immutable release artifacts for inspection, recovery, and repository
-publication, not the normal operator install path.
+GitHub Release assets are build artifacts for inspection and repository
+publication. Operators should install from the package repository for their
+distro family.
 
-Package installation only places files on disk. It does not change PAM until
-you run an enable command.
+Package installation only places files on disk. PAM is not changed until an
+enable command is run.
 
-Supported repository families:
+## Supported Platforms
 
 | Platform | Repository | Architectures |
 |---|---|---|
@@ -21,8 +20,8 @@ Supported repository families:
 | Arch Linux | Pacman | `x86_64` |
 | Alpine Linux-PAM | APK | `aarch64` |
 
-Arch Linux ARM is not targeted. Alpine deployments require Linux-PAM;
-BusyBox-only authentication is outside scope.
+Arch Linux ARM is not targeted. Alpine requires Linux-PAM; BusyBox-only
+authentication is outside scope.
 
 ## Trust Keys
 
@@ -33,8 +32,8 @@ Verify repository keys before installation and before enabling PAM.
 | Apt, DNF/Yum, Arch | OpenPGP fingerprint: `BDF6 F4DD 343E 9F10 EA9D  B510 FDDA 2848 A95A D641` |
 | Alpine | RSA public key SHA256: `8CC2BD76F364D3734C8A265B152FCEFFA6F3B90FC2857DB92D40BED4808F214F` |
 
-Key rotation and revocation handling is documented in
-[Package repositories](package-repositories.md#key-rotation-and-revocation).
+Key rotation, revocation, and repository publication details are maintained in
+[Package repositories](package-repositories.md).
 
 ## Install
 
@@ -69,6 +68,8 @@ EOF
 sudo dnf install pwned-check-native-pam
 ```
 
+Use `yum` instead of `dnf` only on systems where `dnf` is unavailable.
+
 ### Arch Linux
 
 ```bash
@@ -96,7 +97,7 @@ sudo apk update
 sudo apk add pwned-check-native-pam
 ```
 
-Do not use `--allow-untrusted` for production repository installs.
+Do not use `--allow-untrusted` for production installs.
 
 ## Enable Dry-Run
 
@@ -147,8 +148,6 @@ After rollback succeeds, enable dry-run again before switching to enforcement.
 
 ## Enable Enforcement
 
-Switch only after dry-run logs and rollback have been validated.
-
 Debian/Ubuntu and Fedora/RHEL/Rocky:
 
 ```bash
@@ -174,8 +173,7 @@ Test with a dedicated non-production user:
    This password appears in a known breach corpus. Choose a different password.
    ```
 
-3. Retry with a strong random password and confirm the normal password-change
-   flow succeeds.
+3. Retry with a strong random password and confirm the password change succeeds.
 
 ## Disable Or Remove
 
@@ -185,7 +183,7 @@ Disable first:
 sudo pwned-check-pam-disable
 ```
 
-For Arch and Alpine Linux-PAM, include the service path:
+For Arch and Alpine Linux-PAM:
 
 ```bash
 sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
@@ -210,25 +208,63 @@ existing shell open:
 sudo pwned-check-pam-disable
 ```
 
+For Arch and Alpine Linux-PAM, include the service path:
+
+```bash
+sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
+  pwned-check-pam-disable
+```
+
 Confirm the module line is gone:
 
 ```bash
-! grep pam_pwned_check.so /etc/pam.d/common-password                 # Debian/Ubuntu
-! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth # Fedora/RHEL/Rocky
-! grep pam_pwned_check.so /etc/pam.d/passwd                          # Arch/Alpine
+! grep pam_pwned_check.so /etc/pam.d/common-password
+! grep pam_pwned_check.so /etc/pam.d/system-auth /etc/pam.d/password-auth
+! grep pam_pwned_check.so /etc/pam.d/passwd
 ```
 
 If sudo or password changes are already affected, boot single-user mode or a
 rescue image, mount the root filesystem, and remove the `pam_pwned_check.so`
 line from the affected PAM service. On Fedora/RHEL/Rocky, restore the recorded
-authselect backup if possible instead of editing generated PAM files directly.
+authselect backup when possible instead of editing generated PAM files directly.
 
 ## Troubleshooting
 
-- Confirm the package installed `pwned-check` and `pam_pwned_check.so`.
-- Confirm `pwned-check --version`.
-- Check safe logs with `sudo journalctl -t pwned-check -n 100 --no-pager`.
-- See [Operational troubleshooting](troubleshooting.md) for symptom-specific
-  fixes.
-- See [Package repositories](package-repositories.md) for repository trust,
-  key rotation, and publication details.
+| Symptom | Check |
+|---|---|
+| Package cannot be installed | Run the package manager update command again and confirm the repository key fingerprint or SHA256. |
+| Enable command fails | Re-run with `sudo` and check the command output before editing PAM by hand. |
+| Password changes are allowed in dry-run | Expected. Check `journalctl -t pwned-check` for `would=reject`. |
+| Known pwned password is allowed in enforcement | Confirm the PAM line does not include `dry_run` and that `pwned-check --version` returns the expected package version. |
+| Password changes fail during provider outage | Confirm whether the PAM line uses `fail_open` or fail-closed behavior. Package defaults use `fail_open`. |
+| Need the exact checker exit-code behavior | See [Checker contract](checker-contract.md). |
+
+Logs are safe to share for diagnosis when they are emitted by `pwned-check`.
+They do not include plaintext passwords, full SHA-1 hashes, or hash suffixes.
+
+## Standalone Checker
+
+```bash
+pwned-check --version
+printf 'password\n' | pwned-check --stdin
+echo $?
+```
+
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean, or provider failure when fail-open is enabled |
+| `1` | Pwned password at or above the configured threshold |
+| `2` | Configuration or usage error |
+| `3` | Provider or network error when fail-closed is enabled |
+
+Useful options:
+
+```bash
+pwned-check --stdin --min-count 10
+PWNED_CHECK_FAIL_CLOSED=1 pwned-check --stdin
+```
+
+The canonical checker behavior is maintained in
+[Checker contract](checker-contract.md).

@@ -126,9 +126,7 @@ mkdir -p \
 
     cp README.md LICENSE "$DOC_DIR/"
     cp \
-        docs/operations.md \
-        docs/deployment-security-checklist.md \
-        docs/troubleshooting.md \
+        docs/linux-install.md \
         docs/logging-policy.md \
         docs/security-model.md \
         docs/provider-policy.md \

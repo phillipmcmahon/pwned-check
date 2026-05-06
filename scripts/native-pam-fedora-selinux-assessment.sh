@@ -8,13 +8,13 @@ STAMP="$(date -u '+%Y%m%dT%H%M%SZ')"
 RUN_DIR="$OUTPUT_ROOT/${STAMP}-native-pam-fedora-selinux-assessment"
 COMBINED="$RUN_DIR/native-pam-fedora-selinux-assessment.txt"
 AVC_LOG="$RUN_DIR/avc-after-smoke.txt"
-SMOKE_LOG="$RUN_DIR/fedora-host-package-smoke.txt"
+SMOKE_LOG="$RUN_DIR/fedora-rpm-package-smoke.txt"
 
 usage() {
     cat <<'EOF'
 Usage: ./scripts/native-pam-fedora-selinux-assessment.sh
 
-Run the Fedora/RHEL native PAM host package smoke while capturing SELinux mode,
+Run the Fedora/RHEL native PAM RPM package smoke while capturing SELinux mode,
 authselect state, audit AVCs, and a combined text report under .test-output/.
 
 The assessment fails if the smoke fails or if matching SELinux AVCs mention
@@ -23,7 +23,7 @@ checker path.
 
 Environment:
   PWNED_CHECK_TEST_OUTPUT_DIR            Override output root
-  NATIVE_PAM_FEDORA_HOST_SMOKE_VERSION  Version label for the smoke artifact
+  NATIVE_PAM_FEDORA_RPM_SMOKE_VERSION   Version label for the smoke package
 EOF
 }
 
@@ -132,11 +132,11 @@ fi
 set +e
 (
     cd "$ROOT"
-    make native-pam-fedora-host-package-smoke
+    make native-pam-fedora-rpm-package-smoke
 ) >"$SMOKE_LOG" 2>&1
 SMOKE_RC="$?"
 set -e
-cat "$SMOKE_LOG" | append_section "Fedora host package smoke"
+cat "$SMOKE_LOG" | append_section "Fedora RPM package smoke"
 
 if command -v authselect >/dev/null 2>&1; then
     run_capture "Authselect after smoke" authselect current -r

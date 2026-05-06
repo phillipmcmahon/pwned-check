@@ -395,7 +395,7 @@ Expected module placement:
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` |
 | Fedora/RHEL | `/lib64/security/pam_pwned_check.so` |
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` |
-| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` and `/lib/security/pam_pwned_check.so` for Alpine Linux-PAM compatibility |
+| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` and `/lib/security/pam_pwned_check.so` for the Linux-PAM securedir variants covered by current Alpine tests |
 
 Expected package contents:
 

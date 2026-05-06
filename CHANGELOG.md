@@ -59,15 +59,8 @@ and operator-focused.
 
 ### Removed
 
-- `pwned-check-pam-helper` and the old `pam_exec.so expose_authtok` integration path. The native PAM module is now the only supported PAM integration.
-
-### Migration Notes
-
-- If a pre-v0.2 test host still has a hand-written PAM line that invokes
-  `pwned-check-pam-helper`, remove that `pam_exec.so expose_authtok` line
-  before enabling the native package. Then install the native PAM package,
-  run `sudo pwned-check-pam-enable-dry-run`, validate logs and rollback, and
-  switch to enforcement with `sudo pwned-check-pam-enable-enforce`.
+- Pre-production PAM integration alternatives were removed from the supported
+  Linux path. The native PAM package is now the only supported PAM integration.
 
 ## v0.1.7 - 2026-05-05
 
@@ -126,10 +119,10 @@ and operator-focused.
 - Documentation skeleton for requirements, operations, security model, testing, and releases.
 - Staticcheck pinned and added to local/CI validation.
 - CLI hardening for config validation, provider timeouts, safe log events, and release version injection.
-- Linux PAM PoC helper, example PAM config, and manual test/rollback documentation.
+- Linux PAM proof-of-concept packaging and manual test/rollback documentation.
 - Docker smoke matrix for Debian, Ubuntu, Alpine, Arch Linux, and Fedora minimal images.
 - Linux release package workflow with tarballs, install script, build metadata, and SHA256 checksums.
-- Docker PAM package smoke tests that install the Linux package, write `/etc/pam.d` config, and validate allow/reject combinations through `pam_exec.so expose_authtok`.
+- Docker PAM package smoke tests for early Linux package validation.
 - Live HIBP provider policy documentation and mocked HIBP endpoint tests for fail-open/fail-closed behavior.
 - Operational security docs for logging, rollout checks, troubleshooting, and parser fuzz coverage.
 - CI and smoke coverage for bounded parser fuzzing, mocked HIBP provider checks, and fail-open/fail-closed outage paths.
@@ -140,7 +133,7 @@ and operator-focused.
 - Operational hardening for bounded checker input, public HIBP HTTPS validation, single-context provider timeouts, and bounded PAM checker stderr diagnostics.
 - Documentation updates for Ubuntu PAM deployment, rollback, helper exit mapping, HIBP request volume, threat model details, versioning, and log examples.
 - Staticcheck split into a standalone CI job ready for required branch protection, with release provenance attestation over published checksums.
-- PAM helper `--max-bytes` option and Prometheus-style counter examples for operational log pipelines.
+- Prometheus-style counter examples for operational log pipelines.
 - Native PAM module Rust skeleton with safe-string fixtures, argument parsing tests, PAM constant tests, checker outcome mapping tests, exported PAM service stubs, Linux shared-library dependency allowlist CI, and exported-symbol CI.
 - Native PAM module implementation for PAM argv parsing, `PAM_AUTHTOK` retrieval, checker invocation with hard timeout, dry-run mapping, safe user-facing messages, and persistent Ubuntu smoke coverage for clean, pwned, provider, timeout, config, dry-run, and invalid-argument cases.
 - Native PAM Ubuntu smoke assertions for exact PAM conversation messages, checker `--stdin` argv, candidate-over-stdin delivery, fail-closed environment propagation, invalid-argument short-circuiting, and no candidate leakage to PAM output.

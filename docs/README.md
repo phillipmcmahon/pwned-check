@@ -1,44 +1,49 @@
 # Documentation Index
 
-Use this page as the front door for project and operator documentation. The
-Linux production path is package based: install the native PAM package from a
-signed repository, enable dry-run, validate, then switch to enforcement.
+The documentation set is intentionally small. User-facing Linux guidance lives
+in one package-first guide. The remaining documents are for maintainers,
+release work, architecture, design, testing, and roadmap tracking.
 
-## Operator Path
-
-| Need | Start here |
-|---|---|
-| Install and operate the native PAM package | [Linux package install](linux-install.md): repository setup, package install, dry-run, enforcement, rollback, removal, and emergency recovery |
-| Plan production operations | [Operations](operations.md): rollout validation, rollback checks, and configuration notes |
-| Review signed repository internals | [Package repositories](package-repositories.md): repository layout, signing, key rotation, and live endpoint checks |
-| Try the CLI checker locally | [Quickstart](quickstart.md): standalone checker examples, fail-open/fail-closed checks, and binary smoke |
-| Prepare a secure rollout | [Deployment security checklist](deployment-security-checklist.md): rollout and recovery controls |
-| Diagnose rollout issues | [Operational troubleshooting](troubleshooting.md): exit codes, module events, and outage checks |
-| Understand secret-handling and privilege boundaries | [Security model](security-model.md): provider boundary, process exposure, env, argv, and non-goals |
-| Review log events and safe diagnostics | [Logging policy](logging-policy.md): event catalog, example lines, and safe fields |
-| Understand checker stdin/exit behavior | [Checker contract](checker-contract.md): canonical stdin, `--min-count`, exit-code, and stderr contract |
-| Configure live HIBP provider behavior | [Provider policy](provider-policy.md): live API use, timeout, request volume, and test-provider boundary |
-| Confirm platform and deployment assumptions | [Requirements](requirements.md): current Linux-first scope and integration constraints |
-
-## Maintainer Path
+## User Documentation
 
 | Need | Start here |
 |---|---|
-| Understand the roadmap | [Roadmap](roadmap.md): epics, user stories, and current implementation notes |
-| Track issues and board workflow | [Project board workflow](project-board-workflow.md): issue fields, workflow statuses, and audit rules |
-| Validate code changes | [Testing](testing.md): local gate, coverage threshold, fuzz schedule, and CI expectations |
-| Validate Linux distro runtime and PAM package integration | [Distro testing runbook](distro-testing.md): persistent VM smoke process and GitHub Docker package smoke behavior |
-| Understand release VM capacity and recovery | [VM fleet](vm-fleet.md): persistent VM inventory, recovery expectations, fallback boundaries, and access rules |
-| Rebuild or refresh release validation VMs | [VM runbooks](vm-runbooks.md): per-distro bootstrap packages, smoke commands, recovery checks, and known quirks |
-| Prepare a release | [Release playbook](release-playbook.md): release validation, Linux artifacts, and failure rule |
-| Check production release readiness | [Production release gate](production-release-gate.md): signing, repository, smoke, rollback, outage, documentation, and board criteria |
-| Review the Linux production baseline | [Linux production baseline](linux-production-baseline.md): EP11 closeout evidence and remaining non-Linux scope |
-| Maintain package repositories | [Package repositories](package-repositories.md): repository layout, signing, key rotation, and live endpoint checks |
-| Review native PAM design details | [Native PAM module](native-pam-module.md): Rust/FFI contract and PAM placement |
+| Install, enable, validate, roll back, remove, or troubleshoot | [Linux install and operations guide](linux-install.md) |
 
-## Suggested First-Time Flow
+## Architecture And Design
 
-1. Install and enable from [Linux package install](linux-install.md).
-2. Review [Deployment security checklist](deployment-security-checklist.md) before production enforcement.
-3. Use [Troubleshooting](troubleshooting.md) if package, PAM, or provider checks fail.
-4. Use maintainer docs only when changing code, packaging, release automation, or project-board state.
+| Need | Start here |
+|---|---|
+| Confirm product scope and constraints | [Requirements](requirements.md) |
+| Understand the Linux PAM module design | [Native PAM module](native-pam-module.md) |
+| Review security boundaries | [Security model](security-model.md) |
+| Review safe logging rules | [Logging policy](logging-policy.md) |
+| Understand checker stdin and exit codes | [Checker contract](checker-contract.md) |
+| Understand provider behavior | [Provider policy](provider-policy.md) |
+| Review the roadmap | [Roadmap](roadmap.md) |
+
+## Release And Validation
+
+| Need | Start here |
+|---|---|
+| Maintain signed package repositories | [Package repositories](package-repositories.md) |
+| Prepare or publish a release | [Release playbook](release-playbook.md) |
+| Check production release criteria | [Production release gate](production-release-gate.md) |
+| Validate code and package changes | [Testing](testing.md) |
+| Validate distro runtime behavior | [Distro testing](distro-testing.md) |
+| Review VM inventory and recovery expectations | [VM fleet](vm-fleet.md) |
+| Rebuild or refresh release validation VMs | [VM runbooks](vm-runbooks.md) |
+| Track issues and board workflow | [Project board workflow](project-board-workflow.md) |
+| Review Linux production baseline evidence | [Linux production baseline](linux-production-baseline.md) |
+
+## Release Notes
+
+Release notes in this repository start at the production package era. Earlier
+history remains available through Git tags and GitHub Releases.
+
+| Release | Notes |
+|---|---|
+| v0.3.0 | [Production package baseline](releases/v0.3.0.md) |
+| v0.3.0 | [Production gate evidence](releases/v0.3.0-production-gate.md) |
+| v0.3.1 | [Apt multiarch correction](releases/v0.3.1.md) |
+| v0.3.2 | [Package repository refresh](releases/v0.3.2.md) |

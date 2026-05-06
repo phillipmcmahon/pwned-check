@@ -170,8 +170,8 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Create and push a signed tag. Use the matching release note file as the tag
   message and the configured release signing key:
   ```bash
-  git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
-  git push origin v0.1.0
+  git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F docs/releases/vX.Y.Z.md
+  git push origin vX.Y.Z
   ```
   Prefer `gpg-agent` with loopback pinentry enabled for non-interactive release
   signing. A maintainer-local passphrase file such as
@@ -209,7 +209,7 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Archive the release artifacts to the NAS after the GitHub Release assets are
   visible:
   ```bash
-  ./scripts/archive-release-to-nas.sh --version v0.1.0
+  ./scripts/archive-release-to-nas.sh --version vX.Y.Z
   ```
   This downloads the immutable GitHub Release assets, adds the GitHub source
   archives for the tag, writes them to the configured NAS release root, and
@@ -220,7 +220,7 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   ```bash
   PWNED_CHECK_NAS_HOST=<ssh-host> \
   PWNED_CHECK_NAS_RELEASE_ROOT=<remote-project-root> \
-    ./scripts/archive-release-to-nas.sh --version v0.1.0
+    ./scripts/archive-release-to-nas.sh --version vX.Y.Z
   ```
   or with a private config file at
   `${XDG_CONFIG_HOME:-$HOME/.config}/pwned-check/archive-release.env`:
@@ -243,7 +243,7 @@ Draft release notes live under `docs/releases/`. Use the matching file as the
 signed tag message, for example:
 
 ```bash
-git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
+git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F docs/releases/vX.Y.Z.md
 ```
 
 ### 6. Close Tracking

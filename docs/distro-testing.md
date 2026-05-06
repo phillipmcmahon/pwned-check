@@ -24,8 +24,8 @@ Use the cheapest layer that can prove the behavior under test, then move outward
 | Unit and host build gates | Local checkout | Go behavior, Rust module behavior, exported PAM symbols, dependency allowlist on the current host |
 | Docker binary smoke | Throwaway distro containers | Static Linux binaries run across minimal distro images |
 | Docker native PAM distro smoke | Throwaway distro containers | Distro toolchain can build/load `pam_pwned_check.so`, direct clean and pwned `pam_chauthtok` outcomes work |
-| Docker generic native package smoke | Throwaway Arch/Alpine containers | CI/fallback generic artifact installs, package enablement wrappers, direct native PAM outcomes work, rollback restores the service |
-| Persistent Ubuntu smoke container | Reused Ubuntu container | Fast native PAM development loop with captured logs, syslog, exact conversation strings, checker environment, Debian/Ubuntu artifact enable/rollback |
+| Docker package smoke | Throwaway Arch/Alpine containers | CI/fallback package builds, package enablement wrappers, direct native PAM outcomes, and rollback |
+| Persistent Ubuntu smoke container | Reused Ubuntu container | Fast native PAM development loop with captured logs, syslog, exact conversation strings, checker environment, and Debian/Ubuntu package checks |
 | Persistent distro VMs | Real distro hosts | Host package layout, package tooling, distro-specific module directory/dependency drift, enablement and rollback against a real system |
 
 ## Canonical Distro Set
@@ -120,18 +120,12 @@ Run the direct native PAM module matrix when changing `native/pam-pwned-check`, 
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64
 ```
 
-Run the generic native package smoke when changing Arch or Alpine generic artifact behavior:
-
-```bash
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64
-```
-
 Use a focused matrix while iterating:
 
 ```bash
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "alpine:3.22"
+./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
+./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64
 ```
 
 Arch is omitted from local and CI arm64 Docker smoke because the Arch package
@@ -163,7 +157,7 @@ The combined `.txt` file in each run directory is intended for quick preview. Th
 
 ## Persistent VM Setup
 
-Each persistent VM should be prepared once, then reused for host package smoke tests.
+Each persistent VM should be prepared once, then reused for package smoke tests.
 Use [VM runbooks](vm-runbooks.md) for the distro-specific package list, primary
 smoke commands, recovery checks, and known quirks. This section records the
 shared access and sync rules that apply to every guest.
@@ -241,14 +235,6 @@ If using rustup as recommended above:
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-debian'
 ```
 
-Host package smoke:
-
-```bash
-ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make native-pam-ubuntu-host-package-smoke'
-```
-
-The host package smoke installs the Debian/Ubuntu filesystem layout, creates a disposable PAM service, exercises clean and pwned `pam_chauthtok` paths, and removes the installed files. It does not enable the package through the real `common-password` stack.
-
 Debian package smoke:
 
 ```bash
@@ -279,12 +265,6 @@ If the Ubuntu test environment cannot build the Go checker itself, provide an ex
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" PWNED_CHECK_UBUNTU_DEB_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-ubuntu-prebuilt make native-pam-ubuntu-deb-package-smoke'
 ```
 
-The lower-level filesystem-layout artifact remains available for staging and inspection:
-
-```bash
-ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && make package-native-pam-debian-artifact'
-```
-
 ## Debian VM
 
 Install dependencies:
@@ -300,11 +280,11 @@ Core native PAM gates:
 ssh codex-vm-debian 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness'
 ```
 
-Debian/Ubuntu package-layout and `.deb` smoke:
+Debian/Ubuntu `.deb` smoke:
 
 ```bash
-ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
-ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-ubuntu-deb-package-smoke'
 ```
 
 On Debian 13, `pam-auth-update` is installed under `/usr/sbin`, which is not always in the non-root `codex` user's default PATH. Keep the explicit `PATH="/usr/sbin:$PATH"` prefix when running package smoke commands over SSH.
@@ -355,14 +335,6 @@ ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-test native-p
 ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
 ```
 
-Host package and authselect smoke:
-
-```bash
-ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-host-package-smoke'
-```
-
-The host package smoke installs the RPM-family filesystem layout, creates a disposable PAM service for clean and pwned `pam_chauthtok` cases, enables the packaged authselect wrapper with a temporary `custom/pwned-check-smoke` profile, verifies the active `system-auth` and `password-auth` stacks contain the dry-run module line, restores the authselect backup, and removes installed test files.
-
 RPM package smoke:
 
 ```bash
@@ -370,18 +342,12 @@ ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-pa
 ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-fedora-rpm-package-smoke'
 ```
 
-The RPM package smoke builds a native `pwned-check-native-pam` RPM through `rpmbuild`, installs it through `dnf` or `rpm`, verifies the RPM file list, exercises the installed files through the Fedora host smoke in installed-file mode, removes the RPM, and verifies package-managed files are gone.
-
-The lower-level filesystem-layout artifact remains available for staging and inspection:
-
-```bash
-ssh codex-vm-fedora 'cd /home/codex/pwned-check && make package-native-pam-rpm-artifact'
-```
+The RPM package smoke builds a native `pwned-check-native-pam` RPM through `rpmbuild`, installs it through `dnf` or `rpm`, exercises installed files, removes the RPM, and verifies package-managed files are gone.
 
 If the Fedora test environment cannot build the Go checker itself, provide an existing Linux binary:
 
 ```bash
-ssh codex-vm-fedora 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-fedora-prebuilt make native-pam-fedora-host-package-smoke'
+ssh codex-vm-fedora 'cd /home/codex/pwned-check && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-fedora-prebuilt make native-pam-fedora-rpm-package-smoke'
 ```
 
 SELinux assessment:
@@ -400,10 +366,10 @@ The assessment records a combined text report under:
 
 Acceptance for the Fedora/RHEL SELinux story is:
 
-- the Fedora host package smoke passes
+- the Fedora RPM package smoke passes
 - SELinux is `Enforcing`, or the report explicitly states the host mode and the exception is tracked before production release
 - audit AVC capture is present in the report
-- no AVC lines mention `pwned-check`, `pam_pwned_check`, `pwned_check`, or the Fedora host smoke service
+- no AVC lines mention `pwned-check`, `pam_pwned_check`, `pwned_check`, or the Fedora smoke service
 - the package decision remains operator-managed SELinux policy unless enforcing-mode evidence shows a common project policy is required
 
 Fedora currently allows the following additional PAM transitive dependencies beyond the base Rust/C/PAM runtime set:
@@ -433,12 +399,6 @@ Core native PAM and RPM-family package gates:
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols package-native-pam-rpm'
 ```
 
-Host package and authselect smoke:
-
-```bash
-ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-host-package-smoke'
-```
-
 RPM package smoke:
 
 ```bash
@@ -464,9 +424,8 @@ ssh codex-vm-rocky 'mkdir -p /tmp/pwned-check-rocky-prebuilt'
 scp /tmp/pwned-check-rocky-prebuilt/pwned-check codex-vm-rocky:/tmp/pwned-check-rocky-prebuilt/pwned-check
 ssh codex-vm-rocky 'chmod 0755 /tmp/pwned-check-rocky-prebuilt/pwned-check'
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && ./scripts/package-native-pam-rpm-package.sh --version rocky-vm-smoke --pwned-check-bin /tmp/pwned-check-rocky-prebuilt/pwned-check'
-ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check ./scripts/native-pam-fedora-host-package-smoke.sh'
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check ./scripts/native-pam-fedora-rpm-package-smoke.sh'
-ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check make native-pam-fedora-selinux-assessment'
+ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN=/tmp/pwned-check-rocky-prebuilt/pwned-check make native-pam-fedora-selinux-assessment'
 ```
 
 The Rocky VM validates the RHEL-compatible package path against a real host:
@@ -501,12 +460,6 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
 ssh codex-vm-alpine 'mkdir -p /tmp/pwned-check-alpine-prebuilt'
 scp /tmp/pwned-check-alpine-prebuilt/pwned-check codex-vm-alpine:/tmp/pwned-check-alpine-prebuilt/pwned-check
 ssh codex-vm-alpine 'chmod 0755 /tmp/pwned-check-alpine-prebuilt/pwned-check'
-```
-
-Build the Alpine generic artifact:
-
-```bash
-ssh codex-vm-alpine 'cd /home/codex/pwned-check && ./scripts/package-native-pam-generic-artifact.sh --version alpine-vm-smoke --family alpine --pwned-check-bin /tmp/pwned-check-alpine-prebuilt/pwned-check'
 ```
 
 Build and smoke the native APK package on the VM:
@@ -609,7 +562,6 @@ unavailable:
 
 ```bash
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
-./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "archlinux:base-devel"
 ./scripts/native-pam-arch-package-smoke.sh --platform linux/amd64
 ```
 
@@ -648,7 +600,6 @@ Automated in that workflow:
 
 - Ubuntu `.deb` package smoke on an ephemeral Ubuntu runner
 - direct native PAM distro smoke across the first-wave Docker images
-- generic manual-PAM package smoke across Arch and Alpine Docker images
 - Arch `PKGBUILD` package smoke through Docker for CI parity
 - Alpine `APKBUILD` package smoke through Docker
 - arm64 native PAM release-asset smoke for Debian, Fedora, and Alpine package outputs
@@ -702,8 +653,8 @@ pre-push VM stage, such as hardening and SELinux assessments:
 ```bash
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:$PATH" make native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment'
 ssh codex-vm-ubuntu-arm64 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
-ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
-ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-host-package-smoke native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-fedora-arm64 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment native-pam-fedora-rpm-package-smoke'
@@ -734,14 +685,13 @@ and updates `.test-output/native-pam-rpm-repo-smoke/latest`.
 
 ## Current Observations
 
-- Ubuntu host smoke validates the Debian/Ubuntu filesystem-layout artifact without modifying the real `common-password` stack.
 - Ubuntu `.deb` package smoke validates native `pwned-check-native-pam` package install, file list, installed-file PAM behavior, `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, `pwned-check-pam-disable`, `common-password` restoration, package removal, and managed-file cleanup.
 - Ubuntu hardening assessment captures AppArmor state and validates disposable-service lockout recovery without editing `common-password`.
-- Debian 13 VM validation runs the native PAM unit/build/dependency/symbol/host harness gates plus the Debian/Ubuntu host package and `.deb` package smoke. On Debian, run package smoke commands with `PATH="/usr/sbin:$PATH"` so SSH sessions can find `pam-auth-update`.
+- Debian 13 VM validation runs the native PAM unit/build/dependency/symbol/host harness gates plus the Debian/Ubuntu `.deb` package smoke. On Debian, run package smoke commands with `PATH="/usr/sbin:$PATH"` so SSH sessions can find `pam-auth-update`.
 - Fedora host validation caught `libeconf.so.*` as an expected PAM transitive dependency.
 - Fedora RPM package smoke validates the native `pwned-check-native-pam` RPM install, file list, installed-file PAM behavior, authselect dry-run/enforce switching, package rollback, removal, and managed-file cleanup.
-- Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the Fedora host package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
+- Fedora 44 Server SELinux assessment passed in `Enforcing` mode on 2026-05-01: the RPM package/authselect smoke passed, authselect restored to `local with-silent-lastlog with-fingerprint`, and `ausearch -m AVC,USER_AVC` returned `<no matches>` for the assessment window.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security` for the VM and `/lib/security` for the pinned Docker image.
 - Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
-- Arch local validation now runs on `codex-vm-arch`; Docker coverage remains for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal in CI/fallback contexts. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
+- Arch local validation now runs on `codex-vm-arch`; Docker coverage remains for direct native PAM loading and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal in CI/fallback contexts. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
 - Debian Docker coverage remains available for binary smoke and direct native PAM loading against `debian:stable-slim`.

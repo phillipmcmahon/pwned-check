@@ -40,7 +40,7 @@ cd "$ROOT"
 
 NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-}"
 ARM64_DOCKER_IMAGES="${PWNED_CHECK_ARM64_DOCKER_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22}"
-VM_SMOKE_HOSTS="${PWNED_CHECK_VM_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64 codex-vm-fedora codex-vm-fedora-arm64 codex-vm-rocky codex-vm-alpine codex-vm-alpine-arm64 codex-vm-arch}"
+VM_SMOKE_HOSTS="${PWNED_CHECK_VM_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64 codex-vm-fedora codex-vm-fedora-arm64 codex-vm-rocky codex-vm-rocky-arm64 codex-vm-alpine codex-vm-alpine-arm64 codex-vm-arch}"
 VM_PREBUILT_DIR="/tmp/pwned-check-vm-prebuilt"
 VM_PREBUILT_BIN="$VM_PREBUILT_DIR/pwned-check"
 VM_CHECKOUT="/home/codex/pwned-check"
@@ -53,7 +53,7 @@ REMOVE_ARCH_PACKAGE="if pacman -Q pwned-check-native-pam >/dev/null 2>&1; then i
 
 vm_goarch() {
     case "$1" in
-        codex-vm-ubuntu-arm64 | codex-vm-debian-arm64 | codex-vm-fedora-arm64 | codex-vm-alpine-arm64)
+        codex-vm-ubuntu-arm64 | codex-vm-debian-arm64 | codex-vm-fedora-arm64 | codex-vm-rocky-arm64 | codex-vm-alpine-arm64)
             printf '%s\n' arm64
             ;;
         *)
@@ -65,7 +65,7 @@ vm_goarch() {
 host_list_has_arm64_vm() {
     for host in $VM_SMOKE_HOSTS; do
         case "$host" in
-            codex-vm-ubuntu-arm64 | codex-vm-debian-arm64 | codex-vm-fedora-arm64 | codex-vm-alpine-arm64)
+            codex-vm-ubuntu-arm64 | codex-vm-debian-arm64 | codex-vm-fedora-arm64 | codex-vm-rocky-arm64 | codex-vm-alpine-arm64)
                 return 0
                 ;;
         esac
@@ -133,7 +133,7 @@ run_vm_smoke() {
             sync_vm_checkout "$host" "$goarch"
             run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_RPM_PACKAGE && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke"
             ;;
-        codex-vm-rocky)
+        codex-vm-rocky | codex-vm-rocky-arm64)
             sync_vm_checkout "$host" "$goarch"
             run_vm "$host" "cd '$VM_CHECKOUT' && make native-pam-test native-pam-build native-pam-deps native-pam-symbols && $REMOVE_RPM_PACKAGE && PWNED_CHECK_FEDORA_RPM_SMOKE_PWNED_CHECK_BIN='$VM_PREBUILT_BIN' make native-pam-fedora-rpm-package-smoke"
             ;;

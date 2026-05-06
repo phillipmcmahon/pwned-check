@@ -200,7 +200,7 @@ Current smoke architecture coverage:
 | Docker PAM package smoke, `linux/amd64` | Not run by default, because first-wave local amd64 coverage is VM-backed; available manually for CI reproduction | Debian, Ubuntu, Fedora, Arch, Alpine |
 | Docker PAM package smoke, `linux/arm64` | Optional with `PWNED_CHECK_RUN_ARM64_DOCKER=1` because local arm64 acceptance is VM-backed where matching guests exist | Debian, Ubuntu, Fedora, Rocky, Alpine |
 | Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch on persistent VMs | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
-| Native PAM package smoke, `linux/arm64` | Ubuntu, Debian, Fedora, and Alpine on persistent VMs | Docker native PAM package gates for Debian, Fedora, and Alpine arm64 package outputs |
+| Native PAM package smoke, `linux/arm64` | Ubuntu, Debian, Fedora, Rocky, and Alpine on persistent VMs | Docker native PAM package gates for Debian, Fedora, and Alpine arm64 package outputs |
 | Native PAM release assets, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release asset preparation |
 | Native PAM release assets, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 assets |
 | Live repository endpoint smoke | `make native-pam-live-repo-smokes` on persistent VMs, including Alpine arm64, before repository-backed release promotion | Not run in normal CI because it mutates real package-manager state and depends on maintainer VMs |

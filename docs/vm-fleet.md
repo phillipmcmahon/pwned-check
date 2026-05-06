@@ -28,6 +28,7 @@ repaired, recreated, or made available again through its `codex-vm-*` SSH path.
 | `codex-vm-fedora` | Fedora RPM, authselect, SELinux, and repository smoke | `x86_64` |
 | `codex-vm-fedora-arm64` | Fedora RPM, authselect, SELinux, and repository smoke | `arm64` |
 | `codex-vm-rocky` | RHEL-compatible RPM, authselect, SELinux, and repository smoke | `x86_64` |
+| `codex-vm-rocky-arm64` | RHEL-compatible RPM, authselect, SELinux, and repository smoke | `arm64` |
 | `codex-vm-alpine` | Alpine Linux-PAM package smoke | `x86_64` |
 | `codex-vm-alpine-arm64` | Alpine Linux-PAM package and repository smoke | `arm64` |
 | `codex-vm-arch` | Arch package and repository smoke | `x86_64` |
@@ -38,13 +39,12 @@ credentials belong in maintainer-local storage.
 
 ## Missing Capacity
 
-The current persistent fleet includes Debian-family, Fedora, and Alpine ARM
-guests. The following coverage remains explicitly deferred until matching VMs
-are provided:
+The current persistent fleet includes Debian-family, Fedora, Rocky, and Alpine
+ARM guests. The following coverage remains explicitly deferred until a matching
+VM is provided:
 
 | Needed guest | Unlocks |
 |---|---|
-| aarch64 Rocky | RHEL-compatible `aarch64` repository-only smoke |
 | Arch Linux ARM | Arch Linux ARM package/repository decision and smoke |
 
 Docker/QEMU coverage remains useful for CI parity and package-asset confidence,

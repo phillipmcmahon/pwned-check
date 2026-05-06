@@ -156,7 +156,8 @@ Known quirks:
 
 ## Rocky
 
-Host alias: `codex-vm-rocky`
+Host aliases: `codex-vm-rocky` (`x86_64`) and `codex-vm-rocky-arm64`
+(`arm64`)
 
 Purpose: RHEL-compatible RPM package behavior, authselect mode switching,
 SELinux assessment, and RPM repository smoke.
@@ -165,6 +166,7 @@ Bootstrap packages:
 
 ```bash
 ssh codex-vm-rocky 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
+ssh codex-vm-rocky-arm64 'sudo dnf install -y ca-certificates cargo clang file gcc gcc-c++ git golang make pam-devel pkgconf-pkg-config rust rustfmt authselect rpm-build rpmdevtools tar gzip xz findutils diffutils jq policycoreutils selinux-policy-devel setools-console rsync'
 ```
 
 Primary smokes:
@@ -172,6 +174,8 @@ Primary smokes:
 ```bash
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment'
 ./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
+ssh codex-vm-rocky-arm64 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment'
+./scripts/native-pam-rpm-repo-smoke.sh --host codex-vm-rocky-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/rpm
 ```
 
 Recovery checks:
@@ -182,10 +186,8 @@ Recovery checks:
 
 Known quirks:
 
-- Rocky validation must run on `codex-vm-rocky`; do not substitute the Rocky
-  Docker image for local amd64 acceptance.
-- The Rocky Docker image remains arm64 CI-parity coverage only until a
-  persistent arm64 Rocky-family VM exists.
+- Rocky validation must run on the matching Rocky VM; do not substitute the
+  Rocky Docker image for local acceptance when the VM is available.
 
 ## Alpine
 

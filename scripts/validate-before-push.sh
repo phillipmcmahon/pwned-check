@@ -262,7 +262,4 @@ fi
 
 run_arm64_docker_smoke_stage
 
-echo "make package-linux"
-make package-linux
-
 echo "local validation passed"

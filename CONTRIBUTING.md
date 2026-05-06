@@ -22,10 +22,9 @@ Before pushing:
 make validate
 ```
 
-This checks formatting, tests, vet, build, and binary smoke behavior.
-It also runs Staticcheck via the module-pinned tool dependency.
-The validation gate mirrors CI and includes the Docker checker smoke matrix.
-It also builds Linux release packages for `amd64` and `arm64`.
+This checks formatting, tests, vet, Staticcheck, build, checker smoke behavior,
+native PAM build gates, and package install behavior on the configured distro
+VMs.
 
 For Linux runtime compatibility checks across minimal distro images:
 
@@ -50,7 +49,9 @@ The hook runs:
 scripts/validate-before-push.sh
 ```
 
-This is intentionally heavier than a pre-commit hook because it runs race-enabled tests and Docker smoke. It should catch CI failures before code reaches `origin`.
+This is intentionally heavier than a pre-commit hook because it runs
+race-enabled tests and distro package smokes. It should catch package or CI
+failures before code reaches `origin`.
 
 ## Public Contract
 

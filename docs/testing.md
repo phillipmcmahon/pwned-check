@@ -28,9 +28,6 @@ make native-pam-deps
 make native-pam-harness
 make native-pam-ubuntu-deb-package-smoke
 make native-pam-ubuntu-hardening-assessment
-make native-pam-distro-smoke
-make native-pam-arch-package-smoke
-make native-pam-alpine-package-smoke
 make package-native-pam-debian
 make package-native-pam-rpm
 make package-native-pam-arch
@@ -42,7 +39,6 @@ go run honnef.co/go/tools/cmd/staticcheck ./...
 go build -o dist/pwned-check ./cmd/pwned-check
 go run ./scripts/smoke_binary.go dist/pwned-check
 ./scripts/validate-before-push.sh
-make package-linux
 ```
 
 Install the matching pre-push hook:
@@ -73,6 +69,10 @@ Use `PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh` to exercise
 just the SSH VM stage. Use `PWNED_CHECK_SKIP_VM_SMOKE=1` or
 `PWNED_CHECK_SKIP_ARM64_DOCKER=1` only for deliberate offline work where the
 skipped validation will be run separately before pushing.
+
+Standalone Linux tarball packaging is not part of the default validation gate.
+The supported Linux application shape is the native distro package path, so
+pre-push validates native package build/install behavior instead.
 
 For native PAM development, run the persistent Ubuntu smoke container:
 

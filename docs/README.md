@@ -28,17 +28,5 @@ release work, architecture, design, testing, and roadmap tracking.
 |---|---|
 | Maintain signed package repositories | [Package repositories](package-repositories.md) |
 | Prepare or publish a release | [Release playbook](release-playbook.md) |
-| Check production release criteria | [Production release gate](production-release-gate.md) |
 | Validate code and package changes | [Testing](testing.md) |
-| Validate distro runtime behavior | [Distro testing](distro-testing.md) |
-| Review VM inventory and recovery expectations | [VM fleet](vm-fleet.md) |
-| Rebuild or refresh release validation VMs | [VM runbooks](vm-runbooks.md) |
-| Track issues and board workflow | [Project board workflow](project-board-workflow.md) |
-
-## Release Notes
-
-Release notes in this repository document the current package/repository line.
-
-| Release | Notes |
-|---|---|
-| v0.3.2 | [Package repository refresh](releases/v0.3.2.md) |
+| Validate distro runtime behavior and VM setup | [Distro testing](distro-testing.md) |

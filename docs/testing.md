@@ -77,17 +77,7 @@ pre-push validates native package build/install behavior instead.
 All test-only environment variables must use the `PWNED_CHECK_TEST_*` prefix.
 No other prefix is permitted for test scaffolding.
 
-For native PAM development, run the persistent Ubuntu smoke container:
-
-```bash
-make native-pam-ubuntu-smoke
-```
-
-The first run builds a reusable Ubuntu 24.04 image with Rust and PAM development headers, creates a persistent container named `pwned-check-native-pam-dev`, syncs the current checkout into it, builds `pam_pwned_check.so`, installs it into Ubuntu's PAM security module directory, and exercises `pam_chauthtok` through a generated PAM service. Use `./scripts/native-pam-ubuntu-smoke.sh shell` to inspect the container between runs, or `./scripts/native-pam-ubuntu-smoke.sh clean` to remove it.
-
-Each run copies the container test log, per-case PAM output, captured syslog, and selected `/tmp/native-pam-smoke-*` files into an ignored timestamped directory such as `.test-output/native-pam-ubuntu-smoke/20260501T063620Z-native-pam-ubuntu-smoke`. These run directories sort chronologically by name, and `.test-output/native-pam-ubuntu-smoke/latest` points at the newest run. Each run also writes a combined `<timestamp>-native-pam-ubuntu-smoke.txt` file for quick double-click or Preview inspection. Set `NATIVE_PAM_UBUNTU_OUTPUT_DIR` to write those files somewhere else.
-
-For distro-specific Docker and VM validation, use the runbook in [distro-testing.md](distro-testing.md). It defines the first-wave distro set, Docker matrices, persistent VM setup rules, and the current Ubuntu, Debian, Fedora, Alpine, Arch, and Docker coverage paths. Maintainer VM capacity and recovery expectations are in [VM fleet](vm-fleet.md); per-VM rebuild and refresh procedures are in [VM runbooks](vm-runbooks.md).
+For distro-specific Docker and VM validation, use [Distro testing](distro-testing.md). It defines the supported distro set, Docker coverage, persistent VM setup rules, recovery expectations, and current Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch validation paths.
 
 ## Coverage Gate
 
@@ -137,7 +127,6 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-fedora-rpm-package-smoke.sh` | Fedora/RHEL-family RPM smoke that builds the native RPM, installs it through package tooling, exercises installed files, verifies authselect dry-run/enforce switching and rollback, removes the package, and checks managed-file cleanup |
 | `scripts/native-pam-rpm-repo-smoke.sh` | Fedora/Rocky RPM repository smoke that installs from signed RPMs and signed repository metadata with a public key only, then exercises dry-run/enforce/disable, package removal, managed-file cleanup, and writes a combined `.test-output/` report |
 | `scripts/native-pam-fedora-selinux-assessment.sh` | Fedora/RHEL-family SELinux assessment that wraps the RPM package smoke, captures SELinux/authselect/audit state, and fails on pwned-check-related AVCs |
-| `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package staging, and `pam_chauthtok` smoke path |
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
 | `scripts/native-pam-service-installed-smoke.sh` | Reusable installed-file smoke for Arch/Alpine service-file wrapper packages that exercises dry-run/enforce switching, clean/reject behavior, and rollback through installed package wrappers |
 | `scripts/native-pam-arch-package-smoke.sh` | Arch Docker CI/fallback smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed service-file wrapper behavior, removes the package, and checks managed-file cleanup. Local Arch validation uses `codex-vm-arch` through `scripts/validate-before-push.sh` |
@@ -214,7 +203,7 @@ Release-sensitive checks:
 - binary smoke test
 - Docker binary smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, Rocky, and Alpine on `linux/arm64`
 - Rocky/RHEL-compatible host validation on the persistent Rocky VM
-- Linux package build for `amd64` and `arm64` with SHA256 files
+- native distro package builds for supported `amd64`/`x86_64` and `arm64`/`aarch64` repository architectures, with release checksums
 
 CI intentionally produces only Linux `amd64` and `arm64` packages while Linux remains the active integration target. macOS and Windows packages should be introduced together, with both x64 and arm64 coverage, when those roadmap tracks include their signing requirements.
 

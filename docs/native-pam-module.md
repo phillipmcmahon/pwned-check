@@ -15,7 +15,6 @@ flowchart LR
     Module -->|"fork+exec, stdin pipe, hard timeout"| Checker["pwned-check --stdin [--min-count n]"]
     Checker --> Provider{"Provider boundary"}
     Provider --> HIBP["Live HIBP range API"]
-    Provider -. "future" .-> Offline["Offline cache or mirror"]
     Module --> Conv["pam_error / pam_info"]
     Module --> Log["journald / syslog"]
 ```
@@ -29,7 +28,6 @@ The native module exists to:
 - integrate cleanly with distro PAM management tools such as `pam-auth-update` on Debian and Ubuntu, and `authselect` on Fedora and RHEL
 - surface user-facing rejection messages through PAM conversation functions
 - provide the packaging shape that distro maintainers expect for a PAM integration
-- create a future path for lower-overhead IPC if real deployments prove fork/exec cost matters
 
 The native module does not exist to:
 
@@ -62,83 +60,17 @@ Out of scope:
 
 ## Design Principles
 
-The native module inherits the project principles in [Security Model](security-model.md). The principles below restate the ones that become sharper inside a shared object loaded by privileged processes.
+The native module inherits the project principles in [Security Model](security-model.md). The important constraints are:
 
-### Smallest Possible Surface
-
-The module implements only password-change behavior. `pam_sm_chauthtok` is the only service function with meaningful policy logic.
-
-All other PAM service functions return `PAM_IGNORE` so the module is inert outside the password-change path:
-
-- `pam_sm_authenticate`
-- `pam_sm_setcred`
-- `pam_sm_acct_mgmt`
-- `pam_sm_open_session`
-- `pam_sm_close_session`
-
-### No Provider Logic In Process
-
-The module never opens a network socket and never embeds provider lookup behavior.
-
-Provider checks remain inside the existing `pwned-check` binary, invoked with `--stdin` and optional documented checker flags such as `--min-count`. The live HIBP range API, provider timeout, fail-open and fail-closed policy, mocked test providers, and future provider extensions stay behind the checker boundary.
-
-### Stable Checker Contract
-
-The module is a caller of `pwned-check --stdin`, optionally with documented policy flags such as `--min-count <n>`. The canonical exit-code contract is [Checker contract](checker-contract.md).
-
-It does not reach into checker internals. It does not depend on undocumented output. It may include a bounded diagnostic excerpt from checker stderr in module logs, but the module must not parse checker stderr for policy decisions.
-
-If the checker contract changes, the module can change to match it. The native module must not force checker contract changes merely to satisfy PAM implementation details.
-
-### Rust FFI Discipline
-
-The module is implemented in Rust because it provides a better safety profile
-than C while still producing a native PAM-loadable shared object. Go must not
-be used for the PAM module. The Go runtime's signal handling, scheduler, and
-memory model are not appropriate for a shared object loaded into `sshd`,
-`sudo`, `passwd`, `gdm`, and similar processes. Go remains the checker
-language.
-
-The FFI boundary must stay narrow:
-
-- build as a `cdylib`
-- set `panic = "abort"`
+- implement password-change behavior only; all non-password PAM service functions return `PAM_IGNORE`
+- keep provider logic outside the PAM process by invoking `pwned-check --stdin`
+- treat [Checker contract](checker-contract.md) as the only checker API
+- build as a Rust `cdylib` with `panic = "abort"` and a narrow, documented FFI boundary
 - never unwind across PAM or libc boundaries
-- avoid async runtimes inside the PAM module
-- avoid global mutable state unless it is protected and justified
-- keep argument parsing and exit-code mapping as testable pure logic where possible
-
-### No Plaintext Disclosure
-
-The candidate password is retrieved from `PAM_AUTHTOK` when it is already available. If the password stack has not populated `PAM_AUTHTOK` yet, the module calls Linux PAM's `pam_get_authtok` API so PAM performs the normal password conversation and stores the token for downstream modules. The token is copied once into module-owned zeroizing memory and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
-
-The module must not mutate or zero PAM-owned memory returned by `pam_get_item` or `pam_get_authtok`.
-
-The password must not appear in:
-
-- module logs
-- module argv
-- checker argv
-- environment variables passed to the checker
-- syslog or journald fields
-- audit records
-- core dumps
-- panic messages
-- test fixtures committed to the repository
-
-### Core Dump Posture
-
-The module should consider `PR_SET_DUMPABLE = 0` before handling candidate material, but this affects the whole host process, not only the module. That means the control must be implemented deliberately and documented as a process-wide side effect.
-
-Future hardening should decide whether the module:
-
-- sets dumpable to `0` and leaves it there
-- stores and restores the previous value after candidate handling
-- defers this control to a later hardening issue
-
-The initial implementation must not present dump suppression as a harmless module-local setting.
-
-### Privileged Process Controls
+- never log, print, persist, or expose the candidate password through argv or environment
+- copy candidate material only into module-owned zeroizing memory and never mutate PAM-owned memory
+- avoid async runtimes, signal handlers, threads, retries, or identity changes inside the PAM module
+- keep failure behavior explicit and recoverable through dry-run and rollback wrappers
 
 The module runs inside privileged PAM-using processes. It must keep its behavior smaller and stricter than an ordinary CLI program:
 
@@ -153,17 +85,13 @@ The module runs inside privileged PAM-using processes. It must keep its behavior
 
 The release defines an explicit allowlist of acceptable transitive shared-library dependencies for each target. The Linux Rust `cdylib` allowlist includes only the platform's PAM and C/runtime dependencies such as `libpam`, `libc`, `libc.musl-*`, `libgcc_s`, `libdl`, `libpthread`, and `libm`, plus target PAM runtime dependencies such as `libaudit`, `libcap-ng`, and Fedora's `libeconf`, adjusted for the target libc and linker behavior. CI and smoke tests run an equivalent of `ldd pam_pwned_check.so` or the distro-appropriate dynamic dependency inspection tool and fail on unexpected additions.
 
-If the module implements dump suppression, it must call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory and restore the prior value before returning, unless a later design decision documents why leaving dumpability disabled is safer for host processes.
-
-### Fail Predictably
+If the module implements dump suppression, it must treat it as a process-wide control: store the prior value, call `prctl(PR_SET_DUMPABLE, 0)` while candidate material is in module-owned memory, and restore the prior value before returning unless a later design decision documents why leaving dumpability disabled is safer for host processes.
 
 The module must make failure behavior explicit.
 
 The module should pass fail-open or fail-closed configuration to the checker rather than trying to infer provider failure from checker logs. If the checker returns the accepted outcome from [Checker contract](checker-contract.md), the module treats it as success. If provider failure should reject, the checker must be invoked in fail-closed mode so it returns the documented provider-failure outcome.
 
 Configuration errors, timeouts, exec failures, and unexpected checker exits are conservative rejections outside dry-run mode.
-
-### Lockout Safety
 
 A misconfigured module must be recoverable.
 
@@ -385,7 +313,7 @@ The module must never log:
 
 `PAM_USER` may be included only when debug logging is explicitly enabled, and only as a non-sensitive correlation field on a separate low-cardinality event.
 
-## Packaging And Release Shape
+## Package Shape
 
 Package installation places files on disk only. Enabling the module remains an
 explicit operator action, starts in `dry_run` mode, and records enough state to
@@ -411,33 +339,10 @@ Expected package contents:
 - Alpine Linux-PAM service-file wrapper scripts
 - rollback and emergency recovery instructions
 
-| Family | Module path | Package build | Package smoke | Enablement and rollback notes |
-|---|---|---|---|---|
-| Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` | `make package-native-pam-debian` | `make native-pam-ubuntu-deb-package-smoke` | Package `pwned-check-native-pam` installs a `pam-auth-update` profile at `/usr/share/pam-configs/pwned-check`; operators use `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, and `pwned-check-pam-disable`. Release automation builds `amd64` and `arm64` packages in Rust Debian containers. Run the smoke on Debian-family VMs with `PATH="/usr/sbin:/sbin:$PATH"` so SSH sessions can find `pam-auth-update`. |
-| Fedora/RHEL/Rocky | `/lib64/security/pam_pwned_check.so` | `make package-native-pam-rpm` | `make native-pam-fedora-rpm-package-smoke` | Package `pwned-check-native-pam` installs authselect wrapper scripts under `/usr/share/pwned-check/authselect/` plus `pwned-check-pam-*` wrappers under `/usr/sbin`; first enablement records an authselect backup for rollback, while dry-run to enforce switching keeps that rollback target. Release automation builds `x86_64` and `aarch64` packages in Fedora containers. Run `make native-pam-fedora-selinux-assessment` before production release. |
-| Arch Linux | `/usr/lib/security/pam_pwned_check.so` | `make package-native-pam-arch` | `make native-pam-arch-package-smoke` for CI parity; `codex-vm-arch` through `scripts/validate-before-push.sh` for local release validation | Package `pwned-check-native-pam` is built from `packaging/arch/PKGBUILD.in`; operators use `pwned-check-pam-*` wrappers under `/usr/bin`, which preserve a timestamped PAM service backup for rollback. Release automation builds `x86_64` only. |
-| Alpine Linux | `/usr/lib/security/pam_pwned_check.so` | `make package-native-pam-alpine` | `make native-pam-alpine-package-smoke` | Package `pwned-check-native-pam` is built from `packaging/alpine/APKBUILD.in`; native PAM integration is Linux-PAM-only, not BusyBox-only auth, and `pwned-check-pam-*` wrappers under `/usr/sbin` restore the timestamped PAM service backup. Release automation builds `x86_64` and `aarch64` packages in Alpine containers. |
-
-Production repository publication is described in [Package repositories](package-repositories.md). The package decision remains to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
-
-### Signing And Provenance
-
-Release packages should include:
-
-- `.deb` signatures with the project release key
-- `.rpm` signatures through `rpm --addsign`
-- SLSA-style provenance attestations for both `pam_pwned_check.so` and the checker binary
-- reproducible build controls, including pinned toolchains and `SOURCE_DATE_EPOCH` set from the release tag
-
-Native package release candidates must also run:
-
-```bash
-make native-pam-release-provenance
-```
-
-This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM package files. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
-
-Signed apt, dnf/yum, Arch, and Alpine repositories are the normal operator install channel for native PAM packages. Repository layout, signing, and trust-bootstrap instructions live in [Package repositories](package-repositories.md).
+Production repository publication, signing, provenance, package architecture
+coverage, and release smoke gates are described in [Package repositories](package-repositories.md)
+and [Release playbook](release-playbook.md). The module design doc intentionally
+does not duplicate those release procedures.
 
 ## Testing Strategy
 
@@ -456,45 +361,6 @@ test boundary is:
 
 The current Docker, persistent VM, architecture, and release-gate matrix is
 documented in [Testing](testing.md) and [Distro testing runbook](distro-testing.md).
-
-## Rollout Posture
-
-Operators should roll out the native module in phases:
-
-1. Install package without enabling enforcement.
-2. Enable dry-run mode.
-3. Observe `event=pam_module_result mode=dry_run` events for a documented observation period.
-4. Confirm emergency rollback and rescue access.
-5. Disable dry-run and initially keep `fail_closed` unset unless the deployment already accepts provider-outage lockout risk.
-6. Evaluate fail-closed after provider stability is understood in the deployment environment.
-7. Document the chosen provider-failure posture.
-8. Monitor logs after enforcement.
-
-Documentation must put recovery instructions before advanced configuration. Native PAM modules run inside privileged authentication processes, so rollback needs to be obvious and tested.
-
-Rollback documentation must cover:
-
-- disabling the module through `pam-auth-update`
-- disabling the module through `authselect`
-- removing the package
-- recovery from a misconfigured PAM stack through single-user mode or a rescue image
-
-## Future IPC Option
-
-A long-running checker daemon over a Unix socket remains a future option, not the first release path.
-
-The daemon option may become attractive if measured fork/exec cost, DNS behavior, provider rate limiting, or offline-cache work justifies the operational cost of installing and supervising a service.
-
-If added later, the module contract should remain stable. Only the internal IPC implementation should change.
-
-## Closeout Decisions
-
-The implementation sequence resolved the first-release questions as follows:
-
-- User-facing native PAM conversation messages are fixed English-only for the first native package release. Localization can be added later without changing the checker contract.
-- `min_count` is active. The default checker threshold remains `1`, preserving any-hit rejection unless operators explicitly configure a higher count.
-- SELinux policy is operator-managed documentation for the first release. Fedora 44 enforcing-mode assessment passed without project-specific AVCs, so the package should not ship a broad policy module by default.
-- The module argv contract is stable for the documented first native package release options: `checker`, `timeout`, `fail_open`, `fail_closed`, `dry_run`, `debug`, and `min_count`. New policy arguments should be additive or gated behind a documented contract revision.
 
 ## Non-Goals
 

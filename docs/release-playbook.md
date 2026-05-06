@@ -1,63 +1,55 @@
 # Release Playbook
 
-Use this checklist for public releases. Keep the process simple, evidence-led,
-and operator-focused.
+Use this checklist for public releases. Release from a clean `main` tree,
+validate the exact tree being tagged, and keep release notes operator-focused.
 
-## Rules
+## Release Gate
 
-- Release from a clean `main` tree only.
-- Validate from the actual release tree.
-- Keep release notes operator-focused.
-- Do not publish macOS or Windows production packages until signing requirements are addressed.
-- Keep live HIBP calls out of release validation.
-- Describe native PAM distribution as production-ready only for releases that
-  pass the [Production release gate](production-release-gate.md). macOS and
-  Windows production packages remain deferred until their signing and
-  platform-security requirements are addressed.
+A native Linux package release can be called production-ready only when these
+items are complete and recorded in the release notes:
 
-## Release Tracking
+| Area | Required evidence |
+|---|---|
+| Signing | Apt, RPM, Arch, and Alpine repository metadata is signed; package signatures exist where the package manager expects them; checksum and provenance files are signed when release signing keys are available. |
+| Repository publication | Repositories are generated from the validated release package set and published without replacing payloads at an existing version. |
+| Repository smoke | Installs use only public repository configuration, public keys, and normal package-manager commands. Target VMs do not need GitHub credentials, build tools, a checkout, or private signing keys. |
+| Rollback | Each repository smoke covers dry-run enablement, enforcement, disable, package removal, and PAM/authselect rollback. |
+| Provider outage | Fail-open and fail-closed behavior is validated through mocked provider-outage tests. |
+| Documentation | `README.md`, [Linux install](linux-install.md), [Package repositories](package-repositories.md), and `CHANGELOG.md` describe the shipped package path accurately. |
 
-Create one release-prep issue for each release using the release-prep issue template.
+Known architecture deferrals must be named in release notes before a release is
+called production-ready. Current Arch support is `x86_64` only.
 
-The release issue should track:
+Private signing keys, passphrases, GitHub credentials, NAS credentials, and VM
+passwords must not be stored in the repository, copied to persistent distro
+VMs, or embedded in smoke fixtures.
 
-- intended scope
-- version metadata
-- changelog entry
-- validation results
-- package filenames
-- checksum generation
-- project board reconciliation
-
-## Checklist
-
-### 1. Confirm Scope
+## 1. Confirm Scope
 
 - Decide which user-visible changes are shipping.
-- Review related issues and project board entries.
-- Update docs for changed behavior.
-- Update `CHANGELOG.md`.
+- Update behavior docs and `CHANGELOG.md`.
 - Keep a sticky `## Unreleased` placeholder at the top of `CHANGELOG.md`.
-  Release prep moves completed entries into the dated release section and
-  leaves the empty placeholder in place for the next change.
+- Confirm no legacy or migration-only paths are being preserved without a
+  current design reason.
 
-### 2. Prepare Version
+## 2. Prepare Version
 
-- Update version metadata with the paired release helper:
-  ```bash
-  make prepare-release-version VERSION=vX.Y.Z
-  ```
-  This updates the native PAM Rust crate version in
-  `native/pam-pwned-check/Cargo.toml`, refreshes `Cargo.lock`, and verifies the
-  two files agree.
-- Confirm the native PAM Rust crate version in `native/pam-pwned-check/Cargo.toml`
-  and `Cargo.lock` matches the release tag without the leading `v`.
-- Confirm `pwned-check --version` reports the intended version in the built binary.
-- Keep release notes aligned with the actual shipped behavior.
-- Write release-note validation entries in past tense once the checks have
-  completed; avoid mixing planned validation with completed evidence.
+Update version metadata:
 
-### 3. Validate
+```bash
+make prepare-release-version VERSION=vX.Y.Z
+```
+
+This updates `native/pam-pwned-check/Cargo.toml`, refreshes `Cargo.lock`, and
+verifies the Rust crate version matches the tag without the leading `v`.
+
+Then confirm:
+
+- `pwned-check --version` reports the intended version in a built binary
+- release notes match the actual shipped behavior
+- validation entries are written in past tense after checks complete
+
+## 3. Validate
 
 Run:
 
@@ -72,185 +64,92 @@ Capture:
 - `make coverage`
 - `go vet ./...`
 - `go run honnef.co/go/tools/cmd/staticcheck ./...`
-- binary smoke test result
+- binary smoke result
 - Docker smoke matrix result
 - CI `lint`, `staticcheck`, `test`, and `smoke` jobs
-- native PAM package, VM, and Docker validation results when shipping native PAM changes
+- native PAM package, VM, and repository smoke results when shipping package changes
 - GitHub Actions run URLs and the commit SHA each run validated
 
-For production-ready repository releases, also capture the [Production release gate](production-release-gate.md) evidence: signing status, repository-only install smoke, rollback validation, provider-outage validation, key-management documentation, and project board closeout.
+Run `make github-ci-watch` immediately after pushing the release commit to
+`main`. A successful `git push` is not release evidence by itself.
 
-### 4. Build Packages
+## 4. Build Package Artifacts
 
-Native PAM package releases build:
+Native Linux package releases build:
 
-- Debian/Ubuntu `.deb` packages for `amd64` and `arm64`
-- Fedora/RHEL/Rocky `.rpm` packages for `x86_64` and `aarch64`
-- Arch pacman packages for `x86_64`
-- Alpine APK packages for `x86_64` and `aarch64`
+- Debian/Ubuntu `.deb`: `amd64`, `arm64`
+- Fedora/RHEL/Rocky `.rpm`: `x86_64`, `aarch64`
+- Arch package: `x86_64`
+- Alpine `.apk`: `x86_64`, `aarch64`
 - native PAM checksums, build metadata, and provenance
+
+Local build commands:
 
 ```bash
 make package-native-pam-debian
 make package-native-pam-rpm
 make package-native-pam-arch
 make package-native-pam-alpine
+make native-pam-release-provenance
 ```
 
-Release automation builds the same package families through
+Tagged release automation builds the same package families through
 `scripts/build-native-pam-release-assets.sh`.
 
-Native PAM package releases must:
+Package releases must:
 
-- build the native package files for each supported repository architecture
-- set `SOURCE_DATE_EPOCH` from the release tag timestamp before package builds
-- run `make native-pam-release-provenance` after native packages are staged under `dist/release`
-- sign `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` with `PWNED_CHECK_RELEASE_SIGNING_KEY` when release signing keys are available
-- sign `.rpm` packages with `rpm --addsign` in the release signing environment
-- sign or publish `.deb` packages through the project Debian repository/release signing process
-- attach checksum, provenance, and signature files alongside native PAM packages
-- keep private signing keys outside the repository and outside test VMs
-- publish production repositories through GitHub Pages under
+- set `SOURCE_DATE_EPOCH` from the release tag timestamp
+- attach checksums, provenance, signatures, and package files together
+- keep signing keys outside the repository and outside test VMs
+- publish signed package repositories through GitHub Pages under
   `https://phillipmcmahon.github.io/pwned-check/`
-- use one maintainer-owned OpenPGP production key for apt/RPM/Arch and one
-  maintainer-owned Alpine RSA production key
-- record repository signing key fingerprints, rotation due dates, revocation
-  notice paths, and operator public-key update steps as described in
-  [Package repositories](package-repositories.md#key-rotation-and-revocation)
+- record repository signing key fingerprints and smoke evidence in release notes
 
-Signed package repositories are the operator installation channel for native
-PAM packages; build and publish them from the validated release package set by
-following [Package repositories](package-repositories.md).
+Repository layout, signing, key rotation, and publication commands live in
+[Package repositories](package-repositories.md).
 
-The Debian/Ubuntu native package builder runs in a pinned Rust Debian container for both release architectures so the release path does not depend on the host Cargo version.
+## 5. Publish
 
-For every package repository release, complete the repository publication checks in [Package repositories](package-repositories.md):
-
-- publish public key fingerprints and operator trust-bootstrap commands
-- generate repository metadata from the validated release package set; use
-  `scripts/build-native-pam-apt-repository.sh` for apt and
-  `scripts/build-native-pam-rpm-repository.sh` for RPM-family repositories,
-  `scripts/build-native-pam-arch-repository.sh` for Arch repositories, and
-  `scripts/build-native-pam-alpine-repository.sh` for Alpine repositories
-- sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
-- run repository install smokes on Ubuntu, Debian, Fedora, Rocky, Arch, and Alpine persistent VMs for each published architecture
-- confirm the persistent VM fleet is available or record explicit deferrals
-  using [VM fleet](vm-fleet.md)
-- verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
-- record the published repository endpoints, signing key fingerprints, and
-  smoke output paths in the release notes before calling the release
-  production-ready
-
-The production signing model is defined in [Production release gate](production-release-gate.md#signing-model). Private keys must not be stored in repo-tracked files, persistent distro VMs, smoke fixtures, or package repositories.
-
-Release tag signing starts with the next release prepared after this convention
-was adopted. Do not rewrite an already-published GitHub Release tag only to add
-a missing tag signature; ship the process improvement in the next release
-instead. Rewriting a published tag changes release identity, can retrigger
-release automation, and may fail if immutable release package files already exist.
-
-Do not publish macOS or Windows packages until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
-
-### 5. Publish
-
-- Push the release commit to `main`.
-- Monitor the pushed `main` CI run to completion before tagging:
-  ```bash
-  make github-ci-watch
-  ```
-  The watcher waits for the CI workflow associated with the pushed `HEAD` SHA
-  and exits non-zero if any required CI job fails.
-- Create and push a signed tag. Use the matching release note file as the tag
-  message and the configured release signing key:
-  ```bash
-  git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F docs/releases/vX.Y.Z.md
-  git push origin vX.Y.Z
-  ```
-  Prefer `gpg-agent` with loopback pinentry enabled for non-interactive release
-  signing. A maintainer-local passphrase file such as
-  `~/.pwned-check/signing/keys/pwned-check-openpgp-passphrase.txt` may be used
-  to unlock the agent or by a temporary local wrapper, but it is not the
-  repository default. Never commit passphrases, private keys, or wrapper
-  scripts containing secret paths to the repository.
-- Let GitHub Actions build release packages.
-- Monitor the tag-triggered release workflow from GitHub Actions until it
-  reaches a terminal success or failure state. A pushed tag is not considered
-  published until the workflow completes successfully and the release packages are
-  visible on the GitHub Release.
-- Verify package checksums.
-- Verify release provenance attestation is present for the packages listed in
-  `SHA256SUMS.txt`.
-- For repository-backed releases, publish signed package repositories from the
-  immutable GitHub Release package files after the tag-triggered release workflow has
-  completed and release packages are visible.
-- Wait for the GitHub Pages deployment for the repository update to complete.
-- Smoke the live repository endpoints from the persistent distro VMs before
-  calling the repository-backed release complete:
-  ```bash
-  make native-pam-live-repo-smokes
-  ```
-  This runs apt on Ubuntu and Debian, RPM on Fedora and Rocky, Arch on the
-  persistent Arch VM, and Alpine on the persistent Alpine VMs.
-- Confirm the non-mutating published endpoint monitor passes, or use it for
-  focused endpoint diagnosis:
-  ```bash
-  make native-pam-repo-endpoint-check
-  ```
-  This is the same check run by the scheduled `Repository Endpoints` GitHub
-  Actions workflow. It verifies public keys, signed metadata, indexes, and
-  package visibility without installing packages or changing PAM state.
-- Archive the release packages to the NAS after the GitHub Release package files are
-  visible:
-  ```bash
-  ./scripts/archive-release-to-nas.sh --version vX.Y.Z
-  ```
-  This downloads the immutable GitHub Release package files, adds the GitHub source
-  archives for the tag, writes them to the configured NAS release root, and
-  resets its `latest/<version>/` directory.
-
-  The archive destination is maintainer-local configuration. Set it either with
-  environment variables:
-  ```bash
-  PWNED_CHECK_NAS_HOST=<ssh-host> \
-  PWNED_CHECK_NAS_RELEASE_ROOT=<remote-project-root> \
+1. Push the release commit to `main`.
+2. Monitor the pushed `main` CI run:
+   ```bash
+   make github-ci-watch
+   ```
+3. Create and push a signed tag:
+   ```bash
+   git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F <release-notes-file>
+   git push origin vX.Y.Z
+   ```
+   Prefer `gpg-agent` with loopback pinentry enabled for non-interactive
+   signing. A maintainer-local passphrase file may unlock the agent, but it is
+   not a repository input.
+4. Monitor the tag-triggered release workflow to terminal success.
+5. Verify GitHub Release package files, `SHA256SUMS.txt`, and provenance
+   attestation are present.
+6. Publish signed package repositories from the immutable GitHub Release
+   package files.
+7. Wait for GitHub Pages deployment.
+8. Run live repository smokes:
+   ```bash
+   make native-pam-live-repo-smokes
+   ```
+9. Run the non-mutating endpoint monitor:
+   ```bash
+   make native-pam-repo-endpoint-check
+   ```
+10. Archive immutable GitHub Release package files to maintainer-local storage:
+    ```bash
     ./scripts/archive-release-to-nas.sh --version vX.Y.Z
-  ```
-  or with a private config file at
-  `${XDG_CONFIG_HOME:-$HOME/.config}/pwned-check/archive-release.env`:
-  ```bash
-  PWNED_CHECK_NAS_HOST=<ssh-host>
-  PWNED_CHECK_NAS_RELEASE_ROOT=<remote-project-root>
-  PWNED_CHECK_NAS_ARCHIVE_SOURCE=github
-  ```
-  Keep that config file outside the repository. Co-maintainers should point the
-  same script at their own SSH host and project root; the GitHub immutable asset
-  mirror behavior is unchanged.
-- Confirm release notes include:
-  - highlights
-  - operator impact
-  - validation, including local validation commands, GitHub Actions run URLs,
-    and the commit SHA validated by each run
-  - known limitations
+    ```
+    The destination is private configuration outside the repository.
 
-Draft release notes live under `docs/releases/`. Use the matching file as the
-signed tag message, for example:
+Release notes should include highlights, operator impact, validation evidence,
+GitHub Actions run URLs, validated SHAs, package filenames, checksums, and known
+limitations.
 
-```bash
-git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F docs/releases/vX.Y.Z.md
-```
+## Failure Rule
 
-### 6. Close Tracking
-
-- Comment on the release-prep issue with validation and release links.
-- For production-ready repository releases, include the completed production gate evidence or the explicit deferment rationale.
-- Move shipped story/task issues to `Done`.
-- Run the project board audit.
-- Run `make github-workflow-status` to confirm the latest completed `main`
-  runs for CI, fuzz, and Native PAM Package Gates are green.
-
-## Release Failure Rule
-
-If a release workflow fails after the tag is pushed:
+If a release workflow fails after a tag is pushed:
 
 - fix `main` first
 - cut a new patch release from the fixed tree

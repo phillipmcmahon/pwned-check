@@ -140,6 +140,12 @@ For every package repository release, complete the repository publication checks
 
 The production signing model is defined in [Production release gate](production-release-gate.md#signing-model). Private keys must not be stored in repo-tracked files, persistent distro VMs, smoke fixtures, or package repositories.
 
+Release tag signing starts with the next release prepared after this convention
+was adopted. Do not rewrite an already-published GitHub Release tag only to add
+a missing tag signature; ship the process improvement in the next release
+instead. Rewriting a published tag changes release identity, can retrigger
+release automation, and may fail if immutable release assets already exist.
+
 Do not publish macOS or Windows artifacts until those roadmap tracks include complete x64 and arm64 build coverage and their signing requirements.
 
 ### 5. Publish
@@ -157,6 +163,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
   git push origin v0.1.0
   ```
+  If the release signing key needs a non-interactive passphrase unlock, use a
+  maintainer-local GPG wrapper or agent configuration that reads from private
+  storage outside the repository, for example
+  `~/.pwned-check/signing/keys/pwned-check-openpgp-passphrase.txt`. Never
+  commit passphrases, private keys, or wrapper scripts containing secret paths
+  to the repository.
 - Let GitHub Actions build release artifacts.
 - Monitor the tag-triggered release workflow from GitHub Actions until it
   reaches a terminal success or failure state. A pushed tag is not considered
@@ -237,3 +249,5 @@ If a release workflow fails after the tag is pushed:
 - fix `main` first
 - cut a new patch release from the fixed tree
 - fold the failed attempt's user-facing notes into the successful release
+- do not force-update a published release tag unless the release has been
+  explicitly withdrawn and the operator impact has been documented

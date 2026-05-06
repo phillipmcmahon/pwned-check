@@ -37,8 +37,12 @@ The release issue should track:
 ### 2. Prepare Version
 
 - Update version metadata.
+- Confirm the native PAM Rust crate version in `native/pam-pwned-check/Cargo.toml`
+  and `Cargo.lock` matches the release tag without the leading `v`.
 - Confirm `pwned-check --version` reports the intended version in the built binary.
 - Keep release notes aligned with the actual shipped behavior.
+- Write release-note validation entries in past tense once the checks have
+  completed; avoid mixing planned validation with completed evidence.
 
 ### 3. Validate
 
@@ -153,8 +157,8 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   published until the workflow completes successfully and the release assets are
   visible on the GitHub Release.
 - Verify artifact checksums.
-- Verify release provenance attestation is present for the published checksums.
-- Verify the attestation can be resolved against `SHA256SUMS.txt`.
+- Verify release provenance attestation is present for the artifacts listed in
+  `SHA256SUMS.txt`.
 - For repository-backed releases, verify signed repository metadata and public-key instructions before publishing release notes.
 - For repository-backed releases, smoke the live repository endpoints from the
   persistent distro VMs before tagging or promoting release notes:

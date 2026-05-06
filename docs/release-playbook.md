@@ -96,7 +96,7 @@ Native PAM packaging currently includes Debian/Ubuntu `.deb`, Fedora/RHEL `.rpm`
 Native PAM package releases must additionally:
 
 - build the native package artifacts for Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine where supported
-- build native PAM `linux/amd64` and `linux/arm64` release artifacts; Arch is `linux/amd64` only until an Arch Linux ARM builder image or VM is selected
+- build native PAM `linux/amd64` and `linux/arm64` release artifacts where supported; Arch is `linux/amd64` only
 - set `SOURCE_DATE_EPOCH` from the release tag timestamp before package builds
 - run `make native-pam-release-provenance` after native package artifacts are staged under `dist/release`
 - sign `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` with `PWNED_CHECK_RELEASE_SIGNING_KEY` when release signing keys are available

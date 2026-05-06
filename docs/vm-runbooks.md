@@ -268,8 +268,7 @@ Known quirks:
 
 - Arch package helpers install under `/usr/bin`, not `/usr/sbin`, to match Arch
   filesystem ownership expectations.
-- Arch Linux ARM is intentionally deferred until a persistent Arch Linux ARM VM
-  or trusted builder path is selected.
+- Arch Linux packaging is `x86_64` only for this project.
 
 ## After Rebuild
 

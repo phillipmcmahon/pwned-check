@@ -27,8 +27,7 @@ evidence for the first production endpoint set is recorded in
 
 Known architecture deferrals must be recorded in release notes before a release
 is called production-ready. Apt `arm64`, RPM `aarch64`, and Alpine `aarch64`
-now have native VM smoke coverage. Arch remains `x86_64` until an Arch Linux
-ARM builder or VM is selected.
+now have native VM smoke coverage. Arch Linux is targeted as `x86_64` only.
 
 ## Signing Model
 

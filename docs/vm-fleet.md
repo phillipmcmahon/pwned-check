@@ -39,13 +39,10 @@ credentials belong in maintainer-local storage.
 
 ## Missing Capacity
 
-The current persistent fleet includes Debian-family, Fedora, Rocky, and Alpine
-ARM guests. The following coverage remains explicitly deferred until a matching
-VM is provided:
-
-| Needed guest | Unlocks |
-|---|---|
-| Arch Linux ARM | Arch Linux ARM package/repository decision and smoke |
+The current persistent fleet includes all targeted ARM package families:
+Debian-family, Fedora, Rocky, and Alpine. Arch Linux is targeted as `x86_64`
+only; Arch Linux ARM is a separate downstream ecosystem and is not part of the
+current VM fleet plan.
 
 Docker/QEMU coverage remains useful for CI parity and package-asset confidence,
 but it is not a replacement for a persistent real-host repository smoke.

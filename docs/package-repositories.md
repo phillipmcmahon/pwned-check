@@ -28,7 +28,7 @@ artifact source and bootstrap fallback.
 |---|---|---|---|
 | Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs, including arm64 guests, with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`/`arm64` |
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs, including arm64 guests, with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`/`aarch64` |
-| Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM support is deferred until a persistent Arch Linux ARM VM or trusted builder path is selected |
+| Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM is a separate downstream ecosystem and is not targeted |
 | Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
 
 GitHub Pages endpoints:
@@ -55,8 +55,7 @@ Release assets must include per-file SHA256 files, native aggregate checksums, a
 
 Current release automation builds Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine
 native PAM packages for `amd64`/`x86_64` and `arm64`/`aarch64`. Arch package
-assets are `x86_64` only until an Arch Linux ARM builder image or persistent VM
-is selected.
+assets are `x86_64` only.
 
 Published repository architecture status is deliberately narrower than package
 build support when a matching persistent VM does not exist:
@@ -65,7 +64,7 @@ build support when a matching persistent VM does not exist:
 |---|---|---|---|
 | Apt | `amd64`, `arm64` | `amd64` and `arm64` on Ubuntu and Debian VMs | None |
 | DNF/Yum | `x86_64`, `aarch64` | `x86_64` and `aarch64` on Fedora and Rocky VMs | None |
-| Arch | `x86_64` | `x86_64` on the Arch VM | Arch Linux ARM until the project selects a builder or VM |
+| Arch | `x86_64` | `x86_64` on the Arch VM | None; Arch Linux ARM is not targeted |
 | Alpine | `aarch64` for `v0.1.6` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
 
 All native package families expose the same operator commands after installation:
@@ -407,16 +406,9 @@ package, and verifies managed files are gone:
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
 build tooling, `makepkg`, or `repo-add` for this repo-only smoke.
 
-Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
-ARM coverage is deferred until a maintained Arch Linux ARM builder image or
-persistent VM is selected.
-
-Arch Linux ARM is a deliberate deferral for the v0.2 readiness path. The
-project will not publish Arch Linux ARM repository metadata from an unvetted
-community builder image. Support can be reopened when a persistent Arch Linux
-ARM VM is explicitly provided, when a trusted and pinned builder image is
-selected, or when the project records a source-only Arch Linux ARM position
-instead of binary package support.
+Arch repository smoke covers `x86_64` on `codex-vm-arch`. Arch Linux ARM is a
+separate downstream ecosystem, not an official Arch Linux architecture target,
+so the project does not publish Arch Linux ARM binary repository metadata.
 
 ## Alpine Repository
 

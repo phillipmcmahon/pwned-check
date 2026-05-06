@@ -60,7 +60,7 @@ repository smoke.
 | Debian/Ubuntu | `amd64` on `codex-vm-debian` and `codex-vm-ubuntu`; `arm64` on `codex-vm-debian-arm64` and `codex-vm-ubuntu-arm64` | Apt `arm64` metadata and package assets | Covered by persistent apt package/repository VM smokes |
 | Fedora/Rocky | `x86_64` on `codex-vm-fedora` and `codex-vm-rocky`; `arm64` on `codex-vm-fedora-arm64` and `codex-vm-rocky-arm64` | RPM `aarch64` metadata and package assets | Covered by persistent Fedora and Rocky RPM package/repository VM smokes |
 | Alpine | `x86_64` on `codex-vm-alpine`; `arm64` on `codex-vm-alpine-arm64` | Alpine `aarch64` endpoint and package assets | Covered by persistent Alpine package/repository VM smokes |
-| Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux ARM deferred by decision, not by accident |
+| Arch | `x86_64` on `codex-vm-arch` | None | Arch Linux is `x86_64` only for this project |
 
 ### ARM VM Runbook Template
 
@@ -139,8 +139,8 @@ Use a focused matrix while iterating:
 ./scripts/native-pam-generic-package-smoke.sh --platform linux/amd64 --images "alpine:3.22"
 ```
 
-Arch is omitted from local and CI arm64 Docker smoke because
-`archlinux:base-devel` does not currently publish a suitable arm64 image.
+Arch is omitted from local and CI arm64 Docker smoke because the Arch package
+path is `x86_64` only.
 
 ## Ubuntu Persistent Smoke Container
 
@@ -595,29 +595,18 @@ writes a combined report under
 `.test-output/native-pam-arch-repo-smoke/<timestamp>-native-pam-arch-repo-smoke/`
 and updates `.test-output/native-pam-arch-repo-smoke/latest`.
 
-Arch repository smoke currently covers `x86_64` on `codex-vm-arch`. Arch Linux
-ARM coverage is deferred until a maintained Arch Linux ARM builder image or
-persistent VM is selected.
+Arch repository smoke currently covers `x86_64` on `codex-vm-arch`.
 
-### Arch Linux ARM Decision
+### Arch Architecture Decision
 
-Arch Linux ARM is deferred for the v0.2 readiness path. The project has an
-official Arch Linux `x86_64` VM and an `archlinux:base-devel` Docker path for
-`x86_64`, but it does not have a trusted Arch Linux ARM builder image or a
-persistent Arch Linux ARM VM. Treating a community image as a release builder
-would add a larger supply-chain decision than the current story needs.
+Arch Linux is targeted as `x86_64` only. The project has an official Arch Linux
+`x86_64` VM and an `archlinux:base-devel` Docker path for `x86_64`. Arch Linux
+ARM is a separate downstream ecosystem rather than an official Arch Linux
+architecture target, so it is not part of the supported package matrix.
 
 User impact: Arch operators on `x86_64` can install and smoke the signed custom
-repository through `pacman -S`; Arch Linux ARM operators must build from source
-or wait for a future package path. Revisit this decision when one of these
-inputs exists:
-
-- an explicitly provisioned `codex-vm-arch-arm64` or equivalent Arch Linux ARM
-  guest with key-based SSH and passwordless sudo
-- a trusted, pinned Arch Linux ARM builder image with clear provenance and a
-  package smoke path
-- a maintainer decision to publish Arch Linux ARM as source-only with no binary
-  repository promise
+repository through `pacman -S`. ARM users should use one of the supported ARM
+package families instead: Debian/Ubuntu, Fedora/Rocky, or Alpine Linux-PAM.
 
 Use the Arch Docker path only for GitHub CI parity or when the VM is
 unavailable:
@@ -684,7 +673,7 @@ Smoke architecture coverage is split by runner capability:
 | Fedora | `codex-vm-fedora` and `codex-vm-fedora-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Fedora native PAM package asset smoke |
 | Rocky | `codex-vm-rocky` and `codex-vm-rocky-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; RPM smoke runs from clean package state | Binary/PAM Docker smoke on `linux/arm64` using `rockylinux/rockylinux:10.1` for CI parity; amd64 Rocky acceptance is VM-first | Covered by Fedora/RHEL-family package scripts and persistent Rocky VM smokes |
 | Alpine | `codex-vm-alpine` and `codex-vm-alpine-arm64` over SSH | VMs cover `linux/amd64` and `linux/arm64`; APK smoke runs from clean package state | Binary/PAM Docker smoke on `linux/amd64` and `linux/arm64` | arm64 Alpine native PAM package asset smoke |
-| Arch | `codex-vm-arch` over SSH | VM is `linux/amd64`; pacman smoke runs from clean package state | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | No arm64 Arch smoke until an Arch Linux ARM image or VM is selected |
+| Arch | `codex-vm-arch` over SSH | VM is `linux/amd64`; pacman smoke runs from clean package state | Binary/PAM Docker smoke and `PKGBUILD` package smoke on `linux/amd64` | Arch package path is `x86_64` only |
 
 The pre-push hook runs the VM package smoke stage over SSH against the default
 persistent VM set. Local arm64 Docker binary and PAM package smoke is skipped

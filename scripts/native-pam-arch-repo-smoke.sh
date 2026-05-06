@@ -144,6 +144,26 @@ fail() {
     exit 1
 }
 
+assert_module_defaults() {
+    line="$1"
+    mode="$2"
+    printf '%s\n' "$line" | grep -F 'pam_pwned_check.so' >/dev/null || fail "$mode line missing pam_pwned_check.so"
+    printf '%s\n' "$line" | grep -F 'checker=/usr/bin/pwned-check' >/dev/null || fail "$mode line missing checker=/usr/bin/pwned-check"
+    printf '%s\n' "$line" | grep -F 'timeout=3' >/dev/null || fail "$mode line missing timeout=3"
+    printf '%s\n' "$line" | grep -F 'fail_open' >/dev/null || fail "$mode line missing fail_open"
+    case "$mode" in
+        dry-run)
+            printf '%s\n' "$line" | grep -F 'dry_run' >/dev/null || fail "$mode line missing dry_run"
+            ;;
+        enforce)
+            if printf '%s\n' "$line" | grep -F 'dry_run' >/dev/null; then
+                fail "$mode line should not include dry_run"
+            fi
+            ;;
+        *) fail "unknown module default assertion mode: $mode" ;;
+    esac
+}
+
 as_root() {
     if [ "$(id -u)" -eq 0 ]; then
         "$@"
@@ -215,9 +235,9 @@ pacman -Q "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
 [ -f /usr/lib/security/pam_pwned_check.so ] || fail "PAM module missing after repo install"
 [ "$(stat -c '%a' /usr/lib/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
-command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
-command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
-command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"
+[ "$(command -v pwned-check-pam-enable-dry-run)" = "/usr/bin/pwned-check-pam-enable-dry-run" ] || fail "dry-run helper installed outside /usr/bin"
+[ "$(command -v pwned-check-pam-enable-enforce)" = "/usr/bin/pwned-check-pam-enable-enforce" ] || fail "enforce helper installed outside /usr/bin"
+[ "$(command -v pwned-check-pam-disable)" = "/usr/bin/pwned-check-pam-disable" ] || fail "disable helper installed outside /usr/bin"
 actual_version="$(/usr/bin/pwned-check --version | awk '{print $2}')"
 if [ -n "$EXPECTED_VERSION" ] && [ "$actual_version" != "$EXPECTED_VERSION" ]; then
     fail "installed pwned-check version $actual_version, expected $EXPECTED_VERSION"
@@ -230,14 +250,14 @@ backup_dir="$REMOTE_DIR/pam-backups"
 as_root sh -c "printf '%s\n' 'password required pam_unix.so' > '$service'"
 
 as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$state_file" PWNED_CHECK_BACKUP_DIR="$backup_dir" pwned-check-pam-enable-dry-run
-grep -F 'pam_pwned_check.so' "$service" >/dev/null || fail "dry-run helper did not update test service"
-grep -F 'dry_run' "$service" >/dev/null || fail "dry-run helper did not configure dry_run"
+dry_run_line="$(grep -F 'pam_pwned_check.so' "$service" || true)"
+[ -n "$dry_run_line" ] || fail "dry-run helper did not update test service"
+assert_module_defaults "$dry_run_line" dry-run
 
 as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$state_file" PWNED_CHECK_BACKUP_DIR="$backup_dir" pwned-check-pam-enable-enforce
-grep -F 'pam_pwned_check.so' "$service" >/dev/null || fail "enforce helper removed pam_pwned_check"
-if grep -F 'pam_pwned_check.so' "$service" | grep -F 'dry_run' >/dev/null; then
-    fail "enforce helper left dry_run in test service"
-fi
+enforce_line="$(grep -F 'pam_pwned_check.so' "$service" || true)"
+[ -n "$enforce_line" ] || fail "enforce helper removed pam_pwned_check"
+assert_module_defaults "$enforce_line" enforce
 
 as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$state_file" pwned-check-pam-disable
 if grep -F 'pam_pwned_check.so' "$service" >/dev/null; then

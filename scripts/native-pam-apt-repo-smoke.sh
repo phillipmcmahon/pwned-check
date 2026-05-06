@@ -163,6 +163,26 @@ require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found on target: $1"
 }
 
+assert_module_defaults() {
+    line="$1"
+    mode="$2"
+    printf '%s\n' "$line" | grep -F 'pam_pwned_check.so' >/dev/null || fail "$mode line missing pam_pwned_check.so"
+    printf '%s\n' "$line" | grep -F 'checker=/usr/bin/pwned-check' >/dev/null || fail "$mode line missing checker=/usr/bin/pwned-check"
+    printf '%s\n' "$line" | grep -F 'timeout=3' >/dev/null || fail "$mode line missing timeout=3"
+    printf '%s\n' "$line" | grep -F 'fail_open' >/dev/null || fail "$mode line missing fail_open"
+    case "$mode" in
+        dry-run)
+            printf '%s\n' "$line" | grep -F 'dry_run' >/dev/null || fail "$mode line missing dry_run"
+            ;;
+        enforce)
+            if printf '%s\n' "$line" | grep -F 'dry_run' >/dev/null; then
+                fail "$mode line should not include dry_run"
+            fi
+            ;;
+        *) fail "unknown module default assertion mode: $mode" ;;
+    esac
+}
+
 as_root() {
     if [ "$(id -u)" -eq 0 ]; then
         "$@"
@@ -226,9 +246,9 @@ module_path="/lib/$multiarch/security/pam_pwned_check.so"
 dpkg -L "$PACKAGE_NAME" | grep -Fx "$module_path" >/dev/null || fail "package file list missing PAM module at $module_path"
 [ -f "$module_path" ] || fail "PAM module missing after repo install at $module_path"
 [ "$(stat -c '%a' "$module_path")" = "644" ] || fail "PAM module should be installed mode 0644 at $module_path"
-command -v pwned-check-pam-enable-dry-run >/dev/null || fail "dry-run helper missing after repo install"
-command -v pwned-check-pam-enable-enforce >/dev/null || fail "enforce helper missing after repo install"
-command -v pwned-check-pam-disable >/dev/null || fail "disable helper missing after repo install"
+[ "$(command -v pwned-check-pam-enable-dry-run)" = "/usr/sbin/pwned-check-pam-enable-dry-run" ] || fail "dry-run helper installed outside /usr/sbin"
+[ "$(command -v pwned-check-pam-enable-enforce)" = "/usr/sbin/pwned-check-pam-enable-enforce" ] || fail "enforce helper installed outside /usr/sbin"
+[ "$(command -v pwned-check-pam-disable)" = "/usr/sbin/pwned-check-pam-disable" ] || fail "disable helper installed outside /usr/sbin"
 actual_version="$(/usr/bin/pwned-check --version | awk '{print $2}')"
 if [ -n "$EXPECTED_VERSION" ] && [ "$actual_version" != "$EXPECTED_VERSION" ]; then
     fail "installed pwned-check version $actual_version, expected $EXPECTED_VERSION"
@@ -239,14 +259,14 @@ before="$(mktemp)"
 as_root cp "$common_password" "$before"
 
 as_root pwned-check-pam-enable-dry-run
-grep -F 'pam_pwned_check.so' "$common_password" >/dev/null || fail "dry-run helper did not enable pam_pwned_check"
-grep -F 'dry_run' "$common_password" >/dev/null || fail "dry-run helper did not configure dry_run"
+dry_run_line="$(grep -F 'pam_pwned_check.so' "$common_password" || true)"
+[ -n "$dry_run_line" ] || fail "dry-run helper did not enable pam_pwned_check"
+assert_module_defaults "$dry_run_line" dry-run
 
 as_root pwned-check-pam-enable-enforce
-grep -F 'pam_pwned_check.so' "$common_password" >/dev/null || fail "enforce helper removed pam_pwned_check"
-if grep -F 'pam_pwned_check.so' "$common_password" | grep -F 'dry_run' >/dev/null; then
-    fail "enforce helper left dry_run in common-password"
-fi
+enforce_line="$(grep -F 'pam_pwned_check.so' "$common_password" || true)"
+[ -n "$enforce_line" ] || fail "enforce helper removed pam_pwned_check"
+assert_module_defaults "$enforce_line" enforce
 
 as_root pwned-check-pam-disable
 if grep -F 'pam_pwned_check.so' "$common_password" >/dev/null; then

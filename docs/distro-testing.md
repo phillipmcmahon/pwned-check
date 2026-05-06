@@ -1,9 +1,7 @@
 # Distro Testing Runbook
 
-This runbook covers Linux distro validation for both supported integration paths:
-
-- the existing `pam_exec.so expose_authtok` helper package
-- the native `pam_pwned_check.so` module and its distro package layouts
+This runbook covers Linux distro validation for the native `pam_pwned_check.so`
+module and its distro package layouts.
 
 Keep Git and GitHub operations in the main development environment. Persistent VMs are test execution targets only.
 
@@ -25,9 +23,8 @@ Use the cheapest layer that can prove the behavior under test, then move outward
 |---|---|---|
 | Unit and host build gates | Local checkout | Go behavior, Rust module behavior, exported PAM symbols, dependency allowlist on the current host |
 | Docker binary smoke | Throwaway distro containers | Static Linux binaries run across minimal distro images |
-| Docker PAM package smoke | Throwaway distro containers | Helper package install, `pam_exec.so expose_authtok`, helper exit-code mapping, timeout and config-error behavior |
 | Docker native PAM distro smoke | Throwaway distro containers | Distro toolchain can build/load `pam_pwned_check.so`, direct clean and pwned `pam_chauthtok` outcomes work |
-| Docker generic native package smoke | Throwaway Arch/Alpine containers | CI/fallback generic artifact installs, manual PAM helper enables, direct native PAM outcomes work, rollback restores the service |
+| Docker generic native package smoke | Throwaway Arch/Alpine containers | CI/fallback generic artifact installs, package enablement wrappers, direct native PAM outcomes work, rollback restores the service |
 | Persistent Ubuntu smoke container | Reused Ubuntu container | Fast native PAM development loop with captured logs, syslog, exact conversation strings, checker environment, Debian/Ubuntu artifact enable/rollback |
 | Persistent distro VMs | Real distro hosts | Host package layout, package tooling, distro-specific module directory/dependency drift, enablement and rollback against a real system |
 
@@ -328,18 +325,17 @@ Debian/Ubuntu apt repository smoke:
 Run this after `dist/apt-repository` has been generated with
 `scripts/build-native-pam-apt-repository.sh`. The target VM receives only the
 repository files and public key, installs through apt, exercises the packaged
-dry-run/enforce/disable helpers, purges the package, and verifies managed-file
+dry-run/enforce/disable wrappers, purges the package, and verifies managed-file
 cleanup. Each run writes a combined report under
 `.test-output/native-pam-apt-repo-smoke/<timestamp>-native-pam-apt-repo-smoke/`
 and updates `.test-output/native-pam-apt-repo-smoke/latest`.
 
 ## Debian Docker Route
 
-The Debian Docker route remains the cheap, disposable coverage path. Run the Debian slices of the binary, helper PAM, and direct native PAM smoke tests:
+The Debian Docker route remains the cheap, disposable coverage path. Run the Debian slices of the binary and direct native PAM smoke tests:
 
 ```bash
 ./scripts/docker-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
-./scripts/docker-pam-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
 ./scripts/native-pam-distro-smoke.sh --platform linux/amd64 --images "debian:stable-slim"
 ```
 
@@ -367,7 +363,7 @@ Host package and authselect smoke:
 ssh codex-vm-fedora 'cd /home/codex/pwned-check && make native-pam-fedora-host-package-smoke'
 ```
 
-The host package smoke installs the RPM-family filesystem layout, creates a disposable PAM service for clean and pwned `pam_chauthtok` cases, enables the packaged authselect helper with a temporary `custom/pwned-check-smoke` profile, verifies the active `system-auth` and `password-auth` stacks contain the dry-run module line, restores the authselect backup, and removes installed test files.
+The host package smoke installs the RPM-family filesystem layout, creates a disposable PAM service for clean and pwned `pam_chauthtok` cases, enables the packaged authselect wrapper with a temporary `custom/pwned-check-smoke` profile, verifies the active `system-auth` and `password-auth` stacks contain the dry-run module line, restores the authselect backup, and removes installed test files.
 
 RPM package smoke:
 
@@ -457,9 +453,9 @@ SELinux assessment:
 ssh codex-vm-rocky 'cd /home/codex/pwned-check && make native-pam-fedora-selinux-assessment'
 ```
 
-Rocky packages may lag the repository's Go version. If Rocky cannot build the
-`pwned-check` helper because its packaged Go is too old, build a static Linux
-helper in the main development environment and copy it in:
+Rocky packages may lag the repository's Go version. If Rocky cannot build
+`pwned-check` because its packaged Go is too old, build a static Linux checker
+in the main development environment and copy it in:
 
 ```bash
 mkdir -p /tmp/pwned-check-rocky-prebuilt
@@ -476,7 +472,7 @@ ssh codex-vm-rocky 'cd /home/codex/pwned-check && PWNED_CHECK_HOST_SMOKE_PWNED_C
 ```
 
 The Rocky VM validates the RHEL-compatible package path against a real host:
-`authselect` profile creation, dry-run and enforce helper switching, rollback,
+`authselect` profile creation, dry-run and enforce switching, rollback,
 package removal, dependency drift, and SELinux/audit behavior. The scripts keep
 their `fedora` names because they cover the shared Fedora/RHEL/Rocky package
 family.
@@ -495,7 +491,9 @@ Core native PAM gates:
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 ```
 
-Alpine packages may lag the repository's Go version. If Alpine cannot build the `pwned-check` helper because its packaged Go is too old, build a static Linux helper in the main development environment and copy it in:
+Alpine packages may lag the repository's Go version. If Alpine cannot build
+`pwned-check` because its packaged Go is too old, build a static Linux checker
+in the main development environment and copy it in:
 
 ```bash
 mkdir -p /tmp/pwned-check-alpine-prebuilt
@@ -527,7 +525,7 @@ ssh codex-vm-alpine 'cd /home/codex/pwned-check &&
 Alpine Linux-PAM module placement varies by release. The persistent Alpine VM
 loads from `/usr/lib/security`, while the pinned `alpine:3.22` Docker image
 loads from `/lib/security`. The Alpine package installs `pam_pwned_check.so`
-in both locations for first-release compatibility:
+in both locations so current supported Alpine targets can load it:
 
 ```text
 /usr/lib/security
@@ -546,7 +544,7 @@ Alpine package smoke should run on `codex-vm-alpine` for release validation. Use
 ./scripts/native-pam-alpine-package-smoke.sh --platform linux/amd64
 ```
 
-The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises dry-run/enforce/disable through the manual PAM helper wrappers, removes the package, and verifies package-managed files are gone.
+The Alpine package smoke builds an `APKBUILD` package, installs it with `apk`, verifies the package file list, exercises dry-run/enforce/disable through the package wrappers, removes the package, and verifies package-managed files are gone.
 
 Alpine repository smoke:
 
@@ -557,7 +555,7 @@ Alpine repository smoke:
 Run this after `dist/alpine-repository` has been generated with
 `scripts/build-native-pam-alpine-repository.sh`. The target VM receives only the
 repository files and RSA public key, installs through apk without
-`--allow-untrusted`, exercises packaged dry-run/enforce/disable helpers on a
+`--allow-untrusted`, exercises packaged dry-run/enforce/disable wrappers on a
 disposable Linux-PAM service, removes the package, and verifies managed-file
 cleanup. Each run writes a combined report under
 `.test-output/native-pam-alpine-repo-smoke/<timestamp>-native-pam-alpine-repo-smoke/`
@@ -589,7 +587,7 @@ Run this after `dist/arch-repository` has been generated with
 `scripts/build-native-pam-arch-repository.sh`. The target VM receives only the
 repository files and armored public key, imports and locally signs the key in
 the pacman keyring, installs through `pacman -S` from the custom repository,
-exercises packaged dry-run/enforce/disable helpers on a disposable Linux-PAM
+exercises packaged dry-run/enforce/disable wrappers on a disposable Linux-PAM
 service, removes the package, and verifies managed-file cleanup. Each run
 writes a combined report under
 `.test-output/native-pam-arch-repo-smoke/<timestamp>-native-pam-arch-repo-smoke/`
@@ -731,7 +729,7 @@ Run this after `dist/rpm-repository` has been generated with
 `scripts/build-native-pam-rpm-repository.sh`. The target VM receives only the
 repository files and public key, installs through dnf/yum with package and
 repository metadata signature checks enabled, exercises the packaged
-dry-run/enforce/disable helpers, removes the package, and verifies managed-file
+dry-run/enforce/disable wrappers, removes the package, and verifies managed-file
 cleanup. Each run writes a combined report under
 `.test-output/native-pam-rpm-repo-smoke/<timestamp>-native-pam-rpm-repo-smoke/`
 and updates `.test-output/native-pam-rpm-repo-smoke/latest`.
@@ -748,4 +746,4 @@ and updates `.test-output/native-pam-rpm-repo-smoke/latest`.
 - Alpine host validation caught the `libc.musl-*.so.*` dependency name and confirmed Linux-PAM module placement under `/usr/lib/security` for the VM and `/lib/security` for the pinned Docker image.
 - Alpine package smoke validates native `APKBUILD` package build/install, installed-file PAM behavior, manual dry-run/enforce switching, rollback, package removal, and managed-file cleanup on the Alpine VM. Docker remains available only as fallback coverage when the VM is unavailable.
 - Arch local validation now runs on `codex-vm-arch`; Docker coverage remains for direct native PAM loading, generic artifact install/enable/rollback, and native `PKGBUILD` package build/install/dry-run/enforce/rollback/removal in CI/fallback contexts. Arch packages install `pwned-check-pam-*` wrappers under `/usr/bin` to avoid conflicting with Arch's `/usr/sbin` ownership model.
-- Debian Docker coverage remains available for binary smoke, helper PAM package smoke, and direct native PAM loading against `debian:stable-slim`.
+- Debian Docker coverage remains available for binary smoke and direct native PAM loading against `debian:stable-slim`.

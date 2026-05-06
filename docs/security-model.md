@@ -30,8 +30,8 @@ The password is trusted only inside the OS password-change process, integration 
 
 ## Password Handling Rules
 
-- Read candidate passwords from stdin only.
-- Bound password reads to 4096 bytes in both the checker and PAM helper.
+- Read candidate passwords from stdin or PAM-owned token APIs only.
+- Bound password reads to 4096 bytes in the checker and supported PAM integration paths.
 - Never accept passwords via command-line arguments.
 - Never log plaintext passwords.
 - Never persist plaintext passwords to disk.
@@ -72,15 +72,15 @@ Provider and integration timeouts are mandatory. Password-change workflows must 
 
 The PAM integration should enforce its own timeout around the checker process even though the checker also has provider timeouts.
 
-The helper-based PAM path and the native PAM module both enforce a timeout around the checker process. They read the PAM-supplied token from stdin or `PAM_AUTHTOK`; when `PAM_AUTHTOK` is absent, the native module uses Linux PAM's `pam_get_authtok` helper so PAM performs the normal password conversation. Both paths invoke the checker without passing the password through argv.
+The native PAM module enforces a timeout around the checker process. It reads the PAM-supplied token from `PAM_AUTHTOK`; when `PAM_AUTHTOK` is absent, it uses Linux PAM's `pam_get_authtok` API so PAM performs the normal password conversation. The checker is invoked without passing the password through argv.
 
 ## Process and Environment Exposure
 
-The checker, helper, and native module checker child are short-lived in normal operation, so plaintext candidates exist in process memory only for the duration of one validation. The native module keeps its PAM token copy in zeroizing memory, but transient copies can still exist in PAM-owned memory, the checker process, and kernel pipe buffers. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current helper or native module; any future native-module dump suppression must account for the process-wide side effect. The helper's `--max-bytes` option has a 1048576-byte ceiling and should not be used to accept arbitrary streams.
+The checker and native module checker child are short-lived in normal operation, so plaintext candidates exist in process memory only for the duration of one validation. The native module keeps its PAM token copy in zeroizing memory, but transient copies can still exist in PAM-owned memory, the checker process, and kernel pipe buffers. Core dump hardening such as `prctl(PR_SET_DUMPABLE, 0)` is not implemented in the current native module; any future native-module dump suppression must account for the process-wide side effect.
 
-The PAM helper inherits its environment when invoking the checker. This is intentional so provider settings such as `PWNED_CHECK_FAIL_CLOSED` and `PWNED_CHECK_TIMEOUT` can be supplied by the integration layer. Environment values must not contain plaintext passwords or full hashes.
+The native module starts the checker with a clean environment. Environment values must not contain plaintext passwords or full hashes.
 
-Helper argv is safe by design: it contains only helper flags, checker path, and timeout values. Candidate passwords are passed over stdin, never argv, so they should not appear in process listings.
+Integration argv is safe by design: it contains only module flags, checker path, and timeout values. Candidate passwords are passed through PAM token memory or stdin, never argv, so they should not appear in process listings.
 
 ## Live Provider Dependency
 
@@ -95,6 +95,7 @@ Release artifacts should include:
 - versioned binaries
 - SHA256 checksums
 - documented build provenance
+- signed package repository metadata for supported Linux package families
 - signing for macOS and Windows before those platforms become production targets
 
 ## Non-Goals
@@ -102,4 +103,3 @@ Release artifacts should include:
 - The checker is not a password strength estimator.
 - The checker is not a password manager.
 - The checker does not store historical password decisions.
-- The current phase does not guarantee backwards compatibility while the concept is being shaped.

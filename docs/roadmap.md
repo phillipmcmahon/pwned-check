@@ -37,7 +37,7 @@ User stories:
 - As an operator, I want clear rollback instructions if the PAM integration blocks password changes unexpectedly.
 
 Deliverables:
-- PAM helper/module approach decision.
+- Native PAM module approach decision.
 - Minimal PAM integration.
 - Example PAM config.
 - Linux test harness.
@@ -112,21 +112,21 @@ Current implementation notes:
 - [Security model](security-model.md) documents current trust boundaries and failure modes.
 - [Logging policy](logging-policy.md) documents safe event fields and rollout counters.
 - [Deployment security checklist](deployment-security-checklist.md) captures rollout and rollback controls.
-- [Operational troubleshooting](troubleshooting.md) maps exit codes plus PAM helper and native module events to operator actions.
+- [Operational troubleshooting](troubleshooting.md) maps checker exit codes, native module events, and repository trust symptoms to operator actions.
 - Parser fuzz coverage exists in `internal/pwned/provider_fuzz_test.go`.
 
 ## Epic 6: Native Linux PAM Module Delivery
 
 Project entry: [#10](https://github.com/phillipmcmahon/pwned-check/issues/10)
 
-Goal: deliver an optional native Linux PAM module that preserves the existing checker contract while improving PAM-native integration, distro packaging readiness, staged rollout, and operator recovery.
+Goal: deliver and maintain the native Linux PAM module as the preferred Linux password-change integration while preserving the existing checker contract, staged rollout, and operator recovery.
 
 User stories:
-- As a Linux administrator, I want a native PAM module so password-change enforcement integrates cleanly with PAM management tools without relying on `pam_exec.so expose_authtok`.
+- As a Linux administrator, I want a native PAM module so password-change enforcement integrates cleanly with PAM management tools.
 - As an operator, I want dry-run mode so I can validate would-be rejections before enabling enforcement.
 - As a security reviewer, I want the module to keep provider HTTP logic out of privileged PAM-using processes.
-- As a maintainer, I want parity tests proving the native module maps checker outcomes consistently with the documented checker and helper contract.
-- As a packager, I want Debian/Ubuntu, Fedora/RHEL, Arch Linux, and Alpine Linux install patterns documented before release packaging starts.
+- As a maintainer, I want tests proving the native module maps checker outcomes consistently with the documented checker contract.
+- As a packager, I want Debian/Ubuntu, Fedora/RHEL/Rocky, Arch Linux, and Alpine Linux package and repository install patterns documented and tested.
 - As an administrator, I want rollback and recovery guidance before enabling the module on a host.
 
 Deliverables:
@@ -136,7 +136,7 @@ Deliverables:
 - Module argument contract for checker path, timeout, fail-open/fail-closed, dry-run, and debug behavior.
 - Fork/exec IPC contract covering pipes, clean environment, file-descriptor hygiene, hard timeout, and safe stderr capture.
 - PAM stack placement and composition guidance, including `requisite` default placement and `PAM_AUTHTOK` non-mutation rules.
-- Outcome mapping parity with `pwned-check-pam-helper`.
+- Outcome mapping parity with the checker contract.
 - Module logging event catalog aligned with the logging policy.
 - `libpam_wrapper` or equivalent PAM module test harness.
 - Container integration tests that load the native module directly.
@@ -149,7 +149,7 @@ Deliverables:
 - Security review checklist for native PAM deployment.
 
 Current implementation notes:
-- [Native PAM module](native-pam-module.md) records the agreed design baseline. Native PAM packages are the preferred Linux deployment path; the helper path remains available for compatibility deployments.
+- [Native PAM module](native-pam-module.md) records the agreed design baseline. Native PAM packages are the Linux deployment path.
 - Epic 6 first-release delivery is complete through `EP6-S9`: Fedora SELinux assessment, RPM, `.deb`, Arch, Alpine, package gates, provenance, recovery docs, and closeout decisions are recorded. Follow-up hardening is now covered for argv parser corpus/memory checks, Ubuntu/Debian AppArmor/lockout drills, and count-based `min_count` checker/native-module policy.
 
 ## Epic 7: macOS and Windows Feasibility
@@ -174,4 +174,4 @@ Deliverables:
 
 ## Current Recommendation
 
-Keep the Linux helper and native PAM paths healthy while preparing release candidates. New work should focus on release readiness, signing/provenance, production feedback from supported Linux distros, and the macOS/Windows feasibility tracks. Keep all breach-checking logic in the Go checker binary.
+Keep the native PAM package path healthy while preparing release candidates. New work should focus on release readiness, signing/provenance, production feedback from supported Linux distros, and the macOS/Windows feasibility tracks. Keep all breach-checking logic in the Go checker binary.

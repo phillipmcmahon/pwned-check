@@ -100,7 +100,6 @@ make coverage
 The coverage gate currently includes:
 
 - `./internal/pwned`
-- `./internal/pamhelper`
 
 Command entrypoints under `cmd/` and smoke/package harnesses under `scripts/` are intentionally excluded from the coverage threshold. They are thin executable adapters or integration test drivers and are covered through unit tests of their internal packages plus binary, Docker, and PAM package smoke tests.
 
@@ -129,7 +128,6 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `internal/pwned/provider_test.go` | HIBP-compatible range response parsing and privacy headers |
 | `internal/pwned/provider_fuzz_test.go` | Parser fuzz coverage for HIBP-compatible range responses |
 | `internal/pwned/cli_test.go` | CLI exit codes, fail-open/fail-closed, logging, and mocked provider flow |
-| `internal/pamhelper/helper_test.go` | PAM helper exit mapping, timeout, and no-secret-output behavior |
 | `native/pam-pwned-check` | Native PAM module argument parsing, deterministic argv parser corpus coverage, safe conversation strings, PAM constants, service stubs, and checker outcome mapping |
 | `scripts/native-pam-harness.sh` | Host-level Linux PAM harness that loads the native module through a temporary PAM service and asserts outcome, conversation, checker argv/stdin/env, timeout cleanup, exec failure, and invalid-argument behavior |
 | `scripts/native-pam-ubuntu-host-package-smoke.sh` | Ubuntu host package-layout smoke that installs the Debian/Ubuntu artifact, exercises the installed module through a disposable PAM service, and rolls back host files without enabling `pam-auth-update` |
@@ -143,8 +141,8 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-fedora-selinux-assessment.sh` | Fedora/RHEL-family SELinux assessment that wraps the host package smoke, captures SELinux/authselect/audit state, and fails on pwned-check-related AVCs |
 | `scripts/native-pam-ubuntu-smoke.sh` | Persistent Ubuntu native PAM module build, install, exported-symbol, dependency, Debian/Ubuntu package-layout artifact, and `pam_chauthtok` smoke path |
 | `scripts/native-pam-distro-smoke.sh` | Throwaway first-wave distro containers that build `pam_pwned_check.so`, install it into the distro PAM module directory, and exercise direct native PAM allow/reject behavior |
-| `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, helper-driven dry-run/enforce switching, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
-| `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises dry-run/enforce switching, clean/reject behavior, and rollback through installed manual helpers |
+| `scripts/native-pam-generic-package-smoke.sh` | Generic manual-PAM artifact install, package-wrapper dry-run/enforce switching, real `pam_chauthtok` allow/reject behavior, and rollback on Arch and Alpine |
+| `scripts/native-pam-manual-installed-smoke.sh` | Reusable installed-file smoke for manual-PAM packages that exercises dry-run/enforce switching, clean/reject behavior, and rollback through installed package wrappers |
 | `scripts/native-pam-arch-package-smoke.sh` | Arch Docker CI/fallback smoke that builds the `PKGBUILD` package, installs it with `pacman`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup. Local Arch validation uses `codex-vm-arch` through `scripts/validate-before-push.sh` |
 | `scripts/native-pam-arch-repo-smoke.sh` | Arch repository smoke that installs from signed package files and signed pacman database metadata with a locally trusted public key, then exercises dry-run/enforce/disable, package removal, managed-file cleanup, and writes a combined `.test-output/` report |
 | `scripts/native-pam-alpine-package-smoke.sh` | Alpine Docker smoke that builds the `APKBUILD` package, installs it with `apk`, exercises installed manual-PAM behavior, removes the package, and checks managed-file cleanup |
@@ -153,7 +151,6 @@ Native PAM argv parsing has a deterministic property-style corpus in the Rust un
 | `scripts/native-pam-repo-endpoint-check.sh` | Non-mutating published endpoint monitor for scheduled CI. Verifies public keys, signed apt/RPM/Arch metadata, Alpine signed index presence, and package visibility without installing packages |
 | `scripts/smoke_binary.go` | Built-binary behavior against a mocked range service |
 | `scripts/container-smoke` | In-container Linux binary behavior across distro images |
-| `scripts/pam-package-smoke` | In-container package install, `/etc/pam.d` wiring, and PAM allow/reject outcomes through `pam_exec.so expose_authtok` |
 
 ## CI Rules
 
@@ -246,20 +243,9 @@ The native PAM Linux integration suite proves:
 - `pam_pwned_check.so` builds, exports the expected symbols, and loads through Linux PAM
 - the module can obtain the candidate from existing `PAM_AUTHTOK` or through `pam_get_authtok`
 - clean, pwned, fail-open, fail-closed, timeout, config-error, and unexpected-exit outcomes map correctly
-- package helpers enable dry-run, switch to enforcement, disable, remove packages, and restore PAM state
+- package wrappers enable dry-run, switch to enforcement, disable, remove packages, and restore PAM state
 - exact safe conversation strings and syslog events are emitted without plaintext candidate leakage
 - distro package placement and shared-library dependencies match the supported distro family
-
-The PAM package smoke path proves:
-
-- known pwned password is rejected
-- clean password is accepted
-- provider failure follows fail-open/fail-closed configuration
-- child process timeout blocks hangs
-- package installation creates stable binary and symlink paths
-- a dedicated `/etc/pam.d/pwned-check-smoke` service can pass the candidate token to the helper
-
-The automated PAM smoke uses an isolated PAM `auth` service to drive token exposure deterministically in containers. When `pamtester` is unavailable, the runner compiles a tiny fallback PAM client and now prints the selected client, distro identity, and generated PAM service before executing cases. This is intentionally verbose enough to make any future helper-path segfault actionable. Operator-facing password-change placement is documented in [Operations](operations.md) and should be tested on the target host before enablement.
 
 ## Static Analysis
 

@@ -37,26 +37,6 @@ Example checker logs:
 2026-04-30 17:00:00 event=provider_failure fail_closed=true error="Get \"https://api.pwnedpasswords.com/range/5BAA6\": context deadline exceeded"
 ```
 
-## PAM Helper Events
-
-| Event | Meaning | Fields |
-|---|---|---|
-| `event=pam_helper_result result=allow` | Checker allowed the password. | none |
-| `event=pam_helper_result result=reject reason=pwned` | Checker found the password in the breach corpus. | `reason` |
-| `event=pam_helper_failure reason=timeout` | Checker exceeded helper timeout. | `timeout` |
-| `event=pam_helper_failure reason=checker_config` | Checker returned a configuration error. | `reason` |
-| `event=pam_helper_failure reason=checker_provider` | Checker returned a provider error in fail-closed mode. | `reason` |
-| `event=pam_helper_failure reason=checker_exit` | Checker returned an unexpected exit code. | `code` |
-
-The helper may include a bounded `checker_stderr` excerpt for checker configuration, provider, or unexpected-exit failures. The checker must never write plaintext passwords to stderr, and the helper limits this excerpt to keep diagnostics safe and manageable.
-
-Example helper logs:
-
-```text
-event=pam_helper_result result=reject reason=pwned
-event=pam_helper_failure reason=checker_provider checker_stderr="2026-04-30 17:00:00 event=provider_failure fail_closed=true error=\"provider returned HTTP 503\""
-```
-
 ## Native PAM Module Events
 
 The native Linux PAM module emits structured events through syslog with the stable identifier `pwned-check`.
@@ -93,8 +73,6 @@ During rollout, operators can count safe event fields:
 - `event=validation pwned=false min_count=<n>`
 - `event=provider_failure fail_closed=false`
 - `event=provider_failure fail_closed=true`
-- `event=pam_helper_failure reason=timeout`
-- `event=pam_helper_failure reason=checker_provider`
 - `event=pam_module_result result=reject reason=pwned`
 - `event=pam_module_result result=allow mode=dry_run`
 - `event=pam_module_failure reason=timeout`
@@ -110,7 +88,7 @@ A log pipeline can derive Prometheus-style counters from event fields without pa
 pwned_check_validation_total{pwned="true",min_count="1"} 1
 pwned_check_validation_total{pwned="false",min_count="1"} 1
 pwned_check_provider_failure_total{fail_closed="true"} 1
-pwned_check_pam_helper_failure_total{reason="checker_provider"} 1
+pwned_check_pam_module_failure_total{reason="checker_provider"} 1
 ```
 
 For Vector-style pipelines, parse the key/value event line and increment counters from `.event`, `.pwned`, `.min_count`, `.fail_closed`, and `.reason`. Keep `checker_stderr` as a bounded diagnostic field, not as a counter label.

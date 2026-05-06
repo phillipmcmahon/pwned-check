@@ -194,7 +194,7 @@ Known quirks:
 Host aliases: `codex-vm-alpine` (`x86_64`) and `codex-vm-alpine-arm64`
 (`arm64`)
 
-Purpose: Alpine Linux-PAM package behavior, manual PAM helper rollback, and
+Purpose: Alpine Linux-PAM package behavior, package rollback, and
 Alpine repository smoke for published `aarch64` content.
 
 Bootstrap packages:
@@ -222,7 +222,7 @@ Recovery checks:
 
 - `sudo pwned-check-pam-disable || true`
 - `sudo apk del pwned-check-native-pam || true`
-- verify the disposable Linux-PAM service used by manual helper smokes has been
+- verify the disposable Linux-PAM service used by manual package smokes has been
   removed or restored
 
 Known quirks:
@@ -240,7 +240,7 @@ Known quirks:
 
 Host alias: `codex-vm-arch`
 
-Purpose: Arch package behavior, manual PAM helper rollback, and Arch custom
+Purpose: Arch package behavior, package rollback, and Arch custom
 repository smoke.
 
 Bootstrap packages:
@@ -261,12 +261,12 @@ Recovery checks:
 
 - `sudo pwned-check-pam-disable || true`
 - `sudo pacman -Rns --noconfirm pwned-check-native-pam || true`
-- verify the disposable Linux-PAM service used by manual helper smokes has been
+- verify the disposable Linux-PAM service used by manual package smokes has been
   removed or restored
 
 Known quirks:
 
-- Arch package helpers install under `/usr/bin`, not `/usr/sbin`, to match Arch
+- Arch package wrappers install under `/usr/bin`, not `/usr/sbin`, to match Arch
   filesystem ownership expectations.
 - Arch Linux packaging is `x86_64` only for this project.
 

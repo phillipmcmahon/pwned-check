@@ -1,12 +1,10 @@
 # Native PAM Module
 
-This document describes the design and contract for a native Linux PAM module, `pam_pwned_check.so`, that performs the same default any-hit rejection check as the current `pam_exec`-based integration, with optional count-based thresholding through the shared checker contract.
+This document describes the design and contract for the native Linux PAM module, `pam_pwned_check.so`. The module performs the default any-hit rejection check, with optional count-based thresholding through the shared checker contract.
 
 The current implementation is a Rust `cdylib` under `native/pam-pwned-check`. The crate establishes exported PAM service symbols, argument parsing, safe conversation-message constants, `PAM_AUTHTOK` retrieval, checker invocation with a hard timeout, clean checker environment handling, child file-descriptor cleanup, checker-outcome mapping, structured syslog emission, Linux shared-library dependency inspection, Debian/Ubuntu native packaging, distro package smoke tests, and Ubuntu AppArmor/lockout hardening assessment coverage. The persistent Ubuntu smoke harness exercises the module through `pam_chauthtok`.
 
 The Rust implementation is split into focused modules: `config.rs` owns module argument parsing, `checker.rs` owns checker fork/exec and timeout handling, `events.rs` owns decision mapping and structured log event formatting, `pam_ffi.rs` owns PAM symbols and libc/PAM FFI, and `lib.rs` remains the small public surface plus unit-test host.
-
-The native module is an additional supported Linux integration path. It does not replace the current `pam_exec.so` plus `pwned-check-pam-helper` flow. Both paths should remain valid so operators can choose based on distro packaging, audit requirements, rollout risk, and recovery constraints.
 
 ## Architecture
 
@@ -22,7 +20,7 @@ flowchart LR
     Module --> Log["journald / syslog"]
 ```
 
-The module is the only new runtime component in the first native release. The provider boundary remains unchanged: provider logic stays in the checker process, not in the PAM module.
+The module is the PAM-facing runtime component. Provider logic stays in the checker process, not in the PAM module.
 
 ## Intent
 
@@ -30,7 +28,6 @@ The native module exists to:
 
 - integrate cleanly with distro PAM management tools such as `pam-auth-update` on Debian and Ubuntu, and `authselect` on Fedora and RHEL
 - surface user-facing rejection messages through PAM conversation functions
-- avoid `pam_exec.so expose_authtok` quirks in deployments that prefer a native PAM module
 - provide the packaging shape that distro maintainers expect for a PAM integration
 - create a future path for lower-overhead IPC if real deployments prove fork/exec cost matters
 
@@ -40,11 +37,10 @@ The native module does not exist to:
 - replace the stdin-based checker contract
 - ship a long-running daemon by default
 - link the checker as an in-process library
-- replace the helper-based integration before the native path has independent evidence and tests
 
 ## Scope
 
-In scope for the first native module release:
+In scope:
 
 - a Rust `cdylib` that builds `pam_pwned_check.so`
 - meaningful implementation of `pam_sm_chauthtok` for password-change enforcement
@@ -56,9 +52,8 @@ In scope for the first native module release:
 - Debian/Ubuntu, Fedora/RHEL, Arch, and Alpine package paths with documented enablement and rollback
 - unit, host PAM harness, persistent Ubuntu, Docker, VM, package, dependency, AppArmor, SELinux, and memory-check validation paths
 
-Out of scope for the first native module release:
+Out of scope:
 
-- replacing the existing `pam_exec` integration
 - a long-running checker daemon
 - an offline cache or mirror provider
 - macOS or Windows native integrations
@@ -112,7 +107,7 @@ The FFI boundary must stay narrow:
 
 ### No Plaintext Disclosure
 
-The candidate password is retrieved from `PAM_AUTHTOK` when it is already available. If the password stack has not populated `PAM_AUTHTOK` yet, the module calls Linux PAM's `pam_get_authtok` helper so PAM performs the normal password conversation and stores the token for downstream modules. The token is copied once into module-owned zeroizing memory and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
+The candidate password is retrieved from `PAM_AUTHTOK` when it is already available. If the password stack has not populated `PAM_AUTHTOK` yet, the module calls Linux PAM's `pam_get_authtok` API so PAM performs the normal password conversation and stores the token for downstream modules. The token is copied once into module-owned zeroizing memory and written to the checker stdin pipe. The module-owned buffer is zeroized when dropped. PAM-owned memory is never modified, and transient copies may still exist in the checker process or kernel pipe buffer during validation.
 
 The module must not mutate or zero PAM-owned memory returned by `pam_get_item` or `pam_get_authtok`.
 
@@ -203,7 +198,7 @@ The checker exit-code meanings are defined only in [Checker contract](checker-co
 | Exec failure | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged as exec failure. |
 | Unexpected checker exit | `PAM_AUTHTOK_ERR` | Conservative rejection. Logged with the checker exit code. |
 
-This matches the existing PAM helper posture: checker configuration failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
+Checker configuration failures, provider failures in fail-closed mode, timeouts, exec failures, and unexpected exits reject rather than silently allowing a password change.
 
 The checker's fail-open behavior can short-circuit `min_count`: if the provider cannot return a breach count and fail-open is configured, the canonical checker contract returns the accepted outcome, so the module allows the stack to continue.
 
@@ -287,7 +282,7 @@ Arguments are parsed from `argv` in the PAM stack line. They are root-controlled
 
 If neither `fail_open` nor `fail_closed` is set, the module should use the checker's default provider-failure behavior and log that the policy was inherited.
 
-Native module timeouts are whole seconds in PAM configuration. The Go helper accepts duration strings such as `3s`; sub-second helper values are intentionally not exposed in the native PAM argument contract unless a later operator need justifies adding duration syntax.
+Native module timeouts are whole seconds in PAM configuration. Sub-second values are intentionally not exposed unless a later operator need justifies adding duration syntax.
 
 If both `fail_open` and `fail_closed` are set, the module must treat the configuration as invalid.
 
@@ -313,7 +308,7 @@ The candidate is supplied only over stdin. The checker path, timeout, and fail p
 
 The module should pass fail policy to the checker explicitly, for example with `PWNED_CHECK_FAIL_CLOSED=true` or `PWNED_CHECK_FAIL_CLOSED=false`, rather than relying on inherited process environment.
 
-The checker stderr may be captured for bounded diagnostics, following the existing helper pattern. The diagnostic excerpt must be length-limited and must not influence policy decisions.
+The checker stderr may be captured for bounded diagnostics. The diagnostic excerpt must be length-limited and must not influence policy decisions.
 
 ### Fork And Exec Flow
 
@@ -408,19 +403,19 @@ Expected package contents:
 - `pwned-check`
 - operator documentation under `/usr/share/doc/pwned-check/`
 - Debian `pam-auth-update` profile under `/usr/share/pam-configs/pwned-check`
-- Fedora/RHEL/Rocky authselect helpers
-- Arch Linux manual-PAM helper scripts
-- Alpine Linux-PAM manual-PAM helper scripts
+- Fedora/RHEL/Rocky authselect wrapper scripts
+- Arch Linux manual-PAM wrapper scripts
+- Alpine Linux-PAM manual-PAM wrapper scripts
 - rollback and emergency recovery instructions
 
 | Family | Module path | Package build | Package smoke | Enablement and rollback notes |
 |---|---|---|---|---|
 | Debian/Ubuntu | `/lib/$DEB_HOST_MULTIARCH/security/pam_pwned_check.so` | `make package-native-pam-debian` | `make native-pam-ubuntu-deb-package-smoke` | Package `pwned-check-native-pam` installs a `pam-auth-update` profile at `/usr/share/pam-configs/pwned-check`; operators use `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, and `pwned-check-pam-disable`. Release automation builds `amd64` and `arm64` packages in Rust Debian containers. Run the smoke on Debian-family VMs with `PATH="/usr/sbin:/sbin:$PATH"` so SSH sessions can find `pam-auth-update`. |
-| Fedora/RHEL/Rocky | `/lib64/security/pam_pwned_check.so` | `make package-native-pam-rpm` | `make native-pam-fedora-rpm-package-smoke` | Package `pwned-check-native-pam` installs authselect helpers under `/usr/share/pwned-check/authselect/` plus `pwned-check-pam-*` wrappers under `/usr/sbin`; first enablement records an authselect backup for rollback, while dry-run to enforce switching keeps that rollback target. Release automation builds `x86_64` and `aarch64` packages in Fedora containers. Run `make native-pam-fedora-selinux-assessment` before production release. |
+| Fedora/RHEL/Rocky | `/lib64/security/pam_pwned_check.so` | `make package-native-pam-rpm` | `make native-pam-fedora-rpm-package-smoke` | Package `pwned-check-native-pam` installs authselect wrapper scripts under `/usr/share/pwned-check/authselect/` plus `pwned-check-pam-*` wrappers under `/usr/sbin`; first enablement records an authselect backup for rollback, while dry-run to enforce switching keeps that rollback target. Release automation builds `x86_64` and `aarch64` packages in Fedora containers. Run `make native-pam-fedora-selinux-assessment` before production release. |
 | Arch Linux | `/usr/lib/security/pam_pwned_check.so` | `make package-native-pam-arch` | `make native-pam-arch-package-smoke` for CI parity; `codex-vm-arch` through `scripts/validate-before-push.sh` for local release validation | Package `pwned-check-native-pam` is built from `packaging/arch/PKGBUILD.in`; operators use `pwned-check-pam-*` wrappers under `/usr/bin`, which preserve a timestamped PAM service backup for rollback. Release automation builds `x86_64` only. |
 | Alpine Linux | `/usr/lib/security/pam_pwned_check.so` plus `/lib/security/pam_pwned_check.so` for Linux-PAM deployments | `make package-native-pam-alpine` | `make native-pam-alpine-package-smoke` | Package `pwned-check-native-pam` is built from `packaging/alpine/APKBUILD.in`; native PAM integration is Linux-PAM-only, not BusyBox-only auth, and `pwned-check-pam-*` wrappers under `/usr/sbin` restore the timestamped PAM service backup. Release automation builds `x86_64` and `aarch64` packages in Alpine containers. |
 
-Production repository publication is tracked separately in [Package repositories](package-repositories.md). The first release decision is to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
+Production repository publication is described in [Package repositories](package-repositories.md). The package decision remains to avoid shipping an in-tree SELinux policy module unless the enforcing-mode assessment finds project-specific AVCs. If local SELinux policy blocks the checker network path from password-change domains, document the operator-managed exception rather than silently broadening policy in the package.
 
 ### Signing And Provenance
 
@@ -439,7 +434,7 @@ make native-pam-release-provenance
 
 This writes `native-pam-SHA256SUMS.txt` and `native-pam-provenance.json` next to the native PAM artifacts. If `PWNED_CHECK_RELEASE_SIGNING_KEY` is set, the script also creates detached armored GPG signatures for both files. Private signing keys must remain outside the repository and outside persistent test VMs.
 
-GitHub Release assets are the first native package publication channel. Signed apt, dnf/yum, Arch, and Alpine repositories are tracked separately in [Package repositories](package-repositories.md).
+Signed apt, dnf/yum, Arch, and Alpine repositories are the normal operator install channel for native PAM packages. Repository layout, signing, and trust-bootstrap instructions live in [Package repositories](package-repositories.md).
 
 ## Testing Strategy
 
@@ -505,4 +500,3 @@ The implementation sequence resolved the first-release questions as follows:
 - The module does not cache results.
 - The module does not contact the provider directly.
 - The module does not reduce the security posture of the host's PAM stack.
-- The module does not replace the existing `pam_exec` integration.

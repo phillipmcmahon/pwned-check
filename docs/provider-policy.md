@@ -44,13 +44,13 @@ Choose this setting before rollout and document the decision for each deployment
 
 Provider calls use `PWNED_CHECK_TIMEOUT`, in seconds. The default is five seconds.
 
-Password-change integrations should also wrap the checker in their own timeout. The Linux PAM helper does this with its `--timeout` flag so a stalled checker process cannot hang the PAM stack indefinitely.
+Password-change integrations should also wrap the checker in their own timeout. The native PAM module does this with its `timeout=<seconds>` argument so a stalled checker process cannot hang the PAM stack indefinitely.
 
 The checker enforces provider timeout through the request context. The HTTP client does not carry a second independent timeout, which keeps failure timing easier to reason about.
 
 ## Request Volume and Rate Limiting
 
-The checker performs one HIBP range request per password candidate and does not retry failed provider requests. The HIBP range API is designed for this k-anonymity lookup pattern, but deployments should avoid invoking the helper on every keystroke or in tight retry loops. PAM placement should call the helper once for a submitted candidate password, and repeated provider failures should be investigated through logs rather than retried aggressively.
+The checker performs one HIBP range request per password candidate and does not retry failed provider requests. The HIBP range API is designed for this k-anonymity lookup pattern, but deployments should avoid invoking the checker on every keystroke or in tight retry loops. PAM placement should call the checker once for a submitted candidate password, and repeated provider failures should be investigated through logs rather than retried aggressively.
 
 ## Test Provider Boundary
 

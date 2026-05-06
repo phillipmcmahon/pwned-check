@@ -4,13 +4,14 @@
 
 ## Production Platform
 
-The first production-shaped target is Linux password-change integration.
+The production-shaped target is Linux password-change integration through native PAM packages.
 
 Initial production assumptions:
 
 - Linux host with PAM-based password-change flow.
-- Native `pwned-check` binary available on the host.
-- Native `pwned-check-pam-helper` binary available on the host for the helper path, or `pam_pwned_check.so` installed for the native PAM path.
+- Native `pwned-check` binary installed by the distro package.
+- `pam_pwned_check.so` installed by the native PAM package.
+- Package enablement commands available for dry-run, enforcement, disable, and rollback.
 - PAM integration passes the candidate through stdin or `PAM_AUTHTOK`, not command-line arguments.
 - Production provider access uses the live public HIBP range API.
 - Provider outage behavior is controlled by explicit fail-open/fail-closed configuration.
@@ -24,7 +25,7 @@ Operational implications:
 
 - hosts must be able to reach the HIBP range endpoint during password changes
 - deployments must choose fail-open or fail-closed behavior before rollout
-- provider, helper, and native module timeouts must be short and explicit
+- provider and native module timeouts must be short and explicit
 - automated validation must mock HIBP-compatible range responses rather than calling the live service
 
 Offline cache or mirror providers are not part of the current production scope, but the checker design should keep provider concerns isolated so those modes can be considered later without changing the PAM integration contract.

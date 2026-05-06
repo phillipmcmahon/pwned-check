@@ -82,10 +82,9 @@ Build local packages:
 make package-linux
 ```
 
-Each package contains:
+Each standalone checker archive contains:
 
 - `pwned-check`
-- `pwned-check-pam-helper`
 - `install.sh`
 - `README.md`
 - `LICENSE`
@@ -104,7 +103,7 @@ Native PAM package releases must additionally:
 - sign or publish `.deb` artifacts through the project Debian repository/release signing process
 - attach checksum, provenance, and signature files alongside native PAM packages
 - keep private signing keys outside the repository and outside test VMs
-- publish the first production repositories through GitHub Pages under
+- publish production repositories through GitHub Pages under
   `https://phillipmcmahon.github.io/pwned-check/`
 - use one maintainer-owned OpenPGP production key for apt/RPM/Arch and one
   maintainer-owned Alpine RSA production key
@@ -112,15 +111,13 @@ Native PAM package releases must additionally:
   notice paths, and operator public-key update steps as described in
   [Package repositories](package-repositories.md#key-rotation-and-revocation)
 
-GitHub Releases remain the immutable source of release assets and recovery
-downloads. Signed package repositories are the production-style operator
-installation channel for native PAM packages; build and publish them from the
-validated GitHub Release asset set by following
-[Package repositories](package-repositories.md).
+Signed package repositories are the operator installation channel for native
+PAM packages; build and publish them from the validated release package set by
+following [Package repositories](package-repositories.md).
 
 The Debian/Ubuntu native package builder runs in a pinned Rust Debian container for both release architectures so the release path does not depend on the host Cargo version.
 
-Before the first package repository release, complete the repository-specific signing stories in [Package repositories](package-repositories.md):
+For every package repository release, complete the repository publication checks in [Package repositories](package-repositories.md):
 
 - publish public key fingerprints and operator trust-bootstrap commands
 - generate repository metadata from the validated release package set; use
@@ -129,7 +126,7 @@ Before the first package repository release, complete the repository-specific si
   `scripts/build-native-pam-arch-repository.sh` for Arch repositories, and
   `scripts/build-native-pam-alpine-repository.sh` for Alpine repositories
 - sign apt, dnf/yum, Arch, and Alpine metadata with keys held outside the repository and outside test VMs
-- run repository install smokes on Ubuntu, Debian, Fedora, Alpine, and Arch persistent VMs
+- run repository install smokes on Ubuntu, Debian, Fedora, Rocky, Arch, and Alpine persistent VMs for each published architecture
 - confirm the persistent VM fleet is available or record explicit deferrals
   using [VM fleet](vm-fleet.md)
 - verify `pwned-check-pam-enable-dry-run`, `pwned-check-pam-enable-enforce`, package rollback, and package removal from each repository install
@@ -165,10 +162,8 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   ```bash
   make native-pam-live-repo-smokes
   ```
-  This runs apt on Ubuntu and Debian, RPM on Fedora and Rocky, and Arch on the
-  persistent Arch VM. Alpine live-endpoint smoke is reported as a deferral
-  until `PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a persistent Alpine VM
-  matching the published package architecture.
+  This runs apt on Ubuntu and Debian, RPM on Fedora and Rocky, Arch on the
+  persistent Arch VM, and Alpine on the persistent Alpine arm64 VM.
 - Confirm the non-mutating published endpoint monitor passes, or use it for
   focused endpoint diagnosis:
   ```bash

@@ -1,35 +1,27 @@
 # Package Repositories
 
 This document describes the signed distro package repositories for native PAM
-package distribution. GitHub Release assets remain the immutable bootstrap and
-recovery channel; repository-backed package manager installs are the normal
-production-style operator path.
+package distribution. Use these repositories for normal installs.
 
 Repository-backed releases must satisfy the [Production release gate](production-release-gate.md) before they are described as production-ready.
 
-## Implementation Status
+## Repository Status
 
-Epic 8 has repository-generation, production GitHub Pages hosting, and
-repo-only smoke coverage for each target family. The production hosting and key
-model is tracked in
-[#39](https://github.com/phillipmcmahon/pwned-check/issues/39):
+Production repositories are hosted on GitHub Pages under
+`https://phillipmcmahon.github.io/pwned-check/`. The current signing model uses
+one maintainer-owned OpenPGP production key for apt, RPM, and Arch, and one
+maintainer-owned Alpine RSA production key for the APK repository. Private keys
+must stay outside the repository, GitHub Pages branch, and distro VMs.
 
-- host the first production repositories on GitHub Pages under
-  `https://phillipmcmahon.github.io/pwned-check/`
-- use one maintainer-owned OpenPGP production key for apt, RPM, and Arch
-- use one maintainer-owned Alpine RSA production key for the APK repository
-- keep private keys outside the repository, GitHub Pages branch, and distro VMs
-
-Repository metadata is generated from immutable GitHub Release assets and signed
-with the production keys. GitHub Release assets remain the immutable release
-artifact source and bootstrap fallback.
+Repository metadata is generated from validated release packages and signed with
+the production keys.
 
 | Family | Repository generation | Published repo smoke | Current limitation |
 |---|---|---|---|
 | Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs, including arm64 guests, with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`/`arm64` |
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs, including arm64 guests, with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`/`aarch64` |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM is a separate downstream ecosystem and is not targeted |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | Linux-PAM deployments only; BusyBox-only auth is outside scope |
 
 GitHub Pages endpoints:
 
@@ -40,32 +32,18 @@ GitHub Pages endpoints:
 | Arch | `https://phillipmcmahon.github.io/pwned-check/arch` |
 | Alpine | `https://phillipmcmahon.github.io/pwned-check/alpine` |
 
-## Current Channel
-
-GitHub Releases are the bootstrap distribution channel for native PAM packages:
-
-| Distro family | Release asset | Install tool |
-|---|---|---|
-| Debian/Ubuntu | `pwned-check-native-pam_<version>_<arch>.deb` | `apt install ./...deb` |
-| Fedora/RHEL/Rocky | `pwned-check-native-pam-<version>-1.<dist>.<arch>.rpm` | `dnf install ./...rpm` |
-| Arch Linux | `pwned-check-native-pam-<version>-1-x86_64.pkg.tar.zst` | `pacman -U ./...pkg.tar.zst` |
-| Alpine Linux-PAM | `pwned-check-native-pam-<version>-r0.apk` | `apk add --allow-untrusted ./...apk` |
-
-Release assets must include per-file SHA256 files, native aggregate checksums, and native package provenance. Package installation must place files only; PAM enablement stays explicit and starts in `dry_run` mode.
-
 Current release automation builds Debian/Ubuntu, Fedora/RHEL/Rocky, and Alpine
 native PAM packages for `amd64`/`x86_64` and `arm64`/`aarch64`. Arch package
 assets are `x86_64` only.
 
-Published repository architecture status is deliberately narrower than package
-build support when a matching persistent VM does not exist:
+Published repository architecture status:
 
 | Family | Published architectures | Real-host repository smoke | Deferred repository smoke |
 |---|---|---|---|
 | Apt | `amd64`, `arm64` | `amd64` and `arm64` on Ubuntu and Debian VMs | None |
 | DNF/Yum | `x86_64`, `aarch64` | `x86_64` and `aarch64` on Fedora and Rocky VMs | None |
 | Arch | `x86_64` | `x86_64` on the Arch VM | None; Arch Linux ARM is not targeted |
-| Alpine | `aarch64` for `v0.1.6` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
+| Alpine | `aarch64` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
 
 All native package families expose the same operator commands after installation:
 
@@ -76,19 +54,6 @@ All native package families expose the same operator commands after installation
 | `pwned-check-pam-disable` | Restore the recorded PAM or authselect rollback state |
 
 Debian/Ubuntu and Fedora/RHEL packages install these commands under `/usr/sbin`; Arch packages install them under `/usr/bin`; Alpine packages install them under `/usr/sbin`. Operators should call the command name rather than hard-coding the path when possible.
-
-## Repository Targets
-
-Repository publication should be added in this order:
-
-| Stage | Repository | Signing | Publication gate |
-|---|---|---|---|
-| 1 | apt repository for Debian/Ubuntu | Signed `Release` metadata and package checksums | `.deb` package smoke on Ubuntu and Debian VMs |
-| 2 | dnf/yum repository for Fedora/RHEL/Rocky | Signed RPMs and signed repository metadata | RPM package smoke plus Fedora SELinux assessment |
-| 3 | Arch custom repository | Signed package and repository database | Arch package smoke |
-| 4 | Alpine repository | Signed APK index and trusted public key docs | Alpine Linux-PAM package smoke |
-
-Repository keys must be generated and stored outside the repository and outside persistent test VMs. Public keys can be checked in only after the key-management process is documented in the [Production release gate](production-release-gate.md) and the key-rotation story.
 
 ## Signing Inputs
 
@@ -189,7 +154,8 @@ Repository metadata must be immutable for a published version. If metadata or a 
 
 ## Repository Smoke Tests
 
-Each repository story must add an install test that uses only repository configuration and public keys on the target host:
+Each repository install smoke uses only repository configuration and public keys
+on the target host:
 
 | Repository | Required smoke |
 |---|---|
@@ -224,7 +190,6 @@ without installing packages or mutating PAM state.
 
 ## Apt Repository
 
-The apt repository path is the first Epic 8 repository implementation target.
 Generate metadata from already validated `.deb` artifacts and sign the suite
 metadata with a release signing key that lives outside the repository and
 outside the distro test VMs:
@@ -459,7 +424,7 @@ exercises dry-run/enforce/disable on a disposable Linux-PAM service, removes the
 package, and verifies managed files are gone:
 
 ```bash
-./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine-arm64
 ```
 
 The VM does not need GitHub credentials, repository source code, Rust, Go, C
@@ -467,35 +432,11 @@ build tooling, `abuild`, or `apk index` for this repo-only smoke.
 
 ### Alpine x86_64 Status
 
-The persistent Alpine VM is `x86_64`, but the first published Alpine repository
-from the immutable `v0.1.6` release assets contains only the `aarch64` APK. The
-x86_64 package path itself is not rejected: the VM-backed Alpine package smoke
-continues to validate package install, helper enablement, rollback, removal,
-and managed-file cleanup from locally built artifacts. The publication gap is
-that the immutable release asset set did not include a signed x86_64 APK and
-matching `x86_64/APKINDEX.tar.gz`.
+Alpine `x86_64` package publication remains deferred until a release includes a
+signed x86_64 APK and matching `x86_64/APKINDEX.tar.gz`. The Alpine live
+endpoint is currently validated on `codex-vm-alpine-arm64`.
 
-x86_64 Alpine repository publication is intentionally deferred until a future
-release includes a signed x86_64 APK in the immutable asset set and the
-published repository index. At that point, `scripts/native-pam-alpine-repo-smoke.sh
---host codex-vm-alpine --repo-url https://phillipmcmahon.github.io/pwned-check/alpine`
-becomes a required live endpoint gate for `x86_64`. Until then, the Alpine
-live endpoint is validated on `codex-vm-alpine-arm64`; only x86_64 publication
-remains deferred.
-
-## Required Stories
-
-Create these stories before implementation:
-
-| Story | Exit criteria |
-|---|---|
-| Apt repository publication | Build signed apt repository metadata, publish the public key and source list instructions, install from the repository on Ubuntu and Debian VMs, run dry-run/enforce/disable, and remove the package cleanly |
-| RPM repository publication | Sign RPMs, build signed dnf/yum metadata, install from the repository on Fedora, run authselect dry-run/enforce/disable, and confirm SELinux remains clean |
-| Arch repository publication | Build and sign the package database, install through `pacman -S`, run manual helper dry-run/enforce/disable, and remove the package cleanly |
-| Alpine repository publication | Build and sign the APK index, install through `apk add` using the documented public key, run manual helper dry-run/enforce/disable on Linux-PAM, and remove the package cleanly |
-| Repository key rotation and revocation | Document key location, rotation process, revocation notice path, and how operators update trusted keys |
-
-## Acceptance Rules
+## Publication Rules
 
 - Repository packages must be byte-for-byte the same package outputs or rebuilt from the same release tag with matching provenance.
 - Repository publication must not require GitHub credentials on distro test VMs.

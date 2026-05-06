@@ -1,9 +1,7 @@
 # Production Release Gate
 
 This gate defines when native PAM distribution can be described as
-production-ready. GitHub Release assets remain the immutable bootstrap and
-recovery channel; signed package repositories are the normal production-style
-operator install channel once this gate is satisfied for the release.
+production-ready. Signed package repositories are the operator install channel.
 
 ## Required Criteria
 
@@ -20,8 +18,8 @@ operator install channel once this gate is satisfied for the release.
 Production readiness is blocked if any package repository requires GitHub credentials, build tools, private signing keys, or repository checkout state on the target distro host.
 
 The repository tooling, production signing keys, GitHub Pages endpoints, and
-repo-only smoke suites are implemented for the target families. Publication
-evidence for the first production endpoint set is recorded in
+repo-only smoke suites are implemented for the target families. Initial
+publication evidence is recorded in
 [#39](https://github.com/phillipmcmahon/pwned-check/issues/39) and
 `docs/releases/v0.1.6.md`.
 
@@ -57,8 +55,8 @@ Required repository smoke coverage:
 |---|---|---|
 | Apt | Ubuntu and Debian VMs | Add public key and source list, `apt update`, install, enable dry-run, switch to enforcement, disable, remove package, verify managed-file cleanup. |
 | DNF/Yum | Fedora and Rocky VMs | Add public key and repo file, install with `dnf`, run authselect dry-run/enforcement, disable, remove package, verify rollback, and keep SELinux assessment clean or tracked. |
-| Arch | `codex-vm-arch` | Add custom repository and public key, install with `pacman -S`, run manual helper dry-run/enforcement, disable, remove package, verify managed-file cleanup. |
-| Alpine | Alpine VM | Add public RSA key and repository URL, install with `apk add`, run manual helper dry-run/enforcement on a Linux-PAM service, disable, remove package, verify managed-file cleanup. |
+| Arch | `codex-vm-arch` | Add custom repository and public key, install with `pacman -S`, run package dry-run/enforcement wrappers, disable, remove package, verify managed-file cleanup. |
+| Alpine | Alpine VM | Add public RSA key and repository URL, install with `apk add`, run package dry-run/enforcement wrappers on a Linux-PAM service, disable, remove package, verify managed-file cleanup. |
 
 The release-time wrapper is:
 
@@ -71,4 +69,4 @@ the project has persistent VMs today.
 
 ## Release Decision
 
-A release may be called production-ready only when this gate passes and the release playbook records the evidence. If a criterion is deferred, the release notes must describe the release as pre-production or bootstrap-channel only, and the deferment must link to the relevant open story.
+A release may be called production-ready only when this gate passes and the release playbook records the evidence. If a criterion is deferred, the release notes must describe the release as pre-production and link to the relevant open story.

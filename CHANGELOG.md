@@ -5,11 +5,16 @@ and operator-focused.
 
 ## Unreleased
 
+## v0.3.1 - 2026-05-06
+
 ### Fixed
 
 - Native PAM packages now install `pam_pwned_check.so` with distro-style
   `0644` shared-library permissions while keeping operator helper commands
   executable.
+- Apt repository smoke validation now asserts the exact Debian/Ubuntu
+  multiarch PAM module path so stale or misplaced package payloads are caught
+  before publication.
 
 ## v0.3.0 - 2026-05-06
 

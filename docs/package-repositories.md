@@ -26,10 +26,10 @@ artifact source and bootstrap fallback.
 
 | Family | Repository generation | Published repo smoke | Current limitation |
 |---|---|---|---|
-| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`; `arm64` metadata is published and intentionally deferred until an explicitly provisioned arm64 Debian or Ubuntu VM is available |
+| Apt | `scripts/build-native-pam-apt-repository.sh` | Ubuntu and Debian VMs, including arm64 guests, with `scripts/native-pam-apt-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/apt` | None for published `amd64`/`arm64` |
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | Fedora and Rocky VMs with `scripts/native-pam-rpm-repo-smoke.sh --repo-url https://phillipmcmahon.github.io/pwned-check/rpm` | None for published `x86_64`; `aarch64` metadata is published and intentionally deferred until an explicitly provisioned aarch64 Fedora or Rocky VM is available |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | `codex-vm-arch` with `scripts/native-pam-arch-repo-smoke.sh` | `x86_64` only; Arch Linux ARM support is deferred until a persistent Arch Linux ARM VM or trusted builder path is selected |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `aarch64` Docker smoke against `https://phillipmcmahon.github.io/pwned-check/alpine` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; the persistent Alpine VM is `x86_64`, so x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `codex-vm-alpine-arm64` with `scripts/native-pam-alpine-repo-smoke.sh` | The immutable `v0.1.6` GitHub Release contains an `aarch64` APK only; x86_64 publication is deferred until a release contains a signed x86_64 APK and repository index |
 
 GitHub Pages endpoints:
 
@@ -63,10 +63,10 @@ build support when a matching persistent VM does not exist:
 
 | Family | Published architectures | Real-host repository smoke | Deferred repository smoke |
 |---|---|---|---|
-| Apt | `amd64`, `arm64` | `amd64` on Ubuntu and Debian VMs | `arm64` until an arm64 Debian or Ubuntu VM is provided |
+| Apt | `amd64`, `arm64` | `amd64` and `arm64` on Ubuntu and Debian VMs | None |
 | DNF/Yum | `x86_64`, `aarch64` | `x86_64` on Fedora and Rocky VMs | `aarch64` until an aarch64 Fedora or Rocky VM is provided |
 | Arch | `x86_64` | `x86_64` on the Arch VM | Arch Linux ARM until the project selects a builder or VM |
-| Alpine | `aarch64` for `v0.1.6` | None on the persistent Alpine VM because it is `x86_64` | `x86_64` until a release includes a signed x86_64 APK/index; native aarch64 until an aarch64 Alpine VM is provided |
+| Alpine | `aarch64` for `v0.1.6` | `aarch64` on `codex-vm-alpine-arm64` | `x86_64` until a release includes a signed x86_64 APK/index |
 
 All native package families expose the same operator commands after installation:
 
@@ -173,7 +173,7 @@ Operator public-key update commands:
 | Apt | Install the replacement armored key under `/etc/apt/keyrings/pwned-check.asc`, update the `signed-by=` source-list entry if the filename changes, then run `sudo apt update`. |
 | DNF/Yum | Install the replacement public key file, update `gpgkey=` in `/etc/yum.repos.d/pwned-check-native-pam.repo` if the URL changes, then run `sudo dnf clean metadata && sudo dnf makecache`. |
 | Arch | `sudo pacman-key --delete <old-fingerprint>`, `sudo pacman-key --add <new-key.asc>`, `sudo pacman-key --lsign-key <new-fingerprint>`, then `sudo pacman -Sy`. |
-| Alpine | Replace `/etc/apk/keys/pwned-check-native-pam.rsa.pub` with the new public RSA key, remove the old key file if the name changed, then run `sudo apk update`. |
+| Alpine | Replace `/etc/apk/keys/pwned-check-alpine-production.rsa.pub` with the new public RSA key, remove the old key file if the name changed, then run `sudo apk update`. |
 
 ## Publication Layout
 
@@ -208,9 +208,9 @@ For repository-backed release promotion, run the published endpoint wrapper:
 make native-pam-live-repo-smokes
 ```
 
-The wrapper runs apt, RPM, and Arch live endpoint smokes on persistent VMs where
-architecture coverage exists. Alpine is recorded as deferred unless
-`PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS` points at a matching persistent Alpine VM.
+The wrapper runs apt, RPM, Arch, and Alpine live endpoint smokes on persistent
+VMs where architecture coverage exists. The default Alpine endpoint host is
+`codex-vm-alpine-arm64`, matching the currently published `aarch64` APK index.
 
 For continuous availability monitoring, the scheduled `Repository Endpoints`
 GitHub Actions workflow runs:
@@ -439,7 +439,7 @@ published repository root to `/etc/apk/repositories`:
 
 ```bash
 curl -fsSL https://phillipmcmahon.github.io/pwned-check/alpine/pwned-check-alpine-production.rsa.pub |
-  sudo tee /etc/apk/keys/pwned-check-native-pam.rsa.pub >/dev/null
+  sudo tee /etc/apk/keys/pwned-check-alpine-production.rsa.pub >/dev/null
 echo "https://phillipmcmahon.github.io/pwned-check/alpine" |
   sudo tee -a /etc/apk/repositories >/dev/null
 sudo apk update
@@ -487,9 +487,9 @@ x86_64 Alpine repository publication is intentionally deferred until a future
 release includes a signed x86_64 APK in the immutable asset set and the
 published repository index. At that point, `scripts/native-pam-alpine-repo-smoke.sh
 --host codex-vm-alpine --repo-url https://phillipmcmahon.github.io/pwned-check/alpine`
-becomes a required live endpoint gate. Until then, the Alpine live endpoint is
-validated through the documented aarch64 Docker path and recorded as a
-real-host coverage gap in release notes.
+becomes a required live endpoint gate for `x86_64`. Until then, the Alpine
+live endpoint is validated on `codex-vm-alpine-arm64`; only x86_64 publication
+remains deferred.
 
 ## Required Stories
 

@@ -26,10 +26,10 @@ evidence for the first production endpoint set is recorded in
 `docs/releases/v0.1.6.md`.
 
 Known architecture deferrals must be recorded in release notes before a release
-is called production-ready. For `v0.1.6`, apt `arm64` and RPM `aarch64` metadata
-is published but awaits native VM smoke coverage; Arch remains `x86_64` until an
-Arch Linux ARM builder or VM is selected; Alpine endpoint validation used arm64
-Docker because the persistent Alpine VM is `x86_64`.
+is called production-ready. Apt `arm64` now has native Debian/Ubuntu VM smoke
+coverage, and Alpine `aarch64` now has native Alpine VM smoke coverage. RPM
+`aarch64` metadata still awaits native VM smoke coverage; Arch remains `x86_64`
+until an Arch Linux ARM builder or VM is selected.
 
 ## Signing Model
 

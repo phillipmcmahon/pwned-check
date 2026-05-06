@@ -17,10 +17,10 @@ RPM_URL="${PWNED_CHECK_RPM_REPO_URL:-https://phillipmcmahon.github.io/pwned-chec
 ARCH_URL="${PWNED_CHECK_ARCH_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/arch}"
 ALPINE_URL="${PWNED_CHECK_ALPINE_REPO_URL:-https://phillipmcmahon.github.io/pwned-check/alpine}"
 
-APT_HOSTS="${PWNED_CHECK_APT_REPO_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian}"
+APT_HOSTS="${PWNED_CHECK_APT_REPO_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64}"
 RPM_HOSTS="${PWNED_CHECK_RPM_REPO_SMOKE_HOSTS:-codex-vm-fedora codex-vm-rocky}"
 ARCH_HOSTS="${PWNED_CHECK_ARCH_REPO_SMOKE_HOSTS:-codex-vm-arch}"
-ALPINE_HOSTS="${PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS:-}"
+ALPINE_HOSTS="${PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS:-codex-vm-alpine-arm64}"
 
 run_for_hosts() {
     label="$1"
@@ -40,15 +40,6 @@ run_for_hosts "apt" "$ROOT/scripts/native-pam-apt-repo-smoke.sh" "$APT_URL" "$AP
 run_for_hosts "rpm" "$ROOT/scripts/native-pam-rpm-repo-smoke.sh" "$RPM_URL" "$RPM_HOSTS"
 run_for_hosts "arch" "$ROOT/scripts/native-pam-arch-repo-smoke.sh" "$ARCH_URL" "$ARCH_HOSTS"
 
-if [ -n "$ALPINE_HOSTS" ]; then
-    run_for_hosts "alpine" "$ROOT/scripts/native-pam-alpine-repo-smoke.sh" "$ALPINE_URL" "$ALPINE_HOSTS"
-else
-    cat <<'EOF'
-Alpine live repository smoke deferred: the published v0.1.6 Alpine endpoint is
-aarch64, while the persistent Alpine VM is x86_64. Set
-PWNED_CHECK_ALPINE_REPO_SMOKE_HOSTS to an explicitly provisioned matching
-Alpine VM when one is available.
-EOF
-fi
+run_for_hosts "alpine" "$ROOT/scripts/native-pam-alpine-repo-smoke.sh" "$ALPINE_URL" "$ALPINE_HOSTS"
 
 echo "Native PAM live repository smoke gate complete"

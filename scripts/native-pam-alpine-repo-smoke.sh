@@ -11,6 +11,7 @@ REPO_URL=""
 PUBLIC_KEY="$REPO_DIR/pwned-check-native-pam.rsa.pub"
 PUBLIC_KEY_WAS_SET=0
 PUBLIC_KEY_URL="https://phillipmcmahon.github.io/pwned-check/alpine/pwned-check-alpine-production.rsa.pub"
+PUBLIC_KEY_NAME=""
 REMOTE_DIR=""
 PACKAGE_NAME="pwned-check-native-pam"
 
@@ -100,10 +101,14 @@ if [ -z "$REPO_URL" ]; then
 fi
 if [ -n "$REPO_URL" ] && [ "$PUBLIC_KEY_WAS_SET" -eq 0 ]; then
     require_command curl
+    PUBLIC_KEY_NAME="$(basename "$PUBLIC_KEY_URL")"
     PUBLIC_KEY="$(mktemp "${TMPDIR:-/tmp}/pwned-check-alpine-key.XXXXXX")"
     curl -fsSL "$PUBLIC_KEY_URL" > "$PUBLIC_KEY" || fail "failed to download public key: $PUBLIC_KEY_URL"
 fi
 [ -f "$PUBLIC_KEY" ] || fail "public key file does not exist: $PUBLIC_KEY"
+if [ -z "$PUBLIC_KEY_NAME" ]; then
+    PUBLIC_KEY_NAME="$(basename "$PUBLIC_KEY")"
+fi
 
 require_command ssh
 require_command scp
@@ -116,9 +121,9 @@ ssh "$HOST" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
 if [ -z "$REPO_URL" ]; then
     scp -r "$REPO_DIR" "$HOST:$REMOTE_DIR/repo"
 fi
-scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/pwned-check-native-pam.rsa.pub"
+scp "$PUBLIC_KEY" "$HOST:$REMOTE_DIR/$PUBLIC_KEY_NAME"
 
-ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' sh -s" <<'EOF'
+ssh "$HOST" "REMOTE_DIR='$REMOTE_DIR' REPO_URL='$REPO_URL' PACKAGE_NAME='$PACKAGE_NAME' PUBLIC_KEY_NAME='$PUBLIC_KEY_NAME' sh -s" <<'EOF'
 set -eu
 
 PATH="/usr/sbin:/sbin:$PATH"
@@ -146,7 +151,7 @@ cleanup() {
     if [ -n "${REPOSITORIES_BACKUP:-}" ] && [ -f "$REPOSITORIES_BACKUP" ]; then
         as_root cp "$REPOSITORIES_BACKUP" /etc/apk/repositories
     fi
-    as_root rm -f /etc/apk/keys/pwned-check-native-pam.rsa.pub
+    as_root rm -f "/etc/apk/keys/$PUBLIC_KEY_NAME"
     as_root rm -rf "$REMOTE_DIR"
 }
 trap cleanup EXIT INT TERM
@@ -167,7 +172,7 @@ fi
 as_root pwned-check-pam-disable >/dev/null 2>&1 || true
 as_root apk del "$PACKAGE_NAME" >/dev/null 2>&1 || true
 as_root install -d -m 0755 /etc/apk/keys
-as_root install -m 0644 "$REMOTE_DIR/pwned-check-native-pam.rsa.pub" /etc/apk/keys/pwned-check-native-pam.rsa.pub
+as_root install -m 0644 "$REMOTE_DIR/$PUBLIC_KEY_NAME" "/etc/apk/keys/$PUBLIC_KEY_NAME"
 
 REPOSITORIES_BACKUP="$(mktemp)"
 as_root cp /etc/apk/repositories "$REPOSITORIES_BACKUP"

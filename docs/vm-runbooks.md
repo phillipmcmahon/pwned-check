@@ -41,7 +41,8 @@ matching Go toolchain on every guest.
 
 ## Ubuntu
 
-Host alias: `codex-vm-ubuntu`
+Host aliases: `codex-vm-ubuntu` (`amd64`) and `codex-vm-ubuntu-arm64`
+(`arm64`)
 
 Purpose: Ubuntu `.deb` package behavior, Debian-family native PAM harness,
 hardening assessment, and apt repository smoke.
@@ -51,13 +52,17 @@ Bootstrap packages:
 ```bash
 ssh codex-vm-ubuntu 'sudo apt-get update && sudo apt-get install -y build-essential ca-certificates clang curl file gcc git golang-go libpam0g-dev make pkg-config rsync'
 ssh codex-vm-ubuntu 'if [ ! -x "$HOME/.cargo/bin/rustup" ]; then curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi; ~/.cargo/bin/rustup default stable'
+ssh codex-vm-ubuntu-arm64 'sudo apt-get update && sudo apt-get install -y build-essential ca-certificates clang curl file gcc git golang-go libpam0g-dev make pkg-config rsync cargo rustfmt jq tar gzip xz-utils'
+ssh codex-vm-ubuntu-arm64 'if [ ! -x "$HOME/.cargo/bin/rustup" ]; then curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; fi; ~/.cargo/bin/rustup default stable'
 ```
 
 Primary smokes:
 
 ```bash
 ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-ubuntu-arm64 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
 ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu --repo-url https://phillipmcmahon.github.io/pwned-check/apt
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-ubuntu-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/apt
 ```
 
 Recovery checks:
@@ -75,7 +80,8 @@ Known quirks:
 
 ## Debian
 
-Host alias: `codex-vm-debian`
+Host aliases: `codex-vm-debian` (`amd64`) and `codex-vm-debian-arm64`
+(`arm64`)
 
 Purpose: Debian `.deb` package behavior, Debian-family native PAM harness, and
 apt repository smoke.
@@ -84,13 +90,16 @@ Bootstrap packages:
 
 ```bash
 ssh codex-vm-debian 'sudo apt-get update && sudo apt-get install -y ca-certificates curl gcc libc6-dev libpam0g-dev make pkg-config golang-go cargo rustfmt file tar gzip xz-utils jq rsync'
+ssh codex-vm-debian-arm64 'sudo apt-get update && sudo apt-get install -y ca-certificates curl gcc libc6-dev libpam0g-dev make pkg-config golang-go cargo rustfmt file tar gzip xz-utils jq rsync'
 ```
 
 Primary smokes:
 
 ```bash
 ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian-arm64 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
 ./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian --repo-url https://phillipmcmahon.github.io/pwned-check/apt
+./scripts/native-pam-apt-repo-smoke.sh --host codex-vm-debian-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/apt
 ```
 
 Recovery checks:
@@ -176,15 +185,17 @@ Known quirks:
 
 ## Alpine
 
-Host alias: `codex-vm-alpine`
+Host aliases: `codex-vm-alpine` (`x86_64`) and `codex-vm-alpine-arm64`
+(`arm64`)
 
 Purpose: Alpine Linux-PAM package behavior, manual PAM helper rollback, and
-future x86_64 Alpine repository smoke when a published x86_64 APK/index exists.
+Alpine repository smoke for published `aarch64` content.
 
 Bootstrap packages:
 
 ```bash
 ssh codex-vm-alpine 'sudo apk update && sudo apk add --no-cache ca-certificates cargo clang file gcc git go linux-pam linux-pam-dev make musl-dev pkgconf rust rustfmt tar gzip xz findutils diffutils jq shadow sudo doas rsync'
+ssh codex-vm-alpine-arm64 'sudo sed -i "s|^#\\(http://dl-cdn.alpinelinux.org/alpine/v3.23/community\\)|\\1|" /etc/apk/repositories && sudo apk update && sudo apk add alpine-sdk bash ca-certificates cargo clang file gcc git go libc-dev linux-pam-dev make musl-dev openssl-dev pkgconf rsync rust rustfmt tar xz zstd'
 ```
 
 Primary smokes:
@@ -192,13 +203,13 @@ Primary smokes:
 ```bash
 ssh codex-vm-alpine 'cd /home/codex/pwned-check && make native-pam-test native-pam-build native-pam-deps native-pam-symbols'
 PWNED_CHECK_VM_SMOKE_HOSTS=codex-vm-alpine PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
+PWNED_CHECK_VM_SMOKE_HOSTS=codex-vm-alpine-arm64 PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh
 ```
 
-Repository smoke, once the published endpoint contains a matching `x86_64`
-APK/index:
+Repository smoke:
 
 ```bash
-./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine --repo-url https://phillipmcmahon.github.io/pwned-check/alpine
+./scripts/native-pam-alpine-repo-smoke.sh --host codex-vm-alpine-arm64 --repo-url https://phillipmcmahon.github.io/pwned-check/alpine
 ```
 
 Recovery checks:
@@ -212,9 +223,10 @@ Known quirks:
 
 - Alpine support is for Linux-PAM deployments, not BusyBox-only authentication
   paths.
-- Current published Alpine `v0.1.6` repository content is `aarch64`; the
-  persistent Alpine VM is `x86_64`, so live endpoint install smoke is deferred
-  until a matching package/index exists.
+- Current published Alpine repository content is `aarch64`; use
+  `codex-vm-alpine-arm64` for live endpoint install smoke. The `x86_64` VM
+  remains useful for package-script and loader-path regression checks when a
+  matching local APK is built.
 - Alpine module placement varies by release; package and dependency checks
   cover both observed loader paths.
 

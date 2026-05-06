@@ -23,9 +23,12 @@ repaired, recreated, or made available again through its `codex-vm-*` SSH path.
 |---|---|---|
 | `codex-vm-ubuntu` | Ubuntu package and apt repository smoke | `amd64` |
 | `codex-vm-debian` | Debian package and apt repository smoke | `amd64` |
+| `codex-vm-ubuntu-arm64` | Ubuntu package and apt repository smoke | `arm64` |
+| `codex-vm-debian-arm64` | Debian package and apt repository smoke | `arm64` |
 | `codex-vm-fedora` | Fedora RPM, authselect, SELinux, and repository smoke | `x86_64` |
 | `codex-vm-rocky` | RHEL-compatible RPM, authselect, SELinux, and repository smoke | `x86_64` |
 | `codex-vm-alpine` | Alpine Linux-PAM package smoke | `x86_64` |
+| `codex-vm-alpine-arm64` | Alpine Linux-PAM package and repository smoke | `arm64` |
 | `codex-vm-arch` | Arch package and repository smoke | `x86_64` |
 
 Do not record VM passwords, IP addresses, private SSH keys, hypervisor
@@ -34,14 +37,12 @@ credentials belong in maintainer-local storage.
 
 ## Missing Capacity
 
-The current persistent fleet does not include ARM guests. The following
+The current persistent fleet includes Debian-family ARM guests. The following
 coverage remains explicitly deferred until matching VMs are provided:
 
 | Needed guest | Unlocks |
 |---|---|
-| arm64 Debian or Ubuntu | Apt `arm64` repository-only smoke |
 | aarch64 Fedora or Rocky | RPM `aarch64` repository-only smoke |
-| aarch64 Alpine Linux-PAM | Alpine `aarch64` repository-only smoke |
 | Arch Linux ARM | Arch Linux ARM package/repository decision and smoke |
 
 Docker/QEMU coverage remains useful for CI parity and package-asset confidence,
@@ -59,11 +60,10 @@ should not contain irreplaceable release state.
 | Single VM lost | Recreate the guest, reapply SSH key and passwordless sudo, install bootstrap packages from [VM runbooks](vm-runbooks.md), then rerun the matching package and repository smoke. |
 | VM has broken PAM/sudo state | Do not attempt hypervisor recovery through Codex. Ask the maintainer to repair or recreate the guest, then rerun the relevant smoke from a clean package state. |
 | Private infrastructure unavailable during a release window | Delay production release promotion or record an explicit deferral. Do not replace persistent VM acceptance with amd64 Docker when a VM exists for that distro. |
-| Local Docker/QEMU unavailable | Skip only the documented arm64 Docker CI-parity stage with `PWNED_CHECK_SKIP_ARM64_DOCKER=1` when appropriate; record that skip in release notes if it affects release evidence. |
+| Local Docker/QEMU unavailable | Local arm64 Docker is optional when arm64 VM smokes are configured. Set `PWNED_CHECK_RUN_ARM64_DOCKER=1` only when reproducing GitHub CI-parity behavior locally. |
 
 RTO target: a lost amd64/x86_64 VM should be recreated within one maintainer
-working session before a release is promoted. ARM VMs, once provisioned, should
-follow the same target.
+working session before a release is promoted. ARM VMs follow the same target.
 
 RPO target: persistent VM state has no release-data value beyond the latest
 smoke output. Repository artifacts, signing material, and release notes must be

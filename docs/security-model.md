@@ -21,12 +21,18 @@ Secondary assets:
 
 ```text
 Password-change process
-  -> platform integration layer
+  -> native Linux PAM module
   -> pwned-check binary
   -> live HIBP range API
 ```
 
-The password is trusted only inside the OS password-change process, integration layer, and checker process memory. It must not cross the provider boundary.
+The password is trusted only inside the OS password-change process, native PAM
+module memory, checker process memory, and kernel pipes between those processes.
+It must not cross the provider boundary.
+
+Packaged enable, enforce, disable, and rollback scripts are configuration
+helpers only. They edit distro-managed PAM configuration and must never receive
+candidate passwords.
 
 ## Password Handling Rules
 

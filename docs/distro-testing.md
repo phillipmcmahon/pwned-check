@@ -6,7 +6,8 @@ repository, VM, and Docker validation.
 
 ## Rules
 
-- Test on persistent VMs when a matching VM exists.
+- Test on persistent VMs when a matching VM exists. Local package acceptance
+  must use the VM path for that distro and architecture.
 - Use Docker for CI parity and for local reproduction, not as a substitute for
   an available VM acceptance path.
 - Do not put GitHub credentials, signing keys, passphrases, NAS credentials, VM
@@ -108,8 +109,9 @@ family supports it.
 ## Docker Coverage
 
 GitHub CI runs Docker smoke for binary behavior on `linux/amd64` and
-`linux/arm64`. Local Docker smoke is optional when persistent VMs cover the
-same package path:
+`linux/arm64`. Tagged release asset preparation also builds packages in Docker
+because GitHub-hosted runners do not have access to the maintainer VM fleet.
+Local Docker smoke is optional when persistent VMs cover the same package path:
 
 ```bash
 make docker-smoke
@@ -117,7 +119,8 @@ PWNED_CHECK_RUN_ARM64_DOCKER=1 ./scripts/validate-before-push.sh
 ```
 
 Use local Docker primarily to reproduce CI failures or inspect container-only
-behavior. Do not replace an available VM acceptance path with Docker.
+release-builder behavior. Do not replace an available VM acceptance path with
+Docker.
 
 ## Per-Family Commands
 

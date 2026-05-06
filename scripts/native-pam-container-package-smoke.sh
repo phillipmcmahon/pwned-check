@@ -19,6 +19,9 @@ Build a native PAM package in the matching distro container, install it with
 the distro package manager, exercise installed service-file wrapper behavior,
 remove the package, and verify managed-file cleanup.
 
+This is CI/fallback coverage. Local package acceptance uses persistent VMs when
+a matching VM exists.
+
 Options:
   --distro <distro>      Distro package family: arch or alpine
   --platform <platform>  Docker platform

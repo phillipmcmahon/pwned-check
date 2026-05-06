@@ -58,13 +58,16 @@ smoke runs from a clean package state.
 
 Local amd64 Docker smoke is not part of the default gate because persistent VMs
 cover first-wave amd64 distro behavior. Local arm64 Docker smoke is also skipped
-by default when arm64 Debian or Ubuntu VM smoke hosts are configured; use
+by default when matching arm64 VM smoke hosts are configured; use
 `PWNED_CHECK_RUN_ARM64_DOCKER=1` only when you deliberately want local
-Docker/QEMU CI-parity coverage. Expect that optional arm64 Docker stage to take
-minutes rather than seconds, especially on emulated hosts or cold package
-caches. Recent full validation runs spent roughly 5-10 minutes in the combined
-arm64 binary and PAM Docker smoke stages; network and package-manager cache
-state can move that number noticeably.
+Docker/QEMU CI-parity coverage. Docker release-asset builds remain part of the
+GitHub/tagged-release path because GitHub-hosted runners cannot access the
+maintainer VM fleet; they are not the local acceptance route when a native VM
+exists. Expect optional arm64 Docker stages to take minutes rather than seconds,
+especially on emulated hosts or cold package caches. Recent full validation
+runs spent roughly 5-10 minutes in the combined arm64 binary and PAM Docker
+smoke stages; network and package-manager cache state can move that number
+noticeably.
 Use `PWNED_CHECK_VM_SMOKE_ONLY=1 ./scripts/validate-before-push.sh` to exercise
 just the SSH VM stage. Use `PWNED_CHECK_SKIP_VM_SMOKE=1` or
 `PWNED_CHECK_SKIP_ARM64_DOCKER=1` only for deliberate offline work where the
@@ -177,12 +180,12 @@ Current smoke architecture coverage:
 | Area | Local Pre-Push | GitHub CI |
 |---|---|---|
 | CLI binary smoke | Host-built binary on the development machine | Host-built binary on `ubuntu-24.04` |
-| Docker binary smoke, `linux/amd64` | Not run by default, because first-wave local amd64 coverage is VM-backed; available manually for CI reproduction | Debian, Ubuntu, Fedora, Arch, Alpine |
+| Docker binary smoke, `linux/amd64` | Not run by default, because local amd64 acceptance is VM-backed; available manually for CI reproduction | Debian, Ubuntu, Fedora, Arch, Alpine |
 | Docker binary smoke, `linux/arm64` | Optional with `PWNED_CHECK_RUN_ARM64_DOCKER=1` because local arm64 acceptance is VM-backed where matching guests exist | Debian, Ubuntu, Fedora, Rocky, Alpine |
 | Native PAM package smoke, `linux/amd64` | Ubuntu, Debian, Fedora, Rocky, Alpine, and Arch on persistent VMs | Ubuntu `.deb` runner smoke; Docker native PAM package gates for Arch and Alpine |
 | Native PAM package smoke, `linux/arm64` | Ubuntu, Debian, Fedora, Rocky, and Alpine on persistent VMs | Docker native PAM package gates for Debian, Fedora, and Alpine arm64 package outputs |
-| Native PAM packages, `linux/amd64` | Built by `make package-native-pam-*` as needed | Built during tagged release package preparation |
-| Native PAM packages, `linux/arm64` | Built manually through `scripts/build-native-pam-release-assets.sh --platform linux/arm64` | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 packages |
+| Native PAM packages, `linux/amd64` | Built and accepted on persistent VMs for each supported package family | Built during tagged release package preparation in Docker containers |
+| Native PAM packages, `linux/arm64` | Built and accepted on persistent VMs for each supported package family except Arch ARM, which is not targeted | Native PAM package gates smoke Debian, Fedora, and Alpine arm64 package outputs; tagged release builds arm64 packages in Docker containers |
 | Live repository endpoint smoke | `make native-pam-live-repo-smokes` on persistent VMs, including Alpine arm64, before repository-backed release promotion | Not run in normal CI because it mutates real package-manager state and depends on maintainer VMs |
 | Live repository endpoint monitor | `make native-pam-repo-endpoint-check` for local endpoint diagnosis | Scheduled and manual `Repository Endpoints` workflow validates published metadata/signatures without package install |
 | Arch package path | `codex-vm-arch` over SSH, `linux/amd64` | Docker `linux/amd64` only |

@@ -14,10 +14,12 @@ usage() {
     cat <<'EOF'
 Usage: scripts/build-native-pam-release-assets.sh --version <version> [OPTIONS]
 
-Build native Linux PAM package artifacts for release publication. Debian/Ubuntu,
-Fedora/RPM, Arch, and Alpine package paths are built in distro containers and
-copied into the output directory. Arch package release builds currently require
-linux/amd64 because the official archlinux:base-devel image is amd64-only.
+Build native Linux PAM package artifacts for GitHub/tagged release publication.
+Debian/Ubuntu, Fedora/RPM, Arch, and Alpine package paths are built in distro
+containers because GitHub-hosted release runners cannot access the maintainer
+VM fleet. Local package acceptance still uses persistent VMs when a matching VM
+exists. Arch package release builds currently require linux/amd64 because the
+official archlinux:base-devel image is amd64-only.
 
 Options:
   --version <version>       Release version, for example 0.1.2

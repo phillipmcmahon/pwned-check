@@ -33,6 +33,9 @@ The release issue should track:
 - Review related issues and project board entries.
 - Update docs for changed behavior.
 - Update `CHANGELOG.md`.
+- Keep a sticky `## Unreleased` placeholder at the top of `CHANGELOG.md`.
+  Release prep moves completed entries into the dated release section and
+  leaves the empty placeholder in place for the next change.
 
 ### 2. Prepare Version
 
@@ -63,6 +66,7 @@ Capture:
 - Docker smoke matrix result
 - CI `lint`, `staticcheck`, `test`, `smoke`, and `package-linux` jobs
 - native PAM package, VM, and Docker validation results when shipping native PAM changes
+- GitHub Actions run URLs and the commit SHA each run validated
 
 For production-ready repository releases, also capture the [Production release gate](production-release-gate.md) evidence: signing status, repository-only install smoke, rollback validation, provider-outage validation, key-management documentation, and project board closeout.
 
@@ -147,7 +151,12 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
   ```
   The watcher waits for the CI workflow associated with the pushed `HEAD` SHA
   and exits non-zero if any required CI job fails.
-- Create and push the tag.
+- Create and push a signed tag. Use the matching release note file as the tag
+  message and the configured release signing key:
+  ```bash
+  git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
+  git push origin v0.1.0
+  ```
 - Let GitHub Actions build release artifacts.
 - Monitor the tag-triggered release workflow from GitHub Actions until it
   reaches a terminal success or failure state. A pushed tag is not considered
@@ -201,13 +210,15 @@ Do not publish macOS or Windows artifacts until those roadmap tracks include com
 - Confirm release notes include:
   - highlights
   - operator impact
-  - validation
+  - validation, including local validation commands, GitHub Actions run URLs,
+    and the commit SHA validated by each run
   - known limitations
 
-Draft release notes live under `docs/releases/`. Use the matching file as the annotated tag message, for example:
+Draft release notes live under `docs/releases/`. Use the matching file as the
+signed tag message, for example:
 
 ```bash
-git tag -a v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
+git tag -s -u <release-signing-key-id> v0.1.0 --cleanup=verbatim -F docs/releases/v0.1.0.md
 ```
 
 ### 6. Close Tracking

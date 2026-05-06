@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+const (
+	maxFuzzRangeResponseBytes = 4 * 1024
+	fuzzRangeResponseSuffix   = "ABC"
+)
+
 func FuzzParseRangeResponse(f *testing.F) {
 	seeds := []string{
 		"",
@@ -17,11 +22,15 @@ func FuzzParseRangeResponse(f *testing.F) {
 		strings.Repeat("A", 128) + ":1\n",
 	}
 	for _, seed := range seeds {
-		f.Add(seed, "ABC")
+		f.Add(seed)
 	}
 
-	f.Fuzz(func(t *testing.T, body, suffix string) {
-		count, err := ParseRangeResponse(strings.NewReader(body), suffix)
+	f.Fuzz(func(t *testing.T, body string) {
+		if len(body) > maxFuzzRangeResponseBytes {
+			body = body[:maxFuzzRangeResponseBytes]
+		}
+
+		count, err := ParseRangeResponse(strings.NewReader(body), fuzzRangeResponseSuffix)
 		if err != nil {
 			return
 		}

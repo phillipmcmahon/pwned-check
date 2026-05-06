@@ -1,3 +1,2 @@
 go test fuzz v1
 string("ABC:-1")
-string("ABC")

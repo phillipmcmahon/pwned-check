@@ -9,6 +9,9 @@ Operators should install from the package repository for their distro family.
 Package installation only places files on disk. PAM is not changed until an
 enable command is run.
 
+Repository availability and response objectives are documented in the
+[production baseline SLO](roadmap.md#production-baseline-slo).
+
 ## Supported Platforms
 
 | Platform | Repository | Architectures |

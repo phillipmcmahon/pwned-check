@@ -5,6 +5,8 @@ Linux PAM package. Operators should start with [Linux install](linux-install.md)
 
 Repository-backed releases must satisfy the production release gate in
 [Release playbook](release-playbook.md#release-gate).
+Repository availability and response objectives are defined in the
+[production baseline SLO](roadmap.md#production-baseline-slo).
 
 ## Status
 

@@ -21,6 +21,25 @@ The Linux package path is the production baseline:
 
 Current operator guidance is [Linux package install](linux-install.md).
 
+## Production Baseline SLO
+
+The package repositories are operated as a single-maintainer project. There is
+no contractual uptime SLA and no guaranteed emergency support window.
+
+Operational objective:
+
+- run automated repository endpoint monitoring at least daily
+- investigate broken signed metadata, missing package indexes, or unavailable
+  repository endpoints within two maintainer working days of detection
+- publish a corrective patch release or documented operator workaround before
+  declaring the incident resolved
+- pause publication and publish a visible notice as soon as practical after a
+  suspected signing-key or repository-compromise event
+
+This SLO covers repository publication and installability. It does not cover
+HIBP provider availability, distro package-manager outages, local PAM
+misconfiguration, or site-specific authentication policy.
+
 ## Linux Maintenance
 
 Linux work should keep the package path simple and reliable:

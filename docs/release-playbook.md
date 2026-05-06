@@ -17,6 +17,10 @@ items are complete and recorded in the release notes:
 | Provider outage | Fail-open and fail-closed behavior is validated through mocked provider-outage tests. |
 | Documentation | `README.md`, [Linux install](linux-install.md), [Package repositories](package-repositories.md), and `CHANGELOG.md` describe the shipped package path accurately. |
 
+Production release notes should reference the
+[production baseline SLO](roadmap.md#production-baseline-slo) when describing
+repository availability and response posture.
+
 Known architecture deferrals must be named in release notes before a release is
 called production-ready. Current Arch support is `x86_64` only.
 

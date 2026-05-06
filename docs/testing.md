@@ -74,6 +74,9 @@ Standalone Linux tarball packaging is not part of the default validation gate.
 The supported Linux application shape is the native distro package path, so
 pre-push validates native package build/install behavior instead.
 
+All test-only environment variables must use the `PWNED_CHECK_TEST_*` prefix.
+No other prefix is permitted for test scaffolding.
+
 For native PAM development, run the persistent Ubuntu smoke container:
 
 ```bash

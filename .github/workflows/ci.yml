@@ -206,6 +206,10 @@ jobs:
               --build-time "${BUILD_TIME}" \
               --platform "${platform}"
           done
+          if ! find release -maxdepth 1 -type f -print -quit | grep -q .; then
+            echo "no release assets were produced" >&2
+            exit 1
+          fi
           cd release
           find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
             | sort -z \

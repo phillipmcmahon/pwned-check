@@ -96,6 +96,19 @@ make native-pam-release-provenance
 Tagged release automation builds the same package families through
 `scripts/build-native-pam-release-assets.sh`.
 
+Version mapping:
+
+| Package | Metadata version shape | Verify command |
+|---|---|---|
+| Debian/Ubuntu `.deb` | `X.Y.Z` | `dpkg-deb -f <file.deb> Version` |
+| Fedora/Rocky `.rpm` | `X.Y.Z` with package release in RPM `Release` | `rpm -qp --qf '%{VERSION}-%{RELEASE}\n' <file.rpm>` |
+| Arch `.pkg.tar.zst` | `X.Y.Z-1`, where `-1` is `pkgrel` | `zstd -dc <file.pkg.tar.zst> \| tar -xO .PKGINFO \| awk -F' = ' '/^pkgver/ {print $2; exit}'` |
+| Alpine `.apk` | `X.Y.Z-r0`, where `-r0` is `pkgrel` | `tar -xzOf <file.apk> .PKGINFO \| awk -F'= ' '/^pkgver/ {print $2; exit}'` |
+
+Incident response should compare the repository index, package metadata,
+`pwned-check --version`, release notes, and tag name before declaring a package
+version mismatch resolved.
+
 Package releases must:
 
 - set `SOURCE_DATE_EPOCH` from the release tag timestamp

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const userAgent = "pwned-check/0.2 (+https://github.com/phillipmcmahon/pwned-check)"
+const userAgent = "pwned-check (+https://github.com/phillipmcmahon/pwned-check)"
 
 type RangeProvider struct {
 	BaseURL string

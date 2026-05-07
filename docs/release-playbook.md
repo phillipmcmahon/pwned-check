@@ -35,16 +35,15 @@ current package baseline:
 
 | Gap | Current posture | Evidence needed to close | Tracking decision |
 |---|---|---|---|
-| Reproducible builds | Release artifacts carry checksums, signed provenance, and fixed build timestamps, but independent rebuild equivalence is not yet a release gate. | A documented rebuild procedure that reproduces package payloads from the tagged source and compares normalized package contents across at least one clean maintainer environment. | Track as a future supply-chain hardening task under Epic 12 or a later supply-chain epic. |
-| Transparency log | GitHub Releases, signed checksums, signed repository metadata, and endpoint monitoring provide publication evidence, but release metadata is not written to an append-only external transparency log. | A selected log, submission command, inclusion proof capture, and release-note field that records the log entry for each production release. | Track as a future supply-chain hardening task under Epic 12 or a later supply-chain epic. |
+| Reproducible builds | Release artifacts carry checksums, signed provenance, and fixed build timestamps, but independent rebuild equivalence is not yet a release gate. | A documented rebuild procedure that reproduces package payloads from the tagged source and compares normalized package contents across at least one clean maintainer environment. | Track as a future supply-chain hardening follow-up when the release process needs that assurance level. |
+| Transparency log | GitHub Releases, signed checksums, signed repository metadata, and endpoint monitoring provide publication evidence, but release metadata is not written to an append-only external transparency log. | A selected log, submission command, inclusion proof capture, and release-note field that records the log entry for each production release. | Track as a future supply-chain hardening follow-up when external transparency becomes a release requirement. |
 
 ## 1. Confirm Scope
 
 - Decide which user-visible changes are shipping.
 - Update behavior docs and `CHANGELOG.md`.
 - Keep a sticky `## Unreleased` placeholder at the top of `CHANGELOG.md`.
-- Confirm no legacy or migration-only paths are being preserved without a
-  current design reason.
+- Confirm no obsolete paths are being preserved without a current design reason.
 
 ## 2. Prepare Version
 

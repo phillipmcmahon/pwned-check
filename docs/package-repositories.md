@@ -150,7 +150,8 @@ Generated outputs:
 
 Use `dist/package-repositories` as the source for the `gh-pages` publication
 copy. It already includes the public OpenPGP key at the repository root and the
-family-specific compatibility aliases expected by operator install docs.
+family-specific compatibility aliases expected by the single operator guide,
+[Linux install](linux-install.md).
 
 Alpine index generation may warn about missing dependency providers because the
 project repository contains only `pwned-check-native-pam`; the normal Alpine
@@ -205,63 +206,7 @@ Each smoke must cover install, dry-run enablement, enforcement, disable, package
 removal, and managed-file cleanup. RPM-family smokes must also keep SELinux
 clean or record an explicit tracked exception.
 
-## Apt Operator Bootstrap
-
-Operator trust bootstrap:
-
-```bash
-sudo install -d -m 0755 /etc/apt/keyrings
-curl -fsSL https://phillipmcmahon.github.io/pwned-check/apt/pwned-check.asc \
-  | sudo tee /etc/apt/keyrings/pwned-check.asc >/dev/null
-echo "deb [signed-by=/etc/apt/keyrings/pwned-check.asc] https://phillipmcmahon.github.io/pwned-check/apt stable main" \
-  | sudo tee /etc/apt/sources.list.d/pwned-check.list
-sudo apt update
-sudo apt install pwned-check-native-pam
-```
-
-## RPM Operator Bootstrap
-
-Operator trust bootstrap:
-
-```bash
-sudo tee /etc/yum.repos.d/pwned-check-native-pam.repo >/dev/null <<'EOF'
-[pwned-check-native-pam]
-name=pwned-check native PAM
-baseurl=https://phillipmcmahon.github.io/pwned-check/rpm
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://phillipmcmahon.github.io/pwned-check/rpm/pwned-check.asc
-EOF
-sudo dnf install pwned-check-native-pam
-```
-
-## Arch Operator Bootstrap
-
-Operator trust bootstrap:
-
-```bash
-curl -fsSLO https://phillipmcmahon.github.io/pwned-check/arch/pwned-check.asc
-sudo pacman-key --add pwned-check.asc
-sudo pacman-key --lsign-key <fingerprint>
-sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
-[pwned-check]
-Server = https://phillipmcmahon.github.io/pwned-check/arch
-SigLevel = Required DatabaseRequired
-EOF
-sudo pacman -Sy pwned-check-native-pam
-```
-
-## Alpine Operator Bootstrap
-
-Operator trust bootstrap:
-
-```bash
-sudo install -d -m 0755 /etc/apk/keys
-curl -fsSL https://phillipmcmahon.github.io/pwned-check/alpine/pwned-check-alpine-production.rsa.pub \
-  | sudo tee /etc/apk/keys/pwned-check-alpine-production.rsa.pub >/dev/null
-echo "https://phillipmcmahon.github.io/pwned-check/alpine" \
-  | sudo tee -a /etc/apk/repositories
-sudo apk update
-sudo apk add pwned-check-native-pam
-```
+Operator-facing repository setup commands live only in
+[Linux install](linux-install.md). Keep this maintainer reference focused on
+repository generation, signing, publication, and smoke validation so operator
+instructions do not drift across documents.

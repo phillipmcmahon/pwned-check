@@ -54,8 +54,8 @@ The stable checker contract is documented in [Checker contract](checker-contract
 Development and release validation require:
 
 - Go 1.26
-- GitHub CLI for project-board automation
-- `jq` for project-board scripts
+- GitHub CLI for release monitoring and release asset retrieval
+- `jq` for GitHub workflow status helpers
 - optional Staticcheck for local validation
 
 ## Security Requirements

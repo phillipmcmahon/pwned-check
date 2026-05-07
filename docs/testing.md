@@ -14,31 +14,26 @@ Run the default validation gate:
 make validate
 ```
 
-Equivalent commands:
+The canonical gate is `scripts/validate-before-push.sh`. At a high level it
+runs:
 
 ```bash
 gofmt -l .
 cargo fmt --check
-go test ./...
+go test -v -race ./...
 make native-pam-test
 make native-pam-memory-check
 make native-pam-build
 make native-pam-symbols
 make native-pam-deps
 make native-pam-harness
-make native-pam-ubuntu-deb-package-smoke
-make native-pam-ubuntu-hardening-assessment
-make package-native-pam-debian
-make package-native-pam-rpm
-make package-native-pam-arch
-make package-native-pam-alpine
 make fuzz-smoke
 make coverage
 go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck ./...
-go build -o dist/pwned-check ./cmd/pwned-check
-go run ./scripts/smoke_binary.go dist/pwned-check
-./scripts/validate-before-push.sh
+make build
+make smoke
+# persistent VM package smokes for the configured distro hosts
 ```
 
 Install the matching pre-push hook:
@@ -157,7 +152,8 @@ The GitHub workflow is split into:
 - `test`: race-enabled Go tests, bounded parser fuzz smoke, and 85% per-package coverage threshold
 - `native-pam`: Rust format check, native PAM unit tests, Valgrind-backed native PAM memory check, Linux `pam_pwned_check.so` build, exported PAM symbol check, dynamic dependency allowlist check, and host-level native PAM harness
 - `smoke`: built-binary smoke and Docker distro smoke for `linux/amd64` and `linux/arm64`
-- `release`: tagged release publishing with 60s parser fuzz before package publication, including native PAM package files for the supported repository architectures
+- `release`: tagged release publishing with the deterministic release parser fuzz gate before package publication, including native PAM package files for the supported repository architectures
+- `fuzz`: scheduled and manual deterministic parser fuzz workflow
 
 The `Native PAM Package Gates` workflow runs weekly and on demand for heavier package validation. It covers the Ubuntu `.deb` package smoke, direct native PAM Docker matrix, Arch package smoke, Alpine Docker fallback package smoke, and an arm64 native PAM package smoke for Debian, Fedora, and Alpine package outputs. Debian `.deb` validation, Fedora RPM/SELinux validation, Alpine package validation, and Arch package validation remain documented release gates on persistent VMs because they depend on real package-manager, PAM, or security-module state. Arch package automation is `linux/amd64` only.
 
@@ -172,7 +168,6 @@ Run `make github-workflow-status` during release closeout to confirm the latest
 completed `main` runs for CI, fuzz, Native PAM Package Gates, and Repository
 Endpoints are green. This catches scheduled workflow failures that local
 validation and tag-triggered release checks do not see automatically.
-- `fuzz`: scheduled and manual 5m parser fuzz workflow
 
 During release publication, run `make github-ci-watch` immediately after
 pushing the release commit to `main`. That command waits for the GitHub CI run
@@ -206,7 +201,7 @@ Release-sensitive checks:
 - mocked HIBP-compatible provider contract
 - provider timeout/failure behavior
 - fail-open/fail-closed provider outage behavior
-- bounded parser fuzz coverage, including a 60s release gate
+- bounded parser fuzz coverage, including the release execution-count gate
 - 85% minimum coverage for included product logic packages
 - binary smoke test
 - Docker binary smoke matrix across Debian, Ubuntu, Fedora, Arch Linux, and Alpine on `linux/amd64`, plus Debian, Ubuntu, Fedora, Rocky, and Alpine on `linux/arm64`

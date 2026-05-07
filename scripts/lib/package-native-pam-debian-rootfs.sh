@@ -10,7 +10,7 @@ Build the Debian/Ubuntu native PAM staging rootfs for the current Linux
 architecture. The tarball is consumed by the .deb package builder.
 
 Options:
-  --version <version>      Release version, for example 0.1.0 or dev-abcdef12
+  --version <version>      Release version, for example X.Y.Z or dev-abcdef12
   --output-dir <path>      Output directory (default: dist/release)
   --build-time <time>      RFC3339 build time (default: current UTC time)
   --pwned-check-bin <path> Use a prebuilt Linux pwned-check binary

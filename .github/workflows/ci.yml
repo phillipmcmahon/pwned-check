@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Check for private signing material
-        run: make private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test private-signing-material-check
+        run: make private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test native-pam-repo-endpoint-retry-test private-signing-material-check
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -265,6 +265,10 @@ jobs:
             --remote origin \
             --branch gh-pages \
             --message "Publish package repositories for ${GITHUB_REF_NAME}"
+
+      - name: Validate published repository endpoints
+        if: env.PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS == 'true'
+        run: scripts/native-pam-repo-endpoint-check-retry.sh
 
       - name: Report skipped repository dry run
         if: env.PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS != 'true'

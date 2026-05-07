@@ -5,6 +5,13 @@ lightweight and package-focused.
 
 ## Unreleased
 
+### Known Limitations
+
+- Repository-generation and smoke-test Docker base images are not yet pinned by
+  digest. Release builds still validate package metadata, signatures, and live
+  repository endpoints, but exact container image reproducibility remains a
+  tracked follow-up before a 1.0 release.
+
 ## v0.3.5 - 2026-05-07
 
 ### Fixed

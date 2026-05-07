@@ -134,6 +134,13 @@ Generate repository metadata from the already validated release package set:
 Metadata and package payloads are immutable for a published version. Publish a
 new patch version for payload corrections.
 
+GitHub Release package files remain attached to releases as immutable
+provenance and recovery artifacts. They are useful for auditing repository
+contents, rebuilding repository metadata during recovery, and comparing package
+checksums, but they are not the operator install path. Operator install
+instructions live in [Linux install](linux-install.md) and use package-manager
+repositories only.
+
 ## CI Repository Publication
 
 Tagged release automation is the primary repository publication path. After

@@ -111,6 +111,14 @@ make native-pam-release-provenance
 Tagged release automation builds the same package families through
 `scripts/build-native-pam-release-assets.sh`.
 
+GitHub Release package assets are retained as immutable provenance and recovery
+inputs. They are not the primary operator install path; operators install from
+the signed package repositories. Keep package files, per-file checksums, build
+metadata, `native-pam-artifacts.list`, `native-pam-SHA256SUMS.txt`,
+`native-pam-provenance.json`, and `SHA256SUMS.txt` attached to each public
+release so repository publication can be audited or reconstructed from the
+tagged release output.
+
 Version mapping:
 
 | Package | Metadata version shape | Verify command |

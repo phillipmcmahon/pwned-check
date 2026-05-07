@@ -1,6 +1,6 @@
 [package]
 name = "pam-pwned-check"
-version = "1.0.1"
+version = "1.0.3"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

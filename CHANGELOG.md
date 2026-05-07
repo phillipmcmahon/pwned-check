@@ -5,6 +5,28 @@ lightweight and package-focused.
 
 ## Unreleased
 
+## v1.0.3 - 2026-05-08
+
+### Changed
+
+- Hardened native PAM checker process launch handling so the post-fork child
+  path exits directly if process-group setup fails.
+- Serialized checker launches within a PAM process to prevent bounded stderr
+  pipe inheritance between concurrent checker children.
+- Enforced positive provider timeouts for direct provider construction and set
+  the HTTP client timeout as a backstop.
+- Split native PAM audit events for empty password tokens and PAM token
+  retrieval errors.
+- Extended the private signing material guard to detect binary GnuPG keyring
+  filename patterns.
+
+### Known Limitations
+
+- Repository-generation and smoke-test Docker base images are not yet pinned by
+  digest. Release builds validate package metadata, signatures, and live
+  repository endpoints, but exact container image reproducibility is not yet a
+  release gate.
+
 ## v1.0.1 - 2026-05-07
 
 ### Changed

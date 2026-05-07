@@ -88,11 +88,13 @@ for apk_file in "$INPUT_DIR"/pwned-check-native-pam-*.apk; do
     [ -e "$apk_file" ] || continue
     pkginfo="$(tar -xzOf "$apk_file" .PKGINFO)"
     pkgname="$(printf '%s\n' "$pkginfo" | awk -F' = ' '/^pkgname/ {print $2; exit}')"
+    pkgver="$(printf '%s\n' "$pkginfo" | awk -F' = ' '/^pkgver/ {print $2; exit}')"
     arch="$(printf '%s\n' "$pkginfo" | awk -F' = ' '/^arch/ {print $2; exit}')"
     [ "$pkgname" = "pwned-check-native-pam" ] || fail "unexpected package name in $apk_file: $pkgname"
+    [ -n "$pkgver" ] || fail "could not determine APK version for $apk_file"
     [ -n "$arch" ] || fail "could not determine APK architecture for $apk_file"
     mkdir -p "$repo_dir/$arch"
-    cp "$apk_file" "$repo_dir/$arch/"
+    cp "$apk_file" "$repo_dir/$arch/$pkgname-$pkgver.apk"
     found=$((found + 1))
 done
 [ "$found" -gt 0 ] || fail "no pwned-check-native-pam APK artifacts found in $INPUT_DIR"

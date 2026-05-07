@@ -235,9 +235,9 @@ pacman -Q "$PACKAGE_NAME" >/dev/null
 [ -x /usr/bin/pwned-check ] || fail "pwned-check command missing after repo install"
 [ -f /usr/lib/security/pam_pwned_check.so ] || fail "PAM module missing after repo install"
 [ "$(stat -c '%a' /usr/lib/security/pam_pwned_check.so)" = "644" ] || fail "PAM module should be installed mode 0644"
-[ "$(command -v pwned-check-pam-enable-dry-run)" = "/usr/bin/pwned-check-pam-enable-dry-run" ] || fail "dry-run helper installed outside /usr/bin"
-[ "$(command -v pwned-check-pam-enable-enforce)" = "/usr/bin/pwned-check-pam-enable-enforce" ] || fail "enforce helper installed outside /usr/bin"
-[ "$(command -v pwned-check-pam-disable)" = "/usr/bin/pwned-check-pam-disable" ] || fail "disable helper installed outside /usr/bin"
+[ "$(readlink -f "$(command -v pwned-check-pam-enable-dry-run)")" = "/usr/bin/pwned-check-pam-enable-dry-run" ] || fail "dry-run helper installed outside /usr/bin"
+[ "$(readlink -f "$(command -v pwned-check-pam-enable-enforce)")" = "/usr/bin/pwned-check-pam-enable-enforce" ] || fail "enforce helper installed outside /usr/bin"
+[ "$(readlink -f "$(command -v pwned-check-pam-disable)")" = "/usr/bin/pwned-check-pam-disable" ] || fail "disable helper installed outside /usr/bin"
 actual_version="$(/usr/bin/pwned-check --version | awk '{print $2}')"
 if [ -n "$EXPECTED_VERSION" ] && [ "$actual_version" != "$EXPECTED_VERSION" ]; then
     fail "installed pwned-check version $actual_version, expected $EXPECTED_VERSION"

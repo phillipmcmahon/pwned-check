@@ -128,13 +128,28 @@ Package releases must:
 
 - set `SOURCE_DATE_EPOCH` from the release tag timestamp
 - attach checksums, provenance, signatures, and package files together
-- keep signing keys outside the repository and outside test VMs
+- keep signing keys outside the repository, release assets, workflow artifacts,
+  caches, logs, GitHub Pages, and test VMs
 - publish signed package repositories through GitHub Pages under
   `https://phillipmcmahon.github.io/pwned-check/`
 - record repository signing key fingerprints and smoke evidence in release notes
 
 Repository layout, signing, key rotation, and publication commands live in
 [Package repositories](package-repositories.md).
+
+Required CI repository-signing secrets:
+
+- `PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY`
+- `PWNED_CHECK_CI_OPENPGP_SECRET_KEY`
+- `PWNED_CHECK_CI_OPENPGP_FINGERPRINT`
+- `PWNED_CHECK_CI_OPENPGP_PASSPHRASE`
+- `PWNED_CHECK_CI_ALPINE_PRIVATE_KEY`
+- `PWNED_CHECK_CI_ALPINE_PUBLIC_KEY`
+
+Store only the secret values in GitHub Secrets. Do not record secret values,
+private key material, or passphrases in the repository, release notes, GitHub
+Release assets, Actions artifacts, Pages output, distro VMs, or maintainer
+documentation.
 
 ## 5. Publish
 
@@ -152,28 +167,29 @@ Repository layout, signing, key rotation, and publication commands live in
    signing. A maintainer-local passphrase file may unlock the agent, but it is
    not a repository input.
 4. Monitor the tag-triggered release workflow to terminal success.
-5. Verify GitHub Release package files, `SHA256SUMS.txt`, and provenance
-   attestation are present.
-6. Generate signed package repositories from the immutable GitHub Release
-   package files on the maintainer Mac:
+5. Confirm the release workflow completed these repository publication steps:
+   - `Check release assets for private signing material`
+   - `Prepare repository signing keys`
+   - `Generate signed repositories dry run`
+   - `Publish signed repositories to gh-pages`
+   - `Validate published repository endpoints`
+6. Verify GitHub Release package files, `SHA256SUMS.txt`, provenance
+   attestation, and the live package repositories are present.
+7. Run live repository smokes from the persistent VMs:
+   ```bash
+   make native-pam-live-repo-smokes
+   ```
+8. Run the non-mutating endpoint monitor:
+   ```bash
+   make native-pam-repo-endpoint-check
+   ```
+9. If CI repository publication fails after package assets are created,
+   diagnose the release workflow first. Use local Docker repository generation
+   only as a fallback or recovery path:
    ```bash
    ./scripts/build-native-pam-repositories-docker.sh \
      --version vX.Y.Z \
      --download-release-assets
-   ```
-   This Docker wrapper stages inputs under a Docker-shareable macOS path,
-   mounts signing material read-only, exports a transient OpenPGP secret key
-   from the local GPG keyring, and writes the publishable Pages tree to
-   `dist/package-repositories`.
-7. Publish `dist/package-repositories` to the GitHub Pages branch and wait for
-   deployment.
-8. Run live repository smokes:
-   ```bash
-   make native-pam-live-repo-smokes
-   ```
-9. Run the non-mutating endpoint monitor:
-   ```bash
-   make native-pam-repo-endpoint-check
    ```
 10. Archive immutable GitHub Release package files to maintainer-local storage:
     ```bash

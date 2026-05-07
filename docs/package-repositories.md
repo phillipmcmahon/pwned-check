@@ -48,6 +48,28 @@ Private keys must remain outside:
 - persistent distro VMs
 - smoke fixtures
 - package repositories
+- GitHub Release assets
+- GitHub Actions artifacts, caches, and logs
+
+GitHub Actions owns normal repository generation and publication. Private key
+material enters the workflow only through GitHub Secrets, is materialized under
+`$RUNNER_TEMP`, and is checked by the private-signing-material guard before
+release assets or repository output can be published.
+
+Required GitHub Secrets:
+
+| Secret | Purpose |
+|---|---|
+| `PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY` | Public OpenPGP key for apt, RPM, Arch, checksum, and provenance verification |
+| `PWNED_CHECK_CI_OPENPGP_SECRET_KEY` | Private OpenPGP key used only inside the tag release runner |
+| `PWNED_CHECK_CI_OPENPGP_FINGERPRINT` | Expected full OpenPGP fingerprint |
+| `PWNED_CHECK_CI_OPENPGP_PASSPHRASE` | OpenPGP secret-key passphrase |
+| `PWNED_CHECK_CI_ALPINE_PRIVATE_KEY` | Alpine RSA private key used only inside the tag release runner |
+| `PWNED_CHECK_CI_ALPINE_PUBLIC_KEY` | Alpine RSA public trust key |
+
+Do not put secret values in tracked files, release notes, public docs, package
+payloads, generated repository trees, GitHub Pages, workflow artifacts, caches,
+or test VMs.
 
 Public keys may be published only after fingerprints, owner, storage
 expectations, rotation due date, and revocation path are recorded.
@@ -112,10 +134,41 @@ Generate repository metadata from the already validated release package set:
 Metadata and package payloads are immutable for a published version. Publish a
 new patch version for payload corrections.
 
-## Repository Generation On macOS
+## CI Repository Publication
 
-Generate repositories from immutable GitHub Release assets on the maintainer Mac
-with Docker. Do not run repository generation on distro VMs.
+Tagged release automation is the primary repository publication path. After
+the release package assets are built and checked for private signing material,
+the release workflow:
+
+1. Materializes repository signing keys from GitHub Secrets under
+   `$RUNNER_TEMP`.
+2. Generates signed apt, RPM, Arch, and Alpine repositories from the release
+   package set.
+3. Runs the private-signing-material guard against the generated repository
+   tree.
+4. Publishes the repository tree to `gh-pages` without changing the public URL
+   layout.
+5. Validates the live GitHub Pages endpoints after publication.
+
+The successful `v1.0.2` workflow validated this path end to end:
+`https://github.com/phillipmcmahon/pwned-check/actions/runs/25509839040`.
+
+The release workflow publishes this Pages tree:
+
+| Path | Purpose |
+|---|---|
+| `apt/` | Apt repository output |
+| `rpm/` | RPM repository output |
+| `arch/` | Arch repository output |
+| `alpine/` | Alpine repository output |
+| repository root public keys | OpenPGP and Alpine public trust anchors used by [Linux install](linux-install.md) |
+
+## Local Fallback Generation On macOS
+
+Use local Docker repository generation only for recovery, diagnosis, or
+maintainer fallback when the CI publication path cannot complete. Generate
+repositories from immutable GitHub Release assets on the maintainer Mac with
+Docker. Do not run repository generation on distro VMs.
 
 Required local inputs:
 
@@ -152,7 +205,7 @@ reboot or `SIGKILL` cannot run shell cleanup traps, so avoid placing
 `--stage-dir` under synced, backed-up, or shared folders. If a repository build
 is forcibly killed, remove the staging directory before the next release run.
 
-Generated outputs:
+Generated fallback outputs:
 
 | Path | Purpose |
 |---|---|
@@ -162,10 +215,10 @@ Generated outputs:
 | `dist/alpine-repository` | Alpine repository output |
 | `dist/package-repositories` | Publishable GitHub Pages tree containing `apt/`, `rpm/`, `arch/`, `alpine/`, and public keys |
 
-Use `dist/package-repositories` as the source for the `gh-pages` publication
-copy. It already includes the public OpenPGP key at the repository root and the
-family-specific compatibility aliases expected by the single operator guide,
-[Linux install](linux-install.md).
+If manual fallback publication is required, use `dist/package-repositories` as
+the source for the `gh-pages` publication copy. It already includes the public
+OpenPGP key at the repository root and the family-specific compatibility
+aliases expected by the single operator guide, [Linux install](linux-install.md).
 
 Alpine index generation may warn about missing dependency providers because the
 project repository contains only `pwned-check-native-pam`; the normal Alpine

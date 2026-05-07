@@ -15,8 +15,10 @@ repository, VM, and Docker validation.
 - Codex may access only explicitly provided `codex-vm-*` guests. Codex is not
   authorized to log in to, inspect, modify, or recover through the hypervisor or
   any infrastructure host.
-- Release signing and repository publication happen from the maintainer
-  development or signing environment, not from distro VMs.
+- Release signing and repository publication happen in the tag-triggered GitHub
+  Actions release workflow. Maintainer-local repository generation is only a
+  fallback path. Distro VMs never receive signing material or GitHub
+  credentials.
 
 ## Coverage Matrix
 

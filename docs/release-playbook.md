@@ -43,6 +43,8 @@ current package baseline:
 - Decide which user-visible changes are shipping.
 - Update behavior docs and `CHANGELOG.md`.
 - Keep a sticky `## Unreleased` placeholder at the top of `CHANGELOG.md`.
+- Move every shipped `Unreleased` subsection, including `Known Limitations`,
+  into the new versioned changelog section during release prep.
 - Confirm no obsolete paths are being preserved without a current design reason.
 
 ## 2. Prepare Version

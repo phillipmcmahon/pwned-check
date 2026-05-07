@@ -5,6 +5,15 @@ lightweight and package-focused.
 
 ## Unreleased
 
+## v0.3.4 - 2026-05-07
+
+### Fixed
+
+- Release asset generation now exports the Arch and Alpine package artifacts
+  from the consolidated container smoke script.
+- Tagged release builds now fail if a required package artifact is missing for
+  the platform being built.
+
 ## v0.3.3 - 2026-05-07
 
 ### Fixed

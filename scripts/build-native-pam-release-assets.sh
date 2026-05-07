@@ -204,6 +204,33 @@ verify_package_versions() {
     echo "Verified native package metadata versions for $found artifacts"
 }
 
+require_artifact() {
+    pattern="$1"
+    set -- "$OUTPUT_DIR"/$pattern
+    [ -e "$1" ] || fail "required release artifact missing for $PLATFORM: $pattern"
+}
+
+verify_platform_artifacts() {
+    case "$PLATFORM" in
+        linux/amd64)
+            require_artifact "pwned-check-native-pam_${VERSION}_amd64.deb"
+            require_artifact "pwned-check-native-pam-${VERSION}-*.x86_64.rpm"
+            require_artifact "pwned-check-native-pam-${VERSION}-*-x86_64.pkg.tar.zst"
+            require_artifact "pwned-check-native-pam-${VERSION}-r0-x86_64.apk"
+            ;;
+        linux/arm64)
+            require_artifact "pwned-check-native-pam_${VERSION}_arm64.deb"
+            require_artifact "pwned-check-native-pam-${VERSION}-*.aarch64.rpm"
+            require_artifact "pwned-check-native-pam-${VERSION}-r0-aarch64.apk"
+            ;;
+        *)
+            fail "unsupported platform artifact verification target: $PLATFORM"
+            ;;
+    esac
+
+    echo "Verified required release artifacts for $PLATFORM"
+}
+
 sync_repo_to_container() {
     cid="$1"
     dest="$2"
@@ -302,8 +329,8 @@ echo "::endgroup::"
 case "$PLATFORM" in
     linux/amd64)
         echo "::group::[build+smoke:arch:$PLATFORM] package smoke"
-        NATIVE_PAM_ARCH_PACKAGE_SMOKE_VERSION="$VERSION" \
-        NATIVE_PAM_ARCH_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
+        NATIVE_PAM_CONTAINER_PACKAGE_SMOKE_VERSION="$VERSION" \
+        NATIVE_PAM_CONTAINER_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
             "$ROOT/scripts/native-pam-container-package-smoke.sh" --distro arch --platform "$PLATFORM"
         echo "::endgroup::"
         ;;
@@ -313,13 +340,14 @@ case "$PLATFORM" in
 esac
 
 echo "::group::[build+smoke:alpine:$PLATFORM] package smoke"
-NATIVE_PAM_ALPINE_PACKAGE_SMOKE_VERSION="$VERSION" \
-NATIVE_PAM_ALPINE_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
+NATIVE_PAM_CONTAINER_PACKAGE_SMOKE_VERSION="$VERSION" \
+NATIVE_PAM_CONTAINER_PACKAGE_SMOKE_EXPORT_DIR="$OUTPUT_DIR" \
     "$ROOT/scripts/native-pam-container-package-smoke.sh" --distro alpine --platform "$PLATFORM"
 echo "::endgroup::"
 
 echo "::group::[verify] package metadata versions"
 verify_package_versions
+verify_platform_artifacts
 echo "::endgroup::"
 
 PWNED_CHECK_RELEASE_ARTIFACT_DIR="$OUTPUT_DIR" \

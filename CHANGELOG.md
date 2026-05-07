@@ -5,6 +5,8 @@ lightweight and package-focused.
 
 ## Unreleased
 
+## v0.3.3 - 2026-05-07
+
 ### Fixed
 
 - Fuzz gates now use explicit execution counts for smoke, release, and nightly

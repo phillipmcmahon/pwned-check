@@ -20,6 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check for private signing material
+        run: make private-signing-material-guard-test private-signing-material-check
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
@@ -214,6 +217,9 @@ jobs:
           find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
             | sort -z \
             | xargs -0 sha256sum > SHA256SUMS.txt
+
+      - name: Check release assets for private signing material
+        run: ./scripts/check-no-private-signing-material.sh release
 
       - name: Attest release provenance
         uses: actions/attest@v4

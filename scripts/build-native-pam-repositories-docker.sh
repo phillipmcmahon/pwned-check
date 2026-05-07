@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+PRIVATE_MATERIAL_GUARD="$ROOT/scripts/check-no-private-signing-material.sh"
 INPUT_DIR="$ROOT/dist/release"
 OUTPUT_ROOT="$ROOT/dist"
 STAGE_DIR="${PWNED_CHECK_REPOSITORY_DOCKER_STAGE:-$HOME/pwned-check-repository-build}"
@@ -126,6 +127,7 @@ done
 require_command docker
 require_command rsync
 
+[ -x "$PRIVATE_MATERIAL_GUARD" ] || fail "private signing material guard is not executable: $PRIVATE_MATERIAL_GUARD"
 [ -d "$KEY_DIR" ] || fail "signing key directory does not exist: $KEY_DIR"
 [ -f "$KEY_DIR/$OPENPGP_KEY_FILE" ] || fail "OpenPGP key file missing: $KEY_DIR/$OPENPGP_KEY_FILE"
 [ -f "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE" ] || fail "OpenPGP fingerprint file missing: $KEY_DIR/$OPENPGP_FINGERPRINT_FILE"
@@ -147,6 +149,7 @@ fi
 [ -d "$INPUT_DIR" ] || fail "input directory does not exist: $INPUT_DIR"
 find "$INPUT_DIR" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.apk' -o -name '*.pkg.tar.zst' \) | grep -q . \
     || fail "input directory contains no native package artifacts: $INPUT_DIR"
+"$PRIVATE_MATERIAL_GUARD" "$INPUT_DIR"
 
 if [ -e "$STAGE_DIR" ]; then
     [ -d "$STAGE_DIR" ] || fail "stage path exists but is not a directory: $STAGE_DIR"
@@ -157,7 +160,7 @@ mkdir -p "$STAGE_DIR/repo" "$STAGE_DIR/release" "$STAGE_DIR/out" "$STAGE_DIR/key
 printf 'pwned-check repository Docker staging directory\n' > "$STAGE_DIR/$STAGE_MARKER"
 : > "$STAGE_DIR/keys/.metadata_never_index"
 cleanup_sensitive_stage() {
-    rm -f "$STAGE_DIR/keys/openpgp-secret.asc"
+    rm -rf "$STAGE_DIR/keys"
 }
 trap cleanup_sensitive_stage EXIT INT TERM
 
@@ -280,6 +283,7 @@ cp "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE" "$STAGE_DIR/out/package-repositories/pwn
 cp "$STAGE_DIR/out/package-repositories/pwned-check-openpgp-production.asc" "$STAGE_DIR/out/package-repositories/apt/pwned-check.asc"
 cp "$STAGE_DIR/out/package-repositories/pwned-check-openpgp-production.asc" "$STAGE_DIR/out/package-repositories/rpm/pwned-check.asc"
 cp "$STAGE_DIR/out/package-repositories/pwned-check-openpgp-production.asc" "$STAGE_DIR/out/package-repositories/arch/pwned-check.asc"
+"$PRIVATE_MATERIAL_GUARD" "$STAGE_DIR/out/package-repositories"
 
 mkdir -p "$OUTPUT_ROOT"
 rm -rf \
@@ -293,6 +297,7 @@ cp -a "$STAGE_DIR/out/rpm-repository" "$OUTPUT_ROOT/rpm-repository"
 cp -a "$STAGE_DIR/out/arch-repository" "$OUTPUT_ROOT/arch-repository"
 cp -a "$STAGE_DIR/out/alpine-repository" "$OUTPUT_ROOT/alpine-repository"
 cp -a "$STAGE_DIR/out/package-repositories" "$OUTPUT_ROOT/package-repositories"
+"$PRIVATE_MATERIAL_GUARD" "$OUTPUT_ROOT/package-repositories"
 
 echo "Repository build complete"
 echo "Family outputs:"

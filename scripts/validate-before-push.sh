@@ -38,6 +38,9 @@ fi
 
 cd "$ROOT"
 
+echo "make private-signing-material-guard-test private-signing-material-check"
+make private-signing-material-guard-test private-signing-material-check
+
 NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-}"
 ARM64_DOCKER_IMAGES="${PWNED_CHECK_ARM64_DOCKER_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22}"
 VM_SMOKE_HOSTS="${PWNED_CHECK_VM_SMOKE_HOSTS:-codex-vm-ubuntu codex-vm-debian codex-vm-ubuntu-arm64 codex-vm-debian-arm64 codex-vm-fedora codex-vm-fedora-arm64 codex-vm-rocky codex-vm-rocky-arm64 codex-vm-alpine codex-vm-alpine-arm64 codex-vm-arch}"

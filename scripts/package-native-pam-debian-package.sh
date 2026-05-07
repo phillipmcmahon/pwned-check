@@ -144,7 +144,7 @@ cat > "$PACKAGE_DIR/DEBIAN/postinst" <<'EOF'
 set -e
 
 if [ "$1" = "configure" ] && command -v pam-auth-update >/dev/null 2>&1; then
-    echo "pwned-check native PAM installed. Run 'pwned-check-pam-enable-dry-run' to enable dry-run mode."
+    echo "pwned-check native PAM installed. Run 'pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]' to enable dry-run mode."
 fi
 EOF
 chmod 0755 "$PACKAGE_DIR/DEBIAN/postinst"

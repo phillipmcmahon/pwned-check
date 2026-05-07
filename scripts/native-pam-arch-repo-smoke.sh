@@ -147,10 +147,16 @@ fail() {
 assert_module_defaults() {
     line="$1"
     mode="$2"
+    fail_policy="${3:-fail_open}"
     printf '%s\n' "$line" | grep -F 'pam_pwned_check.so' >/dev/null || fail "$mode line missing pam_pwned_check.so"
     printf '%s\n' "$line" | grep -F 'checker=/usr/bin/pwned-check' >/dev/null || fail "$mode line missing checker=/usr/bin/pwned-check"
     printf '%s\n' "$line" | grep -F 'timeout=3' >/dev/null || fail "$mode line missing timeout=3"
-    printf '%s\n' "$line" | grep -F 'fail_open' >/dev/null || fail "$mode line missing fail_open"
+    printf '%s\n' "$line" | grep -F "$fail_policy" >/dev/null || fail "$mode line missing $fail_policy"
+    other_policy=fail_closed
+    [ "$fail_policy" = fail_closed ] && other_policy=fail_open
+    if printf '%s\n' "$line" | grep -F "$other_policy" >/dev/null; then
+        fail "$mode line includes both fail policies"
+    fi
     case "$mode" in
         dry-run)
             printf '%s\n' "$line" | grep -F 'dry_run' >/dev/null || fail "$mode line missing dry_run"
@@ -258,6 +264,11 @@ as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$sta
 enforce_line="$(grep -F 'pam_pwned_check.so' "$service" || true)"
 [ -n "$enforce_line" ] || fail "enforce helper removed pam_pwned_check"
 assert_module_defaults "$enforce_line" enforce
+
+as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$state_file" PWNED_CHECK_BACKUP_DIR="$backup_dir" pwned-check-pam-enable-enforce --fail-closed
+fail_closed_line="$(grep -F 'pam_pwned_check.so' "$service" || true)"
+[ -n "$fail_closed_line" ] || fail "fail-closed enforce helper removed pam_pwned_check"
+assert_module_defaults "$fail_closed_line" enforce fail_closed
 
 as_root env PWNED_CHECK_PAM_SERVICE_PATH="$service" PWNED_CHECK_STATE_FILE="$state_file" pwned-check-pam-disable
 if grep -F 'pam_pwned_check.so' "$service" >/dev/null; then

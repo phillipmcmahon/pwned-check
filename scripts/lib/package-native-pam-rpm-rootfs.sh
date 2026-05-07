@@ -151,19 +151,28 @@ PROFILE_NAME="${PWNED_CHECK_AUTHSELECT_PROFILE:-pwned-check}"
 BACKUP_NAME="${PWNED_CHECK_AUTHSELECT_BACKUP:-pwned-check-$(date -u '+%Y%m%dT%H%M%SZ')}"
 STATE_DIR="${PWNED_CHECK_STATE_DIR:-/var/lib/pwned-check}"
 PROFILE_MODE="${PWNED_CHECK_PAM_MODE:-dry_run}"
+FAIL_POLICY="${PWNED_CHECK_FAIL_POLICY:-fail_open}"
 
 case "$PROFILE_MODE" in
     dry_run)
-        PAM_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run'
+        dry_run_suffix=" dry_run"
         ;;
     enforce)
-        PAM_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open'
+        dry_run_suffix=""
         ;;
     *)
         echo "PWNED_CHECK_PAM_MODE must be dry_run or enforce" >&2
         exit 2
         ;;
 esac
+case "$FAIL_POLICY" in
+    fail_open|fail_closed) ;;
+    *)
+        echo "PWNED_CHECK_FAIL_POLICY must be fail_open or fail_closed" >&2
+        exit 2
+        ;;
+esac
+PAM_LINE="password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 $FAIL_POLICY$dry_run_suffix"
 
 command -v authselect >/dev/null 2>&1 || {
     echo "authselect is required to enable the RPM-family native PAM module" >&2
@@ -269,7 +278,16 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/authselect/enable-authselect.sh
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+PWNED_CHECK_PAM_MODE=dry_run PWNED_CHECK_FAIL_POLICY="$fail_policy" /usr/share/pwned-check/authselect/enable-authselect.sh
 EOF
 chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run"
 
@@ -277,7 +295,16 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/authselect/enable-authselect.sh
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+PWNED_CHECK_PAM_MODE=enforce PWNED_CHECK_FAIL_POLICY="$fail_policy" /usr/share/pwned-check/authselect/enable-authselect.sh
 EOF
 chmod 0755 "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce"
 

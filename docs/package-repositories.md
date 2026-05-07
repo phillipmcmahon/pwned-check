@@ -32,6 +32,8 @@ All package families install:
 
 Debian/Ubuntu and Fedora/Rocky install wrapper commands under `/usr/sbin`.
 Arch installs them under `/usr/bin`. Alpine installs them under `/usr/sbin`.
+The enable commands accept `--fail-open` and `--fail-closed`; `--fail-open` is
+the default.
 
 ## Signing Model
 

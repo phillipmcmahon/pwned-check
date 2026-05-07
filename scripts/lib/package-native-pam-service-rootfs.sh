@@ -192,19 +192,28 @@ BACKUP_DIR="${PWNED_CHECK_BACKUP_DIR:-/var/lib/pwned-check/pam-backups}"
 STATE_FILE="${PWNED_CHECK_STATE_FILE:-/var/lib/pwned-check/service-pam-last-backup}"
 INSERT_AFTER_PATTERN="${PWNED_CHECK_INSERT_AFTER_PATTERN:-}"
 PROFILE_MODE="${PWNED_CHECK_PAM_MODE:-dry_run}"
+FAIL_POLICY="${PWNED_CHECK_FAIL_POLICY:-fail_open}"
 
 case "$PROFILE_MODE" in
     dry_run)
-        DEFAULT_MODULE_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open dry_run'
+        dry_run_suffix=" dry_run"
         ;;
     enforce)
-        DEFAULT_MODULE_LINE='password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 fail_open'
+        dry_run_suffix=""
         ;;
     *)
         echo "PWNED_CHECK_PAM_MODE must be dry_run or enforce" >&2
         exit 2
         ;;
 esac
+case "$FAIL_POLICY" in
+    fail_open|fail_closed) ;;
+    *)
+        echo "PWNED_CHECK_FAIL_POLICY must be fail_open or fail_closed" >&2
+        exit 2
+        ;;
+esac
+DEFAULT_MODULE_LINE="password    requisite                                    pam_pwned_check.so checker=/usr/bin/pwned-check timeout=3 $FAIL_POLICY$dry_run_suffix"
 MODULE_LINE="${PWNED_CHECK_MODULE_LINE:-$DEFAULT_MODULE_LINE}"
 
 [ -f "$SERVICE_PATH" ] || {
@@ -277,7 +286,16 @@ cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=dry_run /usr/share/pwned-check/service-pam/enable-service-pam.sh
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+PWNED_CHECK_PAM_MODE=dry_run PWNED_CHECK_FAIL_POLICY="$fail_policy" /usr/share/pwned-check/service-pam/enable-service-pam.sh
 EOF
 chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-dry-run"
 
@@ -285,7 +303,16 @@ cat > "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce" <<'EOF'
 #!/bin/sh
 set -eu
 
-PWNED_CHECK_PAM_MODE=enforce /usr/share/pwned-check/service-pam/enable-service-pam.sh
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+PWNED_CHECK_PAM_MODE=enforce PWNED_CHECK_FAIL_POLICY="$fail_policy" /usr/share/pwned-check/service-pam/enable-service-pam.sh
 EOF
 chmod 0755 "$ROOTFS$HELPER_DIR/pwned-check-pam-enable-enforce"
 

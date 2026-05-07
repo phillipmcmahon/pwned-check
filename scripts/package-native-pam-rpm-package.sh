@@ -162,7 +162,7 @@ test -f %{buildroot}/usr/share/doc/pwned-check/linux-install.md
 
 %post
 if command -v authselect >/dev/null 2>&1; then
-    echo "pwned-check native PAM installed. Run pwned-check-pam-enable-dry-run to enable dry-run mode."
+    echo "pwned-check native PAM installed. Run 'pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]' to enable dry-run mode."
 fi
 
 %files

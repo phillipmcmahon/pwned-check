@@ -198,6 +198,20 @@ for stack in system-auth password-auth; do
     fi
 done
 
+as_root env \
+    PWNED_CHECK_AUTHSELECT_PROFILE="$PROFILE_NAME" \
+    PWNED_CHECK_STATE_DIR="$STATE_DIR" \
+    "$ENABLE_ENFORCE_HELPER" --fail-closed
+for stack in system-auth password-auth; do
+    line="$(grep -F 'pam_pwned_check.so' "/etc/authselect/custom/$PROFILE_NAME/$stack" || true)"
+    [ -n "$line" ] || fail "custom profile missing pam_pwned_check.so after fail-closed enforce in $stack"
+    printf '%s\n' "$line" | grep -F 'fail_closed' >/dev/null || fail "fail-closed enforce wrapper missing fail_closed in $stack"
+    if printf '%s\n' "$line" | grep -F 'fail_open' >/dev/null; then
+        cat "/etc/authselect/custom/$PROFILE_NAME/$stack" >&2
+        fail "fail-closed enforce wrapper left fail_open in custom profile $stack"
+    fi
+done
+
 as_root env PWNED_CHECK_STATE_DIR="$STATE_DIR" "$DISABLE_HELPER"
 AUTHSELECT_ENABLED=""
 authselect current -r | grep -F "custom/$PROFILE_NAME" >/dev/null && fail "authselect still selects custom/$PROFILE_NAME after rollback"

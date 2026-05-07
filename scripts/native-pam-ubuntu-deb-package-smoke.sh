@@ -137,11 +137,24 @@ grep -F 'dry_run' "$COMMON_PASSWORD" >/dev/null || fail "dry-run helper enabled 
 
 as_root "$ENABLE_ENFORCE_HELPER"
 grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "enforce helper removed pam_pwned_check from common-password"
+grep -F 'fail_open' "$PROFILE_PATH" >/dev/null || fail "enforce helper profile missing fail_open"
 if grep -F 'dry_run' "$PROFILE_PATH" >/dev/null; then
     fail "enforce helper left dry_run in profile"
 fi
 if grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" | grep -F 'dry_run' >/dev/null; then
     fail "enforce helper left dry_run in common-password"
+fi
+
+as_root "$ENABLE_ENFORCE_HELPER" --fail-closed
+grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" >/dev/null || fail "fail-closed enforce helper removed pam_pwned_check from common-password"
+grep -F 'fail_closed' "$PROFILE_PATH" >/dev/null || fail "fail-closed enforce helper profile missing fail_closed"
+if grep -F 'fail_open' "$PROFILE_PATH" >/dev/null; then
+    fail "fail-closed enforce helper left fail_open in profile"
+fi
+if grep -F 'pam_pwned_check.so' "$COMMON_PASSWORD" | grep -F 'fail_closed' >/dev/null; then
+    :
+else
+    fail "fail-closed enforce helper common-password line missing fail_closed"
 fi
 
 as_root "$DISABLE_HELPER"

@@ -143,9 +143,23 @@ as_root env \
     PWNED_CHECK_INSERT_AFTER_PATTERN="pam_service_authtok.so" \
     "$ENABLE_ENFORCE_HELPER"
 grep -F 'pam_pwned_check.so' "$SERVICE_FILE" >/dev/null || fail "enforce wrapper removed pam_pwned_check"
+grep -F 'fail_open' "$SERVICE_FILE" >/dev/null || fail "enforce wrapper missing fail_open"
 if grep -F 'pam_pwned_check.so' "$SERVICE_FILE" | grep -F 'dry_run' >/dev/null; then
     cat "$SERVICE_FILE" >&2
     fail "enforce wrapper left dry_run configured"
+fi
+
+as_root env \
+    PWNED_CHECK_PAM_SERVICE_PATH="$SERVICE_FILE" \
+    PWNED_CHECK_BACKUP_DIR="$BACKUP_DIR" \
+    PWNED_CHECK_STATE_FILE="$STATE_FILE" \
+    PWNED_CHECK_INSERT_AFTER_PATTERN="pam_service_authtok.so" \
+    "$ENABLE_ENFORCE_HELPER" --fail-closed
+grep -F 'pam_pwned_check.so' "$SERVICE_FILE" >/dev/null || fail "fail-closed enforce wrapper removed pam_pwned_check"
+grep -F 'fail_closed' "$SERVICE_FILE" >/dev/null || fail "fail-closed enforce wrapper missing fail_closed"
+if grep -F 'pam_pwned_check.so' "$SERVICE_FILE" | grep -F 'fail_open' >/dev/null; then
+    cat "$SERVICE_FILE" >&2
+    fail "fail-closed enforce wrapper left fail_open configured"
 fi
 
 as_root env \

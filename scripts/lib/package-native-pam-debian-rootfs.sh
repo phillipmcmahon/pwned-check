@@ -172,11 +172,19 @@ set -eu
 
 PROFILE_PATH="${PWNED_CHECK_PAM_PROFILE_PATH:-/usr/share/pam-configs/pwned-check}"
 MODE="${1:-}"
+FAIL_POLICY="${2:-fail_open}"
 
 case "$MODE" in
     dry-run|enforce) ;;
     *)
-        echo "usage: set-profile-mode.sh dry-run|enforce" >&2
+        echo "usage: set-profile-mode.sh dry-run|enforce [fail_open|fail_closed]" >&2
+        exit 2
+        ;;
+esac
+case "$FAIL_POLICY" in
+    fail_open|fail_closed) ;;
+    *)
+        echo "fail policy must be fail_open or fail_closed" >&2
         exit 2
         ;;
 esac
@@ -196,9 +204,12 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-awk -v mode="$MODE" '
+awk -v mode="$MODE" -v fail_policy="$FAIL_POLICY" '
     /pam_pwned_check\.so/ {
         gsub(/[[:space:]]+dry_run/, "")
+        gsub(/[[:space:]]+fail_open/, "")
+        gsub(/[[:space:]]+fail_closed/, "")
+        sub(/[[:space:]]*$/, " " fail_policy)
         if (mode == "dry-run") {
             sub(/[[:space:]]*$/, " dry_run")
         }
@@ -214,7 +225,16 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-dry-run" <<'EOF'
 #!/bin/sh
 set -eu
 
-/usr/share/pwned-check/debian-pam/set-profile-mode.sh dry-run
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-dry-run [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+/usr/share/pwned-check/debian-pam/set-profile-mode.sh dry-run "$fail_policy"
 if ! DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package; then
     echo "pam-auth-update failed; PAM configuration unchanged" >&2
     exit 1
@@ -227,7 +247,16 @@ cat > "$ROOTFS/usr/sbin/pwned-check-pam-enable-enforce" <<'EOF'
 #!/bin/sh
 set -eu
 
-/usr/share/pwned-check/debian-pam/set-profile-mode.sh enforce
+[ "$#" -le 1 ] || {
+    echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2
+    exit 2
+}
+case "${1:-}" in
+    ""|--fail-open) fail_policy="fail_open" ;;
+    --fail-closed) fail_policy="fail_closed" ;;
+    *) echo "usage: pwned-check-pam-enable-enforce [--fail-open|--fail-closed]" >&2; exit 2 ;;
+esac
+/usr/share/pwned-check/debian-pam/set-profile-mode.sh enforce "$fail_policy"
 if ! DEBIAN_FRONTEND=noninteractive pam-auth-update --enable pwned-check --package; then
     echo "pam-auth-update failed; PAM configuration unchanged" >&2
     exit 1

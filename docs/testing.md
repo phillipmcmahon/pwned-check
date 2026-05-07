@@ -229,6 +229,7 @@ The native PAM Linux integration suite proves:
 - the module can obtain the candidate from existing `PAM_AUTHTOK` or through `pam_get_authtok`
 - clean, pwned, fail-open, fail-closed, timeout, config-error, and unexpected-exit outcomes map correctly
 - package wrappers enable dry-run, switch to enforcement, disable, remove packages, and restore PAM state
+- package wrappers configure fail-open and fail-closed without manual PAM edits
 - exact safe conversation strings and syslog events are emitted without plaintext candidate leakage
 - distro package placement and shared-library dependencies match the supported distro family
 

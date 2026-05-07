@@ -153,6 +153,10 @@ configuration errors. `min_count` is enforced by the checker contract, not by
 parsing checker logs. If fail-open short-circuits a provider failure, the module
 sees the accepted checker outcome and lets the stack continue.
 
+Operators should select fail-open or fail-closed through the packaged enable
+commands, for example `pwned-check-pam-enable-enforce --fail-closed`, rather
+than editing PAM files directly.
+
 ## Checker Execution
 
 The module invokes:

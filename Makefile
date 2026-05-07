@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build prepare-release-version private-signing-material-check private-signing-material-guard-test native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-native-pam-debian package-native-pam-rpm package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-rpm-repository native-pam-alpine-repository native-pam-arch-repository native-pam-repositories-docker native-pam-apt-repo-smoke native-pam-rpm-repo-smoke native-pam-alpine-repo-smoke native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build prepare-release-version private-signing-material-check private-signing-material-guard-test ci-repository-signing-keys-test native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-native-pam-debian package-native-pam-rpm package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-rpm-repository native-pam-alpine-repository native-pam-arch-repository native-pam-repositories-docker native-pam-apt-repo-smoke native-pam-rpm-repo-smoke native-pam-alpine-repo-smoke native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
 
 BIN := dist/pwned-check
 NATIVE_PAM_BIN := dist/pam_pwned_check.so
@@ -47,6 +47,9 @@ private-signing-material-check:
 
 private-signing-material-guard-test:
 	./scripts/check-no-private-signing-material-test.sh
+
+ci-repository-signing-keys-test:
+	./scripts/prepare-ci-repository-signing-keys-test.sh
 
 native-pam-fmt:
 	cargo fmt --check

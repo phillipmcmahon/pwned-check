@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Check for private signing material
-        run: make private-signing-material-guard-test private-signing-material-check
+        run: make private-signing-material-guard-test ci-repository-signing-keys-test private-signing-material-check
 
       - name: Set up Go
         uses: actions/setup-go@v6

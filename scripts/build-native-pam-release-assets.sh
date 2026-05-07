@@ -22,7 +22,7 @@ exists. Arch package release builds currently require linux/amd64 because the
 official archlinux:base-devel image is amd64-only.
 
 Options:
-  --version <version>       Release version, for example 0.1.2
+  --version <version>       Release version, for example 1.0.0
   --output-dir <dir>        Output directory (default: dist/release)
   --build-time <timestamp>  RFC3339 build timestamp
   --source-date-epoch <n>   SOURCE_DATE_EPOCH for package builds

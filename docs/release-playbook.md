@@ -200,6 +200,6 @@ If a release workflow fails after a tag is pushed:
 
 - fix `main` first
 - cut a new patch release from the fixed tree
-- fold the failed attempt's user-facing notes into the successful release
+- keep release notes focused on the final shipped package behavior
 - do not force-update a published release tag unless the release has been
   explicitly withdrawn and the operator impact has been documented

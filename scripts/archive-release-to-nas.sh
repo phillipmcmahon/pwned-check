@@ -46,7 +46,7 @@ release tag and named like the GitHub UI: "Source code (tar.gz)" and
 "Source code (zip)".
 
 Options:
-  --version <version>       Release version, for example v0.1.6 or 0.1.6
+  --version <version>       Release version, for example v1.0.0 or 1.0.0
   --input-dir <path>        Release artifact directory (default: dist/release)
                              Used only with --source local
   --source <github|local>   Archive source (default: github)

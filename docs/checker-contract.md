@@ -21,6 +21,11 @@ candidate password over stdin -> pwned-check --stdin --min-count <n> -> exit cod
 | `2` | Usage or configuration error. |
 | `3` | Provider or network error when fail-closed is configured. |
 
-Fail-open provider failures short-circuit count-based policy: if the provider cannot return a breach count and fail-open is configured, the checker exits `0` regardless of `--min-count`.
+Fail-open provider failures short-circuit count-based policy: if the provider
+cannot return a breach count and fail-open is configured, the checker exits `0`
+regardless of `--min-count`. In the native PAM module, fail-open also covers the
+module timeout while waiting for the checker, because a host without provider
+connectivity can time out before the checker returns an explicit provider-error
+exit code.
 
 Callers must not parse checker stderr for policy decisions. Stderr is structured diagnostic output only.

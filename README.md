@@ -40,8 +40,13 @@ After dry-run logs and rollback have been validated, switch to enforcement:
 sudo pwned-check-pam-enable-enforce
 ```
 
-Provider availability failures, including provider timeouts, default to
-fail-open. To reject password changes when the provider cannot be reached, pass
+The package defaults to fail-open for provider availability failures:
+unreachable provider, provider error, DNS/network outage, or provider timeout.
+Known-breached passwords still reject. Local installation defects, such as a
+missing checker binary or invalid PAM module configuration, still reject because
+they are not provider outages.
+
+To reject password changes when the provider cannot be reached, pass
 `--fail-closed` to the enable command:
 
 ```bash

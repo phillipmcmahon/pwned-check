@@ -102,6 +102,12 @@ to PAM like this:
 | Exec failure | `PAM_AUTHTOK_ERR` | Reject and log exec failure. |
 | Unexpected checker exit | `PAM_AUTHTOK_ERR` | Reject and log the exit code. |
 
+Fail-open and fail-closed are provider-availability policies. They cover the
+cases where the provider cannot return a breach count, including explicit
+provider failure and module-level timeout while waiting for the checker. They do
+not make local installation defects permissive: invalid module arguments,
+missing checker binaries, and unexpected checker exits reject in both modes.
+
 `PAM_SUCCESS` from `pam_pwned_check.so` does not mean the system accepts the
 password. It means only that this module allows later PAM `password` modules to
 continue.

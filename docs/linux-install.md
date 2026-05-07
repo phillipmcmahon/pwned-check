@@ -115,6 +115,16 @@ Confirm these items before running an enable command:
 - rollout starts on a disposable VM, non-production host, or dedicated test
   account
 
+Fail policy controls only provider availability:
+
+- `--fail-open` allows password changes when the HIBP provider cannot produce a
+  result because of network loss, DNS failure, provider error, or provider
+  timeout. Known-breached passwords still reject.
+- `--fail-closed` rejects password changes when the provider cannot produce a
+  result.
+- Missing checker binaries, invalid module arguments, and unexpected checker
+  exits are local installation defects and reject in both modes.
+
 ## Enable Dry-Run
 
 Keep an existing privileged shell open until rollback has been tested.
@@ -134,8 +144,9 @@ sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
 sudo journalctl -t pwned-check -n 20 --no-pager
 ```
 
-Use `--fail-closed` instead of `--fail-open` only if provider outages or
-provider timeouts should block password changes.
+Use `--fail-closed` instead of `--fail-open` only if provider outages,
+network-unavailable hosts, DNS failures, or provider timeouts should block
+password changes.
 
 Dry-run allows password changes but logs what enforcement would have done. A
 known pwned password should produce a safe log line similar to:

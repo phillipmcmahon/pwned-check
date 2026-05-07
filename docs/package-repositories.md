@@ -140,6 +140,18 @@ directory read-only, exports a transient OpenPGP secret key from the local GPG
 keyring into the staging directory, imports it inside each repository-tool
 container, then removes the staged secret before exit.
 
+Use a local, disposable staging path such as
+`$HOME/pwned-check-repository-build`. The builder writes and verifies a
+`.pwned-check-stage` marker before recreating that directory so an accidental
+`--stage-dir` value cannot remove an unrelated path. On macOS, the staged key
+directory also gets a `.metadata_never_index` marker to keep Spotlight from
+indexing the temporary OpenPGP secret export.
+
+The staged OpenPGP secret is removed on normal exit, `INT`, and `TERM`. A hard
+reboot or `SIGKILL` cannot run shell cleanup traps, so avoid placing
+`--stage-dir` under synced, backed-up, or shared folders. If a repository build
+is forcibly killed, remove the staging directory before the next release run.
+
 Generated outputs:
 
 | Path | Purpose |

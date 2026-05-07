@@ -208,6 +208,7 @@ require_artifact() {
     pattern="$1"
     set -- "$OUTPUT_DIR"/$pattern
     [ -e "$1" ] || fail "required release artifact missing for $PLATFORM: $pattern"
+    [ "$#" -eq 1 ] || fail "required release artifact pattern is ambiguous for $PLATFORM: $pattern"
 }
 
 verify_platform_artifacts() {
@@ -222,6 +223,7 @@ verify_platform_artifacts() {
             require_artifact "pwned-check-native-pam_${VERSION}_arm64.deb"
             require_artifact "pwned-check-native-pam-${VERSION}-*.aarch64.rpm"
             require_artifact "pwned-check-native-pam-${VERSION}-r0-aarch64.apk"
+            # Arch Linux ARM is not published from the official Arch package path.
             ;;
         *)
             fail "unsupported platform artifact verification target: $PLATFORM"

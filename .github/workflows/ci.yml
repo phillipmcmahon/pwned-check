@@ -233,7 +233,7 @@ jobs:
             git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents:body)'
           } > "${NOTES_FILE}"
           for heading in "Highlights" "Operator impact" "Validation"; do
-            if ! grep -Ei "^##[[:space:]]+${heading}$" "${NOTES_FILE}" >/dev/null; then
+            if ! grep -E "^##[[:space:]]+${heading}$" "${NOTES_FILE}" >/dev/null; then
               echo "::error::release notes from ${GITHUB_REF_NAME} are missing ## ${heading}"
               sed -n '1,120p' "${NOTES_FILE}"
               exit 1

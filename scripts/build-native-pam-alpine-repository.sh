@@ -93,7 +93,12 @@ for apk_file in "$INPUT_DIR"/pwned-check-native-pam-*.apk; do
     [ "$pkgname" = "pwned-check-native-pam" ] || fail "unexpected package name in $apk_file: $pkgname"
     [ -n "$pkgver" ] || fail "could not determine APK version for $apk_file"
     [ -n "$arch" ] || fail "could not determine APK architecture for $apk_file"
+    case "$pkgver" in
+        */*) fail "invalid APK version contains a path separator: $pkgver" ;;
+    esac
     mkdir -p "$repo_dir/$arch"
+    # Published APK URLs omit the architecture suffix because each payload lives
+    # under its architecture-specific repository directory.
     cp "$apk_file" "$repo_dir/$arch/$pkgname-$pkgver.apk"
     found=$((found + 1))
 done

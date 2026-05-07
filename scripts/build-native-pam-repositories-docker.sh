@@ -17,6 +17,7 @@ GITHUB_REPO="${PWNED_CHECK_GITHUB_REPO:-phillipmcmahon/pwned-check}"
 VERSION=""
 DOWNLOAD_RELEASE_ASSETS=0
 DOCKER_PLATFORM="${PWNED_CHECK_REPOSITORY_DOCKER_PLATFORM:-linux/amd64}"
+STAGE_MARKER=".pwned-check-stage"
 
 usage() {
     cat <<'EOF'
@@ -64,6 +65,11 @@ fail() {
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+file_mode() {
+    path="$1"
+    stat -f '%Lp' "$path" 2>/dev/null || stat -c '%a' "$path" 2>/dev/null || printf 'unknown'
 }
 
 while [ "$#" -gt 0 ]; do
@@ -120,6 +126,16 @@ done
 require_command docker
 require_command rsync
 
+[ -d "$KEY_DIR" ] || fail "signing key directory does not exist: $KEY_DIR"
+[ -f "$KEY_DIR/$OPENPGP_KEY_FILE" ] || fail "OpenPGP key file missing: $KEY_DIR/$OPENPGP_KEY_FILE"
+[ -f "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE" ] || fail "OpenPGP fingerprint file missing: $KEY_DIR/$OPENPGP_FINGERPRINT_FILE"
+[ -f "$KEY_DIR/$OPENPGP_PASSPHRASE_FILE" ] || fail "OpenPGP passphrase file missing: $KEY_DIR/$OPENPGP_PASSPHRASE_FILE"
+[ -f "$KEY_DIR/$ALPINE_KEY_FILE" ] || fail "Alpine signing key missing: $KEY_DIR/$ALPINE_KEY_FILE"
+[ -f "$KEY_DIR/$ALPINE_PUBLIC_KEY_FILE" ] || fail "Alpine public key missing: $KEY_DIR/$ALPINE_PUBLIC_KEY_FILE"
+
+OPENPGP_KEY_ID="$(awk 'NF {print $1; exit}' "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE")"
+[ -n "$OPENPGP_KEY_ID" ] || fail "OpenPGP fingerprint file is empty: $KEY_DIR/$OPENPGP_FINGERPRINT_FILE"
+
 if [ "$DOWNLOAD_RELEASE_ASSETS" -eq 1 ]; then
     [ -n "$VERSION" ] || fail "--version is required with --download-release-assets"
     require_command gh
@@ -132,18 +148,14 @@ fi
 find "$INPUT_DIR" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.apk' -o -name '*.pkg.tar.zst' \) | grep -q . \
     || fail "input directory contains no native package artifacts: $INPUT_DIR"
 
-[ -d "$KEY_DIR" ] || fail "signing key directory does not exist: $KEY_DIR"
-[ -f "$KEY_DIR/$OPENPGP_KEY_FILE" ] || fail "OpenPGP key file missing: $KEY_DIR/$OPENPGP_KEY_FILE"
-[ -f "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE" ] || fail "OpenPGP fingerprint file missing: $KEY_DIR/$OPENPGP_FINGERPRINT_FILE"
-[ -f "$KEY_DIR/$OPENPGP_PASSPHRASE_FILE" ] || fail "OpenPGP passphrase file missing: $KEY_DIR/$OPENPGP_PASSPHRASE_FILE"
-[ -f "$KEY_DIR/$ALPINE_KEY_FILE" ] || fail "Alpine signing key missing: $KEY_DIR/$ALPINE_KEY_FILE"
-[ -f "$KEY_DIR/$ALPINE_PUBLIC_KEY_FILE" ] || fail "Alpine public key missing: $KEY_DIR/$ALPINE_PUBLIC_KEY_FILE"
-
-OPENPGP_KEY_ID="$(awk 'NF {print $1; exit}' "$KEY_DIR/$OPENPGP_FINGERPRINT_FILE")"
-[ -n "$OPENPGP_KEY_ID" ] || fail "OpenPGP fingerprint file is empty: $KEY_DIR/$OPENPGP_FINGERPRINT_FILE"
-
-rm -rf "$STAGE_DIR"
+if [ -e "$STAGE_DIR" ]; then
+    [ -d "$STAGE_DIR" ] || fail "stage path exists but is not a directory: $STAGE_DIR"
+    [ -f "$STAGE_DIR/$STAGE_MARKER" ] || fail "refusing to remove unmarked stage directory: $STAGE_DIR"
+    rm -rf "$STAGE_DIR"
+fi
 mkdir -p "$STAGE_DIR/repo" "$STAGE_DIR/release" "$STAGE_DIR/out" "$STAGE_DIR/keys"
+printf 'pwned-check repository Docker staging directory\n' > "$STAGE_DIR/$STAGE_MARKER"
+: > "$STAGE_DIR/keys/.metadata_never_index"
 cleanup_sensitive_stage() {
     rm -f "$STAGE_DIR/keys/openpgp-secret.asc"
 }
@@ -151,6 +163,11 @@ trap cleanup_sensitive_stage EXIT INT TERM
 
 if [ -n "$OPENPGP_SECRET_KEY_FILE" ]; then
     [ -f "$OPENPGP_SECRET_KEY_FILE" ] || fail "OpenPGP secret key file does not exist: $OPENPGP_SECRET_KEY_FILE"
+    source_mode="$(file_mode "$OPENPGP_SECRET_KEY_FILE")"
+    case "$source_mode" in
+        400|600) ;;
+        *) echo "Warning: OpenPGP secret key source mode is $source_mode; expected 0400 or 0600: $OPENPGP_SECRET_KEY_FILE" >&2 ;;
+    esac
     cp "$OPENPGP_SECRET_KEY_FILE" "$STAGE_DIR/keys/openpgp-secret.asc"
 else
     require_command gpg
@@ -169,6 +186,8 @@ docker_run() {
     shift
     docker run --rm \
         --platform "$DOCKER_PLATFORM" \
+        -e HOST_UID="$(id -u)" \
+        -e HOST_GID="$(id -g)" \
         -e OPENPGP_KEY_ID="$OPENPGP_KEY_ID" \
         -e OPENPGP_KEY_FILE="$OPENPGP_KEY_FILE" \
         -e OPENPGP_PASSPHRASE_FILE="$OPENPGP_PASSPHRASE_FILE" \
@@ -185,6 +204,11 @@ rm -rf "$GNUPGHOME"
 install -d -m 0700 "$GNUPGHOME"
 gpg --batch --import "/keys/$OPENPGP_KEY_FILE" >/dev/null
 gpg --batch --import /work/keys/openpgp-secret.asc >/dev/null
+imported_fpr="$(gpg --batch --list-secret-keys --with-colons "$OPENPGP_KEY_ID" | awk -F: '\''$1 == "fpr" {print $10; exit}'\'')"
+[ "$imported_fpr" = "$OPENPGP_KEY_ID" ] || {
+    echo "imported OpenPGP secret key fingerprint mismatch: got ${imported_fpr:-none}, expected $OPENPGP_KEY_ID" >&2
+    exit 1
+}
 '
 
 echo "::group::[repository:apt] build"
@@ -199,6 +223,7 @@ PWNED_CHECK_GPG_PASSPHRASE_FILE="/keys/$OPENPGP_PASSPHRASE_FILE" \
     --output-dir /work/out/apt-repository \
     --signing-key "$OPENPGP_KEY_ID" \
     --public-key-output /work/out/apt-repository/pwned-check.asc
+chown -R "$HOST_UID:$HOST_GID" /work/out
 '
 echo "::endgroup::"
 
@@ -212,6 +237,7 @@ PWNED_CHECK_GPG_PASSPHRASE_FILE="/keys/$OPENPGP_PASSPHRASE_FILE" \
     --output-dir /work/out/rpm-repository \
     --signing-key "$OPENPGP_KEY_ID" \
     --public-key-output /work/out/rpm-repository/pwned-check.asc
+chown -R "$HOST_UID:$HOST_GID" /work/out
 '
 echo "::endgroup::"
 
@@ -226,6 +252,7 @@ PWNED_CHECK_GPG_PASSPHRASE_FILE="/keys/$OPENPGP_PASSPHRASE_FILE" \
     --output-dir /work/out/arch-repository \
     --signing-key "$OPENPGP_KEY_ID" \
     --public-key-output /work/out/arch-repository/pwned-check.asc
+chown -R "$HOST_UID:$HOST_GID" /work/out
 '
 echo "::endgroup::"
 
@@ -238,6 +265,7 @@ scripts/build-native-pam-alpine-repository.sh \
   --output-dir /work/out/alpine-repository \
   --signing-key "/keys/'"$ALPINE_KEY_FILE"'" \
   --public-key-output /work/out/alpine-repository/'"$ALPINE_PUBLIC_KEY_FILE"'
+chown -R "$HOST_UID:$HOST_GID" /work/out
 '
 echo "::endgroup::"
 

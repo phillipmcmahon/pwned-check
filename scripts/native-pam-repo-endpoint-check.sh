@@ -184,7 +184,7 @@ check_alpine() {
         assert_contains "$arch_dir/APKINDEX" "A:$alpine_arch"
         alpine_version="$(awk -F: '$1 == "V" {print $2; exit}' "$arch_dir/APKINDEX")"
         [ -n "$alpine_version" ] || fail "Alpine $alpine_arch APKINDEX does not include a version for $PACKAGE_NAME"
-        alpine_payload="$PACKAGE_NAME-$alpine_version.apk"
+        alpine_payload="$PACKAGE_NAME-$alpine_version-$alpine_arch.apk"
         curl --fail --silent --show-error --location --head "$BASE_URL/alpine/$alpine_arch/$alpine_payload" >/dev/null || fail "Alpine $alpine_arch package payload missing: $alpine_payload"
     done
 

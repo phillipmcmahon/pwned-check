@@ -612,6 +612,21 @@ exit 0
     }
 
     #[test]
+    fn fail_open_timeout_keeps_audit_signal() {
+        let decision = map_checker_outcome(CheckerOutcome::Timeout, false, FailPolicy::FailOpen);
+
+        assert_eq!(decision, ModuleDecision::Allow);
+        assert_eq!(
+            format_failure_event(CheckerOutcome::Timeout, 7),
+            Some("event=pam_module_failure reason=timeout timeout=7s".to_string())
+        );
+        assert_eq!(
+            format_result_event(CheckerOutcome::Timeout, decision, false),
+            "event=pam_module_result result=allow"
+        );
+    }
+
+    #[test]
     fn formats_debug_config_without_paths_or_secrets() {
         let config = ModuleConfig {
             checker: "/secret/path/pwned-check".to_string(),

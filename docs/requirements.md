@@ -14,7 +14,7 @@ Initial production assumptions:
 - Package enablement commands available for dry-run, enforcement, disable, and rollback.
 - PAM integration passes the candidate through stdin or `PAM_AUTHTOK`, not command-line arguments.
 - Production provider access uses the live public HIBP range API.
-- Provider outage behavior is controlled by explicit fail-open/fail-closed configuration.
+- Provider-availability policy is controlled by explicit fail-open/fail-closed configuration.
 - The integration layer enforces a hard timeout.
 
 ## Production Provider
@@ -24,13 +24,13 @@ Production password-change paths use the live HIBP Pwned Passwords range API.
 Operational implications:
 
 - hosts must be able to reach the HIBP range endpoint during password changes
-- deployments must choose fail-open or fail-closed behavior before rollout
+- deployments must choose fail-open or fail-closed provider-availability policy before rollout
 - provider and native module timeouts must be short and explicit
 - automated validation must mock HIBP-compatible range responses rather than calling the live service
 
 Offline cache or mirror providers are not part of the current production scope, but the checker design should keep provider concerns isolated so those modes can be considered later without changing the PAM integration contract.
 
-See [Provider policy](provider-policy.md) for current live HIBP configuration, failure posture, and test-provider boundaries.
+See [Provider policy](provider-policy.md) for current live HIBP configuration, provider-availability policy, and test-provider boundaries.
 
 ## Non-Production Platforms
 
@@ -65,4 +65,4 @@ Development and release validation require:
 - Do not write plaintext passwords to disk.
 - Do not include plaintext passwords in telemetry or diagnostics.
 - Use hard timeouts around provider and integration calls.
-- Document fail-open/fail-closed posture for each deployment.
+- Document the provider-availability policy for each deployment.

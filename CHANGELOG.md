@@ -9,7 +9,7 @@ lightweight and package-focused.
 
 ### Changed
 
-- Fail-open PAM enforcement now allows provider availability timeouts as well
+- Fail-open PAM enforcement now allows provider-availability timeouts as well
   as explicit provider failures. Local checker configuration, exec, and
   unexpected-exit failures still reject password changes.
 
@@ -28,7 +28,7 @@ lightweight and package-focused.
   - Arch Linux: `x86_64`
   - Alpine Linux-PAM: `x86_64`, `aarch64`
 - Operator commands for dry-run, enforcement, rollback, and package removal.
-- Configurable fail-open or fail-closed provider-outage behavior through the
+- Configurable fail-open or fail-closed provider-availability policy through the
   package enable commands.
 - Safe structured logging without plaintext passwords, full SHA-1 hashes, or
   SHA-1 suffixes.

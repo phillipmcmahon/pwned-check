@@ -14,7 +14,7 @@ items are complete and recorded in the release notes:
 | Repository publication | Repositories are generated from the validated release package set and published without replacing payloads at an existing version. |
 | Repository smoke | Installs use only public repository configuration, public keys, and normal package-manager commands. Target VMs do not need GitHub credentials, build tools, a checkout, or private signing keys. |
 | Rollback | Each repository smoke covers dry-run enablement, enforcement, disable, package removal, and PAM/authselect rollback. |
-| Provider outage | Fail-open and fail-closed behavior is validated through mocked provider-outage tests. |
+| Provider availability | Fail-open and fail-closed provider-availability policy behavior is validated through mocked provider-availability tests. |
 | Documentation | `README.md`, [Linux install](linux-install.md), [Package repositories](package-repositories.md), and `CHANGELOG.md` describe the shipped package path accurately. |
 
 Production release notes should reference the

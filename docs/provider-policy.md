@@ -18,9 +18,9 @@ The endpoint can be overridden with `PWNED_CHECK_HIBP_ENDPOINT` for controlled t
 
 The public HIBP endpoint must use HTTPS. HTTP endpoints are allowed only for controlled non-public test endpoints such as loopback smoke fixtures.
 
-## Failure Posture
+## Provider-Availability Policy
 
-Provider failures are controlled by `PWNED_CHECK_FAIL_CLOSED`.
+Provider-availability failures are controlled by `PWNED_CHECK_FAIL_CLOSED`.
 
 Fail-open is the default:
 
@@ -28,7 +28,7 @@ Fail-open is the default:
 PWNED_CHECK_FAIL_CLOSED=false
 ```
 
-Provider failures allow the password change and emit a safe `event=provider_failure fail_closed=false` log entry.
+Provider-availability failures allow the password change and emit a safe `event=provider_failure fail_closed=false` log entry.
 
 Fail-closed rejects provider failures:
 
@@ -36,7 +36,7 @@ Fail-closed rejects provider failures:
 PWNED_CHECK_FAIL_CLOSED=true
 ```
 
-Provider failures return the provider-failure outcome defined in [Checker contract](checker-contract.md) and are mapped by PAM integrations to password-change rejection.
+Provider-availability failures return the provider-failure outcome defined in [Checker contract](checker-contract.md) and are mapped by PAM integrations to password-change rejection.
 
 Choose this setting before rollout and document the decision for each deployment.
 
@@ -65,5 +65,5 @@ Offline cache or mirror providers are future considerations. If added, they must
 - the same stdin and exit-code contract
 - no plaintext password crossing the provider boundary
 - no full SHA-1 hash crossing the provider boundary
-- explicit fail-open/fail-closed behavior
+- explicit provider-availability policy behavior
 - freshness and availability controls for cached or mirrored data

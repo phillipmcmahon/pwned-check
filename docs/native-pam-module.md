@@ -95,8 +95,8 @@ to PAM like this:
 | Accepted | `PAM_SUCCESS` | This module has no objection; the stack continues. |
 | Pwned at or above threshold | `PAM_AUTHTOK_ERR` | Reject and show the pwned-password message. |
 | Checker configuration error | `PAM_AUTHTOK_ERR` | Reject and log misconfiguration. |
-| Provider failure in fail-open mode | `PAM_SUCCESS` | Allow and log provider failure. |
-| Provider failure in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log provider failure. |
+| Provider-availability failure in fail-open mode | `PAM_SUCCESS` | Allow and log provider failure. |
+| Provider-availability failure in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log provider failure. |
 | Timeout in fail-open mode | `PAM_SUCCESS` | Allow and log timeout. |
 | Timeout in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log timeout. |
 | Exec failure | `PAM_AUTHTOK_ERR` | Reject and log exec failure. |
@@ -150,16 +150,17 @@ secrets.
 |---|---|---|
 | `checker=<path>` | `/usr/local/bin/pwned-check` | Checker binary path. |
 | `timeout=<seconds>` | `3` | Whole-second checker timeout. |
-| `fail_open` | unset | Configure provider failures to allow. |
-| `fail_closed` | unset | Configure provider failures to reject. |
+| `fail_open` | unset | Configure provider-availability failures to allow. |
+| `fail_closed` | unset | Configure provider-availability failures to reject. |
 | `dry_run` | unset | Log would-be decisions and allow runtime outcomes. |
 | `debug` | unset | Emit extra safe configuration logs. |
 | `min_count=<n>` | unset | Pass `--min-count <n>` to the checker; `n >= 1`. |
 
 Unknown arguments and conflicting `fail_open`/`fail_closed` settings are
 configuration errors. `min_count` is enforced by the checker contract, not by
-parsing checker logs. If fail-open short-circuits a provider failure, the module
-sees the accepted checker outcome and lets the stack continue.
+parsing checker logs. If fail-open short-circuits a provider-availability
+failure, the module sees the accepted checker outcome and lets the stack
+continue.
 
 Operators should select fail-open or fail-closed through the packaged enable
 commands, for example `pwned-check-pam-enable-enforce --fail-closed`, rather
@@ -179,9 +180,9 @@ With `min_count=<n>`:
 pwned-check --stdin --min-count <n>
 ```
 
-The candidate is supplied only over stdin. Fail policy is passed explicitly with
-`PWNED_CHECK_FAIL_CLOSED=true` or `PWNED_CHECK_FAIL_CLOSED=false`; inherited
-process environment is cleared.
+The candidate is supplied only over stdin. Provider-availability policy is
+passed explicitly with `PWNED_CHECK_FAIL_CLOSED=true` or
+`PWNED_CHECK_FAIL_CLOSED=false`; inherited process environment is cleared.
 
 Execution flow:
 

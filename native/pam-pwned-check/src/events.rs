@@ -46,7 +46,20 @@ pub fn map_checker_outcome(
     dry_run: bool,
     fail_policy: FailPolicy,
 ) -> ModuleDecision {
-    let decision = match outcome {
+    if fail_policy == FailPolicy::FailOpen
+        && matches!(
+            outcome,
+            CheckerOutcome::ProviderFailure | CheckerOutcome::Timeout
+        )
+    {
+        return ModuleDecision::Allow;
+    }
+
+    if dry_run {
+        return ModuleDecision::Allow;
+    }
+
+    match outcome {
         CheckerOutcome::Clean => ModuleDecision::Allow,
         CheckerOutcome::Pwned => ModuleDecision::Reject {
             reason: RejectReason::Pwned,
@@ -66,21 +79,6 @@ pub fn map_checker_outcome(
         CheckerOutcome::UnexpectedExit(_) => ModuleDecision::Reject {
             reason: RejectReason::CheckerExit,
         },
-    };
-
-    if fail_policy == FailPolicy::FailOpen
-        && matches!(
-            outcome,
-            CheckerOutcome::ProviderFailure | CheckerOutcome::Timeout
-        )
-    {
-        return ModuleDecision::Allow;
-    }
-
-    if dry_run {
-        ModuleDecision::Allow
-    } else {
-        decision
     }
 }
 

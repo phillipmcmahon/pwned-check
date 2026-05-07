@@ -115,7 +115,7 @@ Confirm these items before running an enable command:
 - rollout starts on a disposable VM, non-production host, or dedicated test
   account
 
-Fail policy controls only provider availability:
+Provider-availability policy controls only provider-availability failures:
 
 - `--fail-open` allows password changes when the HIBP provider cannot produce a
   result because of network loss, DNS failure, provider error, or provider
@@ -144,9 +144,9 @@ sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
 sudo journalctl -t pwned-check -n 20 --no-pager
 ```
 
-Use `--fail-closed` instead of `--fail-open` only if provider outages,
-network-unavailable hosts, DNS failures, or provider timeouts should block
-password changes.
+Use `--fail-closed` instead of `--fail-open` only if provider-availability
+failures such as network-unavailable hosts, DNS failures, or provider timeouts
+should block password changes.
 
 Dry-run allows password changes but logs what enforcement would have done. A
 known pwned password should produce a safe log line similar to:
@@ -266,10 +266,10 @@ authselect backup when possible instead of editing generated PAM files directly.
 | Symptom | Check |
 |---|---|
 | Package cannot be installed | Run the package manager update command again and confirm the repository key fingerprint or SHA256. |
-| Enable command fails | Re-run with `sudo`, confirm the fail-policy option is either `--fail-open` or `--fail-closed`, and check the command output. |
+| Enable command fails | Re-run with `sudo`, confirm the provider-availability policy option is either `--fail-open` or `--fail-closed`, and check the command output. |
 | Password changes are allowed in dry-run | Expected. Check `journalctl -t pwned-check` for `would=reject`. |
 | Known pwned password is allowed in enforcement | Confirm the PAM line does not include `dry_run` and that `pwned-check --version` returns the expected package version. |
-| Password changes fail during provider outage | Confirm whether the enable command was run with `--fail-closed`. Package defaults use `--fail-open` for provider outages and timeouts. |
+| Password changes fail during provider-availability failure | Confirm whether the enable command was run with `--fail-closed`. Package defaults use `--fail-open` for provider-availability failures and timeouts. |
 | Need the exact checker exit-code behavior | See [Checker contract](checker-contract.md). |
 
 Logs are safe to share for diagnosis when they are emitted by `pwned-check`.
@@ -287,7 +287,7 @@ Exit codes:
 
 | Code | Meaning |
 |---|---|
-| `0` | Clean, or provider failure when fail-open is enabled |
+| `0` | Clean, or provider-availability failure when fail-open is enabled |
 | `1` | Pwned password at or above the configured threshold |
 | `2` | Configuration or usage error |
 | `3` | Provider or network error when fail-closed is enabled |

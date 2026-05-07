@@ -58,19 +58,19 @@ This follows the HIBP range API k-anonymity model. The full hash and plaintext p
 
 ## Failure Modes
 
-Fail-open:
+Fail-open provider-availability policy:
 
 - provider failures allow password change
 - protects account-management availability
-- weakens enforcement during provider outage
+- weakens enforcement during provider-availability failures
 
-Fail-closed:
+Fail-closed provider-availability policy:
 
 - provider failures reject or block password change
 - protects enforcement
 - can interrupt account-management workflows during outage
 
-Each deployment must choose and document its posture.
+Each deployment must choose and document its provider-availability policy.
 
 ## Timeout Controls
 
@@ -90,7 +90,7 @@ Integration argv is safe by design: it contains only module flags, checker path,
 
 ## Live Provider Dependency
 
-Production deployments use the live HIBP Pwned Passwords range API. Each deployment must choose fail-open or fail-closed behavior for provider failures and document that decision before rollout.
+Production deployments use the live HIBP Pwned Passwords range API. Each deployment must choose fail-open or fail-closed provider-availability policy behavior and document that decision before rollout.
 
 Offline cache or mirror providers are future considerations. If added, they must preserve the same no-plaintext, no-full-hash provider boundary and must define their own availability and freshness controls.
 

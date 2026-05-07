@@ -200,7 +200,7 @@ Release-sensitive checks:
 - native PAM module dynamic dependency allowlist
 - mocked HIBP-compatible provider contract
 - provider timeout/failure behavior
-- fail-open/fail-closed provider outage behavior
+- fail-open/fail-closed provider-availability policy behavior
 - bounded parser fuzz coverage, including the release execution-count gate
 - 85% minimum coverage for included product logic packages
 - binary smoke test

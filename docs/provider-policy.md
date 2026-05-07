@@ -46,7 +46,7 @@ Provider calls use `PWNED_CHECK_TIMEOUT`, in seconds. The default is five second
 
 Password-change integrations should also wrap the checker in their own timeout. The native PAM module does this with its `timeout=<seconds>` argument so a stalled checker process cannot hang the PAM stack indefinitely.
 
-The checker enforces provider timeout through the request context. The HTTP client does not carry a second independent timeout, which keeps failure timing easier to reason about.
+The checker enforces provider timeout through both the request context and the HTTP client timeout. A zero or negative provider timeout is invalid, including for test providers constructed directly in code.
 
 ## Request Volume and Rate Limiting
 

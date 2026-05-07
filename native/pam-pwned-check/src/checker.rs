@@ -9,6 +9,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::{io::FromRawFd, process::CommandExt};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use wait_timeout::ChildExt;
@@ -17,6 +18,7 @@ use crate::config::{FailPolicy, ModuleConfig};
 
 pub(crate) const CHECKER_STDERR_LIMIT: usize = 512;
 const CHECKER_TIMEOUT_GRACE: Duration = Duration::from_millis(200);
+static CHECKER_RUN_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckerOutcome {
@@ -43,6 +45,7 @@ extern "C" {
     fn kill(pid: c_int, sig: c_int) -> c_int;
     fn setpgid(pid: c_int, pgid: c_int) -> c_int;
     fn sysconf(name: c_int) -> isize;
+    fn _exit(status: c_int) -> !;
 }
 
 #[cfg(all(unix, not(target_os = "linux")))]
@@ -83,6 +86,12 @@ const CLOSE_RANGE_UNSHARE: u32 = 1 << 1;
 const SYS_CLOSE_RANGE: c_long = 436;
 
 pub fn run_checker(config: &ModuleConfig, candidate: &[u8]) -> CheckerRun {
+    // Serialize this module's checker forks so the stderr pipe cannot be
+    // inherited by another concurrent checker child between pipe2 and exec.
+    let _run_guard = CHECKER_RUN_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+
     if checker_is_obviously_unavailable(&config.checker) {
         return CheckerRun {
             outcome: CheckerOutcome::ExecFailure,
@@ -210,7 +219,7 @@ fn configure_child_process(command: &mut Command) {
         // remain the thin libc trampoline, not a wrapper that allocates or locks.
         command.pre_exec(move || {
             if setpgid(0, 0) != 0 {
-                return Err(io::Error::last_os_error());
+                _exit(127);
             }
 
             close_inherited_fds(max_fd);

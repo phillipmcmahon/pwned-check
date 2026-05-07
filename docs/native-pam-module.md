@@ -194,6 +194,10 @@ Execution flow:
 6. On timeout, send `SIGTERM`, wait briefly, then send `SIGKILL`.
 7. Map the checker outcome to the PAM contract and emit safe events.
 
+Checker launches are serialized inside one PAM process. This keeps the bounded
+stderr pipe from being inherited by another concurrent checker child between
+pipe creation and `exec`.
+
 ## Conversation Messages
 
 The pwned-password message is fixed:

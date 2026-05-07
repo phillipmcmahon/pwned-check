@@ -240,11 +240,20 @@ pub extern "C" fn pam_sm_chauthtok(
         // borrowed token into module-owned zeroizing memory.
         let candidate = match unsafe { get_authtok(pamh) } {
             Ok(candidate) if !candidate.is_empty() => candidate,
-            _ => {
+            Ok(_) => {
                 // SAFETY: `pamh` is the active PAM handle; failure to send a
                 // conversation message is intentionally ignored.
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
-                emit_log_event("event=pam_module_failure reason=missing_authtok");
+                emit_log_event("event=pam_module_failure reason=empty_authtok");
+                return PAM_AUTHTOK_ERR;
+            }
+            Err(rc) => {
+                // SAFETY: `pamh` is the active PAM handle; failure to send a
+                // conversation message is intentionally ignored.
+                unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
+                emit_log_event(&format!(
+                    "event=pam_module_failure reason=missing_authtok pam_rc={rc}"
+                ));
                 return PAM_AUTHTOK_ERR;
             }
         };

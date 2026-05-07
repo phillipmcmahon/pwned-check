@@ -52,7 +52,8 @@ The native Linux PAM module emits structured events through syslog with the stab
 | `event=pam_module_failure reason=timeout timeout=3s` | Checker exceeded the module timeout. | `reason`, `timeout` |
 | `event=pam_module_failure reason=exec` | The module could not execute the checker. | `reason` |
 | `event=pam_module_failure reason=checker_exit code=9` | Checker returned an unexpected exit code. | `reason`, `code` |
-| `event=pam_module_failure reason=missing_authtok` | PAM could not provide a usable password token through `PAM_AUTHTOK` or `pam_get_authtok`. | `reason` |
+| `event=pam_module_failure reason=empty_authtok` | PAM returned an empty password token. | `reason` |
+| `event=pam_module_failure reason=missing_authtok pam_rc=20` | PAM could not provide a password token and returned a PAM error code. | `reason`, `pam_rc` |
 | `event=pam_module_config timeout=3s min_count=10 fail_policy=fail_open dry_run=false` | Debug-only module configuration summary. | `timeout`, `min_count`, `fail_policy`, `dry_run` |
 
 The debug configuration event must not include the checker path, PAM user, candidate password, hashes, provider response data, or module argv.
@@ -77,6 +78,8 @@ During rollout, operators can count safe event fields:
 - `event=pam_module_result result=allow mode=dry_run`
 - `event=pam_module_failure reason=timeout`
 - `event=pam_module_failure reason=checker_provider`
+- `event=pam_module_failure reason=empty_authtok`
+- `event=pam_module_failure reason=missing_authtok`
 
 Do not add user identifiers, host account names, plaintext candidates, or full hashes to these event lines.
 

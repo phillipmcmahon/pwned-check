@@ -98,3 +98,14 @@ func TestRangeProviderTimeout(t *testing.T) {
 		t.Fatalf("err = %v, want timeout", err)
 	}
 }
+
+func TestRangeProviderRejectsZeroTimeout(t *testing.T) {
+	provider := NewLocalProvider("https://example.invalid", 0)
+	_, err := provider.Lookup("ABCDE", "11111111111111111111111111111111111")
+	if err == nil {
+		t.Fatal("Lookup succeeded, want timeout configuration error")
+	}
+	if !strings.Contains(err.Error(), "provider timeout must be positive") {
+		t.Fatalf("err = %v, want timeout configuration error", err)
+	}
+}

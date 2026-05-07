@@ -5,6 +5,12 @@ lightweight and package-focused.
 
 ## Unreleased
 
+### Changed
+
+- Fail-open PAM enforcement now allows provider availability timeouts as well
+  as explicit provider failures. Local checker configuration, exec, and
+  unexpected-exit failures still reject password changes.
+
 ## v1.0.0 - 2026-05-07
 
 ### Released

@@ -95,8 +95,10 @@ to PAM like this:
 | Accepted | `PAM_SUCCESS` | This module has no objection; the stack continues. |
 | Pwned at or above threshold | `PAM_AUTHTOK_ERR` | Reject and show the pwned-password message. |
 | Checker configuration error | `PAM_AUTHTOK_ERR` | Reject and log misconfiguration. |
+| Provider failure in fail-open mode | `PAM_SUCCESS` | Allow and log provider failure. |
 | Provider failure in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log provider failure. |
-| Timeout | `PAM_AUTHTOK_ERR` | Reject and log timeout. |
+| Timeout in fail-open mode | `PAM_SUCCESS` | Allow and log timeout. |
+| Timeout in fail-closed mode | `PAM_AUTHTOK_ERR` | Reject and log timeout. |
 | Exec failure | `PAM_AUTHTOK_ERR` | Reject and log exec failure. |
 | Unexpected checker exit | `PAM_AUTHTOK_ERR` | Reject and log the exit code. |
 
@@ -193,7 +195,8 @@ The pwned-password message is fixed:
 This password appears in a known breach corpus. Choose a different password.
 ```
 
-Provider, configuration, timeout, and exec failures use:
+Provider, configuration, timeout, and exec failures use this message when they
+reject:
 
 ```text
 Password breach check failed. Try again later or contact your administrator.

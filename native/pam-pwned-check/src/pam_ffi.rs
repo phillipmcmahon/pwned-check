@@ -250,7 +250,7 @@ pub extern "C" fn pam_sm_chauthtok(
         };
 
         let checker = run_checker(&config, &candidate);
-        let decision = map_checker_outcome(checker.outcome, config.dry_run);
+        let decision = map_checker_outcome(checker.outcome, config.dry_run, config.fail_policy);
         emit_result(checker.outcome, decision, &config);
 
         if let ModuleDecision::Reject { reason } = decision {

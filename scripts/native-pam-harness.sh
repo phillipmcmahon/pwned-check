@@ -328,7 +328,8 @@ run_case 'pwned rejected' pwned PwnedHarness123 'fail_open' reject "$pwned_messa
 run_case 'provider unavailable fail-open allowed' provider ProviderOpenHarness123 'fail_open' allow '-' yes false -
 run_case 'provider unavailable fail-closed rejected' provider ProviderClosedHarness123 'fail_closed' reject "$failure_message" yes true -
 run_case 'checker config rejected' config ConfigHarness123 'fail_open' reject "$failure_message" yes false -
-run_case 'checker timeout rejected' sleep TimeoutHarness123 'fail_open' reject "$failure_message" yes false -
+run_case 'checker timeout fail-open allowed' sleep TimeoutOpenHarness123 'fail_open' allow '-' yes false -
+run_case 'checker timeout fail-closed rejected' sleep TimeoutClosedHarness123 'fail_closed' reject "$failure_message" yes true -
 run_case 'unexpected checker exit rejected' unexpected UnexpectedHarness123 'fail_open' reject "$failure_message" yes false -
 run_case 'checker exec failure rejected' clean ExecHarness123 'fail_open' reject "$failure_message" no '' "$TMP/missing-checker"
 run_case 'dry-run pwned allowed' pwned DryRunHarness123 'fail_open dry_run' allow '-' yes false -

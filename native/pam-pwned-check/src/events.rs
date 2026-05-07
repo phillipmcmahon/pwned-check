@@ -41,7 +41,11 @@ const SYSLOG_IDENT: &[u8] = b"pwned-check\0";
 #[cfg(target_os = "linux")]
 const SYSLOG_FORMAT: &[u8] = b"%s\0";
 
-pub fn map_checker_outcome(outcome: CheckerOutcome, dry_run: bool) -> ModuleDecision {
+pub fn map_checker_outcome(
+    outcome: CheckerOutcome,
+    dry_run: bool,
+    fail_policy: FailPolicy,
+) -> ModuleDecision {
     let decision = match outcome {
         CheckerOutcome::Clean => ModuleDecision::Allow,
         CheckerOutcome::Pwned => ModuleDecision::Reject {
@@ -63,6 +67,15 @@ pub fn map_checker_outcome(outcome: CheckerOutcome, dry_run: bool) -> ModuleDeci
             reason: RejectReason::CheckerExit,
         },
     };
+
+    if fail_policy == FailPolicy::FailOpen
+        && matches!(
+            outcome,
+            CheckerOutcome::ProviderFailure | CheckerOutcome::Timeout
+        )
+    {
+        return ModuleDecision::Allow;
+    }
 
     if dry_run {
         ModuleDecision::Allow

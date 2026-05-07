@@ -105,8 +105,8 @@ Do not use `--allow-untrusted` for production installs.
 Confirm these items before running an enable command:
 
 - the host should use the live HIBP Pwned Passwords range API
-- the selected provider-failure posture is understood; enable commands default
-  to `--fail-open`
+- the selected provider-availability posture is understood; enable commands
+  default to `--fail-open`
 - the repository key or Alpine RSA key matches the value in this guide
 - `pwned-check --version` reports the expected package version
 - `pam_pwned_check.so` is installed in the distro PAM security module directory
@@ -134,8 +134,8 @@ sudo PWNED_CHECK_PAM_SERVICE_PATH=/etc/pam.d/passwd \
 sudo journalctl -t pwned-check -n 20 --no-pager
 ```
 
-Use `--fail-closed` instead of `--fail-open` only if provider outages should
-block password changes.
+Use `--fail-closed` instead of `--fail-open` only if provider outages or
+provider timeouts should block password changes.
 
 Dry-run allows password changes but logs what enforcement would have done. A
 known pwned password should produce a safe log line similar to:
@@ -258,7 +258,7 @@ authselect backup when possible instead of editing generated PAM files directly.
 | Enable command fails | Re-run with `sudo`, confirm the fail-policy option is either `--fail-open` or `--fail-closed`, and check the command output. |
 | Password changes are allowed in dry-run | Expected. Check `journalctl -t pwned-check` for `would=reject`. |
 | Known pwned password is allowed in enforcement | Confirm the PAM line does not include `dry_run` and that `pwned-check --version` returns the expected package version. |
-| Password changes fail during provider outage | Confirm whether the enable command was run with `--fail-closed`. Package defaults use `--fail-open`. |
+| Password changes fail during provider outage | Confirm whether the enable command was run with `--fail-closed`. Package defaults use `--fail-open` for provider outages and timeouts. |
 | Need the exact checker exit-code behavior | See [Checker contract](checker-contract.md). |
 
 Logs are safe to share for diagnosis when they are emitted by `pwned-check`.

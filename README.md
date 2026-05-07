@@ -40,8 +40,9 @@ After dry-run logs and rollback have been validated, switch to enforcement:
 sudo pwned-check-pam-enable-enforce
 ```
 
-Provider failures default to fail-open. To reject password changes when the
-provider cannot be reached, pass `--fail-closed` to the enable command:
+Provider availability failures, including provider timeouts, default to
+fail-open. To reject password changes when the provider cannot be reached, pass
+`--fail-closed` to the enable command:
 
 ```bash
 sudo pwned-check-pam-enable-enforce --fail-closed

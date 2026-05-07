@@ -39,11 +39,23 @@ Every persistent VM should have:
 - passwordless `sudo -n true`
 - no release signing material or GitHub credentials
 - a checkout at `/home/codex/pwned-check`, refreshed by smoke scripts or `rsync`
+- current stable Rust and Cargo available to non-interactive SSH commands through
+  `/usr/local/bin`; the native PAM harness must be able to read the committed
+  `Cargo.lock` and build `pam_pwned_check.so` directly on every VM
 
 Bootstrap check:
 
 ```bash
-ssh codex-vm-<distro> 'uname -m && cat /etc/os-release && sudo -n true'
+ssh codex-vm-<distro> 'uname -m && cat /etc/os-release && sudo -n true && cargo --version && rustc --version'
+```
+
+If a distro package ships an older Cargo than the repository lockfile requires,
+install the current stable toolchain with `rustup` for the `codex` account and
+publish it through `/usr/local/bin`:
+
+```bash
+ssh codex-vm-<distro> 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable'
+ssh codex-vm-<distro> 'sudo ln -sf "$HOME/.cargo/bin/cargo" /usr/local/bin/cargo && sudo ln -sf "$HOME/.cargo/bin/rustc" /usr/local/bin/rustc'
 ```
 
 Manual sync:
@@ -136,8 +148,8 @@ sudo apt-get install -y build-essential ca-certificates clang curl file gcc git 
 Primary smoke:
 
 ```bash
-ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="$HOME/.cargo/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
-ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-ubuntu 'cd /home/codex/pwned-check && PATH="/usr/local/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
+ssh codex-vm-debian 'cd /home/codex/pwned-check && PATH="/usr/local/bin:/usr/sbin:/sbin:$PATH" make native-pam-test native-pam-build native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke'
 ```
 
 Recovery:

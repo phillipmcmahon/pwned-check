@@ -249,7 +249,7 @@ mod tests {
 
         for (outcome, reason) in cases {
             assert_eq!(
-                map_checker_outcome(outcome, false),
+                map_checker_outcome(outcome, false, FailPolicy::Inherit),
                 ModuleDecision::Reject { reason }
             );
         }
@@ -258,11 +258,15 @@ mod tests {
     #[test]
     fn clean_outcome_allows() {
         assert_eq!(
-            map_checker_outcome(CheckerOutcome::Clean, false),
+            map_checker_outcome(CheckerOutcome::Clean, false, FailPolicy::Inherit),
             ModuleDecision::Allow
         );
         assert_eq!(
-            pam_return_for_decision(map_checker_outcome(CheckerOutcome::Clean, false)),
+            pam_return_for_decision(map_checker_outcome(
+                CheckerOutcome::Clean,
+                false,
+                FailPolicy::Inherit
+            )),
             PAM_SUCCESS
         );
     }
@@ -520,13 +524,41 @@ exit 0
     }
 
     #[test]
+    fn fail_open_allows_provider_availability_failures() {
+        for outcome in [CheckerOutcome::ProviderFailure, CheckerOutcome::Timeout] {
+            assert_eq!(
+                map_checker_outcome(outcome, false, FailPolicy::FailOpen),
+                ModuleDecision::Allow
+            );
+        }
+    }
+
+    #[test]
+    fn fail_open_still_rejects_local_checker_failures() {
+        for outcome in [
+            CheckerOutcome::ConfigError,
+            CheckerOutcome::ExecFailure,
+            CheckerOutcome::UnexpectedExit(9),
+        ] {
+            assert!(matches!(
+                map_checker_outcome(outcome, false, FailPolicy::FailOpen),
+                ModuleDecision::Reject { .. }
+            ));
+        }
+    }
+
+    #[test]
     fn dry_run_allows_runtime_rejections() {
         assert_eq!(
-            map_checker_outcome(CheckerOutcome::Pwned, true),
+            map_checker_outcome(CheckerOutcome::Pwned, true, FailPolicy::Inherit),
             ModuleDecision::Allow
         );
         assert_eq!(
-            pam_return_for_decision(map_checker_outcome(CheckerOutcome::Pwned, true)),
+            pam_return_for_decision(map_checker_outcome(
+                CheckerOutcome::Pwned,
+                true,
+                FailPolicy::Inherit
+            )),
             PAM_SUCCESS
         );
     }

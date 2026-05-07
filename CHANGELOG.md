@@ -5,6 +5,8 @@ lightweight and package-focused.
 
 ## Unreleased
 
+## v1.0.1 - 2026-05-07
+
 ### Changed
 
 - Fail-open PAM enforcement now allows provider availability timeouts as well

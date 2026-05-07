@@ -168,6 +168,8 @@ jobs:
       id-token: write
       attestations: write
       artifact-metadata: write
+    env:
+      PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS: ${{ secrets.PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY != '' && secrets.PWNED_CHECK_CI_OPENPGP_SECRET_KEY != '' && secrets.PWNED_CHECK_CI_OPENPGP_FINGERPRINT != '' && secrets.PWNED_CHECK_CI_OPENPGP_PASSPHRASE != '' && secrets.PWNED_CHECK_CI_ALPINE_PRIVATE_KEY != '' && secrets.PWNED_CHECK_CI_ALPINE_PUBLIC_KEY != '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -220,6 +222,41 @@ jobs:
 
       - name: Check release assets for private signing material
         run: ./scripts/check-no-private-signing-material.sh release
+
+      - name: Prepare repository signing keys
+        id: repository-signing-keys
+        if: env.PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS == 'true'
+        shell: bash
+        env:
+          PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY: ${{ secrets.PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY }}
+          PWNED_CHECK_CI_OPENPGP_SECRET_KEY: ${{ secrets.PWNED_CHECK_CI_OPENPGP_SECRET_KEY }}
+          PWNED_CHECK_CI_OPENPGP_FINGERPRINT: ${{ secrets.PWNED_CHECK_CI_OPENPGP_FINGERPRINT }}
+          PWNED_CHECK_CI_OPENPGP_PASSPHRASE: ${{ secrets.PWNED_CHECK_CI_OPENPGP_PASSPHRASE }}
+          PWNED_CHECK_CI_ALPINE_PRIVATE_KEY: ${{ secrets.PWNED_CHECK_CI_ALPINE_PRIVATE_KEY }}
+          PWNED_CHECK_CI_ALPINE_PUBLIC_KEY: ${{ secrets.PWNED_CHECK_CI_ALPINE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          scripts/prepare-ci-repository-signing-keys.sh \
+            --output-dir "${RUNNER_TEMP}/pwned-check-repository-signing-keys"
+
+      - name: Generate signed repositories dry run
+        if: env.PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS == 'true'
+        shell: bash
+        env:
+          PWNED_CHECK_SIGNING_KEY_DIR: ${{ steps.repository-signing-keys.outputs['key-dir'] }}
+          PWNED_CHECK_OPENPGP_SECRET_KEY_FILE: ${{ steps.repository-signing-keys.outputs['openpgp-secret-key-file'] }}
+          PWNED_CHECK_REPOSITORY_DOCKER_STAGE: ${{ runner.temp }}/pwned-check-repository-docker-stage
+        run: |
+          set -euo pipefail
+          scripts/build-native-pam-repositories-docker.sh \
+            --input-dir release \
+            --output-root "${RUNNER_TEMP}/pwned-check-repository-output"
+          scripts/check-no-private-signing-material.sh \
+            "${RUNNER_TEMP}/pwned-check-repository-output/package-repositories"
+
+      - name: Report skipped repository dry run
+        if: env.PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS != 'true'
+        run: echo "Repository signing secrets are not configured; signed repository dry run skipped."
 
       - name: Attest release provenance
         uses: actions/attest@v4

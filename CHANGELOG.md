@@ -5,6 +5,17 @@ lightweight and package-focused.
 
 ## Unreleased
 
+## v0.3.5 - 2026-05-07
+
+### Fixed
+
+- Release creation now accepts normal title-case release-note headings and
+  publishes only the signed tag subject/body, excluding the OpenPGP signature
+  block from GitHub Release notes.
+- v0.3.5 supersedes the failed v0.3.4 release attempt, whose package assets
+  built successfully but whose GitHub Release creation was blocked by strict
+  heading validation.
+
 ## v0.3.4 - 2026-05-07
 
 ### Fixed

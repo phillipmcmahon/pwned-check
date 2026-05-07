@@ -174,6 +174,15 @@ Release notes should include highlights, operator impact, validation evidence,
 GitHub Actions run URLs, validated SHAs, package filenames, checksums, and known
 limitations.
 
+Use these release-note headings so the tag-triggered workflow can validate and
+publish the signed tag body without the OpenPGP signature block:
+
+```markdown
+## Highlights
+## Operator impact
+## Validation
+```
+
 ## Failure Rule
 
 If a release workflow fails after a tag is pushed:

@@ -153,9 +153,19 @@ Repository layout, signing, key rotation, and publication commands live in
 4. Monitor the tag-triggered release workflow to terminal success.
 5. Verify GitHub Release package files, `SHA256SUMS.txt`, and provenance
    attestation are present.
-6. Publish signed package repositories from the immutable GitHub Release
-   package files.
-7. Wait for GitHub Pages deployment.
+6. Generate signed package repositories from the immutable GitHub Release
+   package files on the maintainer Mac:
+   ```bash
+   ./scripts/build-native-pam-repositories-docker.sh \
+     --version vX.Y.Z \
+     --download-release-assets
+   ```
+   This Docker wrapper stages inputs under a Docker-shareable macOS path,
+   mounts signing material read-only, exports a transient OpenPGP secret key
+   from the local GPG keyring, and writes the publishable Pages tree to
+   `dist/package-repositories`.
+7. Publish `dist/package-repositories` to the GitHub Pages branch and wait for
+   deployment.
 8. Run live repository smokes:
    ```bash
    make native-pam-live-repo-smokes

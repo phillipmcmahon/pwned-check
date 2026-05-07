@@ -105,10 +105,74 @@ Generate repository metadata from the already validated release package set:
 | Apt | `scripts/build-native-pam-apt-repository.sh` | `dists/<suite>/Release`, `InRelease`, `Release.gpg`, `pool/main/p/pwned-check-native-pam/*.deb` |
 | DNF/Yum | `scripts/build-native-pam-rpm-repository.sh` | `repodata/repomd.xml`, optional `repomd.xml.asc`, signed RPMs |
 | Arch | `scripts/build-native-pam-arch-repository.sh` | signed `<repo>.db.tar.*`, `<repo>.files.tar.*`, signed `pkg.tar.zst` packages |
-| Alpine | `scripts/build-native-pam-alpine-repository.sh` | `APKINDEX.tar.gz`, `APKINDEX.tar.gz.sig`, packages, public RSA key |
+| Alpine | `scripts/build-native-pam-alpine-repository.sh` | signed `APKINDEX.tar.gz`, packages, public RSA key |
 
 Metadata and package payloads are immutable for a published version. Publish a
 new patch version for payload corrections.
+
+## Repository Generation On macOS
+
+Generate repositories from immutable GitHub Release assets on the maintainer Mac
+with Docker. Do not run repository generation on distro VMs.
+
+Required local inputs:
+
+- Docker Desktop with the staging directory shareable by Docker
+- authenticated `gh` CLI when downloading release assets
+- release package assets under `dist/release`, or a release tag to download
+- signing material under `~/.pwned-check/signing/keys`
+- the OpenPGP secret key available in the local macOS GPG keyring
+
+The stable entrypoint is:
+
+```bash
+./scripts/build-native-pam-repositories-docker.sh \
+  --version vX.Y.Z \
+  --download-release-assets
+```
+
+The script stages inputs under `~/pwned-check-repository-build` by default
+because Docker Desktop can mount that location reliably even when the checkout
+lives under a restricted path such as `Documents`. It mounts the signing-key
+directory read-only, exports a transient OpenPGP secret key from the local GPG
+keyring into the staging directory, imports it inside each repository-tool
+container, then removes the staged secret before exit.
+
+Generated outputs:
+
+| Path | Purpose |
+|---|---|
+| `dist/apt-repository` | Apt repository output |
+| `dist/rpm-repository` | RPM repository output |
+| `dist/arch-repository` | Arch repository output |
+| `dist/alpine-repository` | Alpine repository output |
+| `dist/package-repositories` | Publishable GitHub Pages tree containing `apt/`, `rpm/`, `arch/`, `alpine/`, and public keys |
+
+Use `dist/package-repositories` as the source for the `gh-pages` publication
+copy. It already includes the public OpenPGP key at the repository root and the
+family-specific compatibility aliases expected by operator install docs.
+
+Alpine index generation may warn about missing dependency providers because the
+project repository contains only `pwned-check-native-pam`; the normal Alpine
+base/community repositories provide `linux-pam` and shared-library packages
+during real installs. The live Alpine repo smoke is the acceptance check.
+
+Useful overrides:
+
+```bash
+PWNED_CHECK_REPOSITORY_DOCKER_STAGE="$HOME/pwned-check-repository-build" \
+PWNED_CHECK_SIGNING_KEY_DIR="$HOME/.pwned-check/signing/keys" \
+PWNED_CHECK_REPOSITORY_DOCKER_PLATFORM=linux/amd64 \
+  ./scripts/build-native-pam-repositories-docker.sh --input-dir dist/release
+```
+
+If the OpenPGP secret key is not available in the local GPG keyring, export it
+to a protected file outside the repo and pass it with:
+
+```bash
+PWNED_CHECK_OPENPGP_SECRET_KEY_FILE=/path/to/openpgp-secret.asc \
+  ./scripts/build-native-pam-repositories-docker.sh --input-dir dist/release
+```
 
 ## Repository Smoke
 
@@ -141,17 +205,7 @@ Each smoke must cover install, dry-run enablement, enforcement, disable, package
 removal, and managed-file cleanup. RPM-family smokes must also keep SELinux
 clean or record an explicit tracked exception.
 
-## Apt
-
-Build:
-
-```bash
-scripts/build-native-pam-apt-repository.sh \
-  --version vX.Y.Z \
-  --packages dist/release \
-  --output-dir dist/repositories/apt \
-  --signing-key <openpgp-key-id>
-```
+## Apt Operator Bootstrap
 
 Operator trust bootstrap:
 
@@ -165,17 +219,7 @@ sudo apt update
 sudo apt install pwned-check-native-pam
 ```
 
-## RPM
-
-Build:
-
-```bash
-scripts/build-native-pam-rpm-repository.sh \
-  --version vX.Y.Z \
-  --packages dist/release \
-  --output-dir dist/repositories/rpm \
-  --signing-key <openpgp-key-id>
-```
+## RPM Operator Bootstrap
 
 Operator trust bootstrap:
 
@@ -192,17 +236,7 @@ EOF
 sudo dnf install pwned-check-native-pam
 ```
 
-## Arch
-
-Build:
-
-```bash
-scripts/build-native-pam-arch-repository.sh \
-  --version vX.Y.Z \
-  --packages dist/release \
-  --output-dir dist/repositories/arch \
-  --signing-key <openpgp-key-id>
-```
+## Arch Operator Bootstrap
 
 Operator trust bootstrap:
 
@@ -218,17 +252,7 @@ EOF
 sudo pacman -Sy pwned-check-native-pam
 ```
 
-## Alpine
-
-Build:
-
-```bash
-scripts/build-native-pam-alpine-repository.sh \
-  --version vX.Y.Z \
-  --packages dist/release \
-  --output-dir dist/repositories/alpine \
-  --signing-key <rsa-private-key>
-```
+## Alpine Operator Bootstrap
 
 Operator trust bootstrap:
 

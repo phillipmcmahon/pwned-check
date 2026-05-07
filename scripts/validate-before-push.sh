@@ -38,8 +38,8 @@ fi
 
 cd "$ROOT"
 
-echo "make private-signing-material-guard-test ci-repository-signing-keys-test private-signing-material-check"
-make private-signing-material-guard-test ci-repository-signing-keys-test private-signing-material-check
+echo "make private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test private-signing-material-check"
+make private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test private-signing-material-check
 
 NO_VM_DOCKER_IMAGES="${PWNED_CHECK_NO_VM_DOCKER_IMAGES:-}"
 ARM64_DOCKER_IMAGES="${PWNED_CHECK_ARM64_DOCKER_IMAGES:-debian:stable-slim ubuntu:24.04 fedora:latest rockylinux/rockylinux:10.1 alpine:3.22}"

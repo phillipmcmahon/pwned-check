@@ -48,7 +48,7 @@ check_path_name() {
     esac
 
     case "$lower_name" in
-        .gnupg|gnupg|gpg-agent.conf|private-keys-v1.d)
+        .gnupg|gnupg|gpg-agent.conf|private-keys-v1.d|*.kbx|secring*)
             report_violation "$path" "GnuPG private-key storage path is not allowed"
             ;;
         *passphrase*)

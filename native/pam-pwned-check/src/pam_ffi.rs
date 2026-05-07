@@ -16,6 +16,14 @@ pub const PWNED_REJECTION_MESSAGE: &str =
 pub const CHECK_FAILURE_MESSAGE: &str =
     "Password breach check failed. Try again later or contact your administrator.";
 
+pub(crate) fn format_empty_authtok_event() -> &'static str {
+    "event=pam_module_failure reason=empty_authtok"
+}
+
+pub(crate) fn format_missing_authtok_event(pam_rc: c_int) -> String {
+    format!("event=pam_module_failure reason=missing_authtok pam_rc={pam_rc}")
+}
+
 pub(crate) const PAM_SUCCESS: c_int = 0;
 pub(crate) const PAM_IGNORE: c_int = 25;
 pub(crate) const PAM_AUTHTOK_ERR: c_int = 20;
@@ -244,16 +252,14 @@ pub extern "C" fn pam_sm_chauthtok(
                 // SAFETY: `pamh` is the active PAM handle; failure to send a
                 // conversation message is intentionally ignored.
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
-                emit_log_event("event=pam_module_failure reason=empty_authtok");
+                emit_log_event(format_empty_authtok_event());
                 return PAM_AUTHTOK_ERR;
             }
             Err(rc) => {
                 // SAFETY: `pamh` is the active PAM handle; failure to send a
                 // conversation message is intentionally ignored.
                 unsafe { send_pam_error(pamh, CHECK_FAILURE_MESSAGE) };
-                emit_log_event(&format!(
-                    "event=pam_module_failure reason=missing_authtok pam_rc={rc}"
-                ));
+                emit_log_event(&format_missing_authtok_event(rc));
                 return PAM_AUTHTOK_ERR;
             }
         };

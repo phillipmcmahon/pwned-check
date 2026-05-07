@@ -22,7 +22,8 @@ pub(crate) use config::parse_module_config_from_argv;
 pub(crate) use events::{format_config_event, format_failure_event, format_result_event};
 #[cfg(test)]
 pub(crate) use pam_ffi::{
-    PAM_AUTHTOK_ERR, PAM_IGNORE, PAM_PRELIM_CHECK, PAM_SUCCESS, PAM_UPDATE_AUTHTOK,
+    format_empty_authtok_event, format_missing_authtok_event, PAM_AUTHTOK_ERR, PAM_IGNORE,
+    PAM_PRELIM_CHECK, PAM_SUCCESS, PAM_UPDATE_AUTHTOK,
 };
 
 #[cfg(test)]
@@ -608,6 +609,14 @@ exit 0
         assert_eq!(
             format_failure_event(CheckerOutcome::UnexpectedExit(9), 3),
             Some("event=pam_module_failure reason=checker_exit code=9".to_string())
+        );
+        assert_eq!(
+            format_empty_authtok_event(),
+            "event=pam_module_failure reason=empty_authtok"
+        );
+        assert_eq!(
+            format_missing_authtok_event(20),
+            "event=pam_module_failure reason=missing_authtok pam_rc=20"
         );
     }
 

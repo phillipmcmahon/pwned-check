@@ -196,7 +196,9 @@ Execution flow:
 
 Checker launches are serialized inside one PAM process. This keeps the bounded
 stderr pipe from being inherited by another concurrent checker child between
-pipe creation and `exec`.
+pipe creation and `exec`. A contended caller can wait for the active checker
+run to finish, up to one configured module timeout interval plus the short
+termination grace period.
 
 ## Conversation Messages
 

@@ -25,10 +25,10 @@ fuzz-smoke:
 	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=1000x
 
 fuzz-release:
-	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=60s
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=100000x
 
 fuzz-nightly:
-	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=5m
+	go test $(FUZZ_PACKAGE) -run '^$$' -fuzz=$(FUZZ_TARGET) -fuzztime=1000000x
 
 vet:
 	go vet ./...

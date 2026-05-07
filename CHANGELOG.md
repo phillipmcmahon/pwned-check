@@ -7,6 +7,9 @@ lightweight and package-focused.
 
 ### Fixed
 
+- Fuzz gates now use explicit execution counts for smoke, release, and nightly
+  parser fuzzing so the gate records actual parser exercise instead of elapsed
+  wall-clock time after the Go fuzz worker rate plateaus.
 - Alpine native PAM APK package files now include the APK architecture in the
   exported filename so `x86_64` and `aarch64` packages can coexist in one
   release directory and repository publication can index both.

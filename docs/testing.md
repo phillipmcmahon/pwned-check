@@ -103,10 +103,15 @@ Provider parser fuzzing runs at three depths:
 | Scope | Command | Fuzz time | Purpose |
 |---|---|---:|---|
 | Normal CI and pre-push | `make fuzz-smoke` | `1000 executions` | Fast deterministic regression signal for everyday changes |
-| Release validation | `make fuzz-release` | `60s` | Longer parser robustness check before publishing |
-| Scheduled workflow | `make fuzz-nightly` | `5m` | Deeper recurring search for rare provider parsing bugs |
+| Release validation | `make fuzz-release` | `100000 executions` | Larger deterministic parser robustness check before publishing |
+| Scheduled workflow | `make fuzz-nightly` | `1000000 executions` | Deeper recurring search for rare provider parsing bugs |
 
-The scheduled fuzz workflow runs daily and can also be started manually from GitHub Actions. CI and release fuzzing must stay independent of the live HIBP API.
+The fuzz gates use execution counts deliberately. On the current Go toolchain,
+wall-clock fuzz runs can stop increasing the executed-input count after the
+first few seconds while still waiting for the deadline. Count-based gates state
+exactly how many parser invocations were exercised. The scheduled fuzz workflow
+runs daily and can also be started manually from GitHub Actions. CI and release
+fuzzing must stay independent of the live HIBP API.
 
 Native PAM argv parsing has a deterministic property-style corpus in the Rust unit tests. The corpus combines supported arguments, malformed key/value pairs, active `min_count` input, large numeric values, whitespace, empty values, and conflicting policy flags. `make native-pam-test` runs that corpus on every native PAM test pass.
 

@@ -100,6 +100,21 @@ sudo apk add pwned-check-native-pam
 
 Do not use `--allow-untrusted` for production installs.
 
+## Before Enabling PAM
+
+Confirm these items before running an enable command:
+
+- the host should use the live HIBP Pwned Passwords range API
+- the selected provider-failure posture is understood; package defaults use
+  `fail_open`
+- the repository key or Alpine RSA key matches the value in this guide
+- `pwned-check --version` reports the expected package version
+- `pam_pwned_check.so` is installed in the distro PAM security module directory
+- `pwned-check-pam-disable` is available
+- a privileged shell is already open for rollback
+- rollout starts on a disposable VM, non-production host, or dedicated test
+  account
+
 ## Enable Dry-Run
 
 Keep an existing privileged shell open until rollback has been tested.

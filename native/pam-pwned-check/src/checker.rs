@@ -229,6 +229,8 @@ fn open_max() -> c_int {
     if value > 3 && value < 65_536 {
         value as c_int
     } else {
+        // Primary Linux targets use close_range(2) first. This fallback cap is
+        // for older/non-primary targets and may leave very high fd numbers open.
         1024
     }
 }
@@ -275,6 +277,8 @@ fn terminate_child(child: &mut std::process::Child, grace: Duration) {
     }
 
     let _ = unsafe { kill(process_group, SIGKILL) };
+    // Reap the child to avoid a zombie. If the process is stuck in
+    // uninterruptible sleep, this wait can outlive the configured PAM timeout.
     let _ = child.wait();
 }
 

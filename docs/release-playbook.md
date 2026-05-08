@@ -166,14 +166,19 @@ documentation.
    ```bash
    make github-ci-watch
    ```
-3. Create and push a signed tag:
+3. Create and push a signed tag with the local release-tag helper:
    ```bash
-   git tag -s -u <release-signing-key-id> vX.Y.Z --cleanup=verbatim -F <release-notes-file>
-   git push origin vX.Y.Z
+   PWNED_CHECK_RELEASE_TAG_FLAGS="--key-id <release-signing-key-id> --push" \
+     make create-signed-release-tag \
+       VERSION=vX.Y.Z \
+       RELEASE_NOTES=<release-notes-file>
    ```
-   Prefer `gpg-agent` with loopback pinentry enabled for non-interactive
-   signing. A maintainer-local passphrase file may unlock the agent, but it is
-   not a repository input.
+   The helper validates the worktree, confirms `HEAD` matches `origin/main`,
+   checks required release-note headings, refuses duplicate local or remote
+   tags, creates the signed annotated tag, verifies the tag signature, and then
+   pushes the tag when `--push` is present. Prefer `gpg-agent` with loopback
+   pinentry enabled for non-interactive signing. A maintainer-local passphrase
+   file may unlock the agent, but it is not a repository input.
 4. Monitor the tag-triggered release workflow to terminal success.
 5. Confirm the release workflow completed these repository publication steps:
    - `Check release assets for private signing material`

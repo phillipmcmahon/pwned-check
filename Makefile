@@ -1,4 +1,4 @@
-.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build prepare-release-version private-signing-material-check private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test native-pam-repo-endpoint-retry-test native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-native-pam-debian package-native-pam-rpm package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-rpm-repository native-pam-alpine-repository native-pam-arch-repository native-pam-repositories-docker native-pam-apt-repo-smoke native-pam-rpm-repo-smoke native-pam-alpine-repo-smoke native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
+.PHONY: fmt test coverage fuzz-smoke fuzz-release fuzz-nightly vet staticcheck build prepare-release-version create-signed-release-tag private-signing-material-check private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test native-pam-repo-endpoint-retry-test native-pam-fmt native-pam-build native-pam-test native-pam-memory-check native-pam-deps native-pam-symbols native-pam-harness native-pam-ubuntu-deb-package-smoke native-pam-ubuntu-hardening-assessment native-pam-fedora-rpm-package-smoke native-pam-fedora-selinux-assessment native-pam-distro-smoke native-pam-arch-package-smoke native-pam-alpine-package-smoke smoke docker-smoke package-native-pam-debian package-native-pam-rpm package-native-pam-arch package-native-pam-alpine native-pam-apt-repository native-pam-rpm-repository native-pam-alpine-repository native-pam-arch-repository native-pam-repositories-docker native-pam-apt-repo-smoke native-pam-rpm-repo-smoke native-pam-alpine-repo-smoke native-pam-arch-repo-smoke native-pam-live-repo-smokes native-pam-repo-endpoint-check native-pam-release-provenance archive-release-to-nas github-ci-watch github-workflow-status validate
 
 BIN := dist/pwned-check
 NATIVE_PAM_BIN := dist/pam_pwned_check.so
@@ -41,6 +41,10 @@ build:
 
 prepare-release-version:
 	./scripts/prepare-release-version.sh --version "$(VERSION)"
+
+create-signed-release-tag:
+	@test -n "$(RELEASE_NOTES)" || { echo "RELEASE_NOTES=/path/to/release-notes.md is required" >&2; exit 2; }
+	./scripts/create-signed-release-tag.sh --version "$(VERSION)" --notes "$(RELEASE_NOTES)" $${PWNED_CHECK_RELEASE_TAG_FLAGS:-}
 
 private-signing-material-check:
 	./scripts/check-no-private-signing-material.sh .

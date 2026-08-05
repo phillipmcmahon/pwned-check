@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Check for private signing material
         run: make private-signing-material-guard-test ci-repository-signing-keys-test package-repository-pages-publish-test native-pam-repo-endpoint-retry-test private-signing-material-check
@@ -48,7 +48,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -65,7 +65,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -88,7 +88,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install PAM development headers
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpam0g-dev valgrind
@@ -121,7 +121,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -171,7 +171,7 @@ jobs:
     env:
       PWNED_CHECK_HAS_REPOSITORY_SIGNING_SECRETS: ${{ secrets.PWNED_CHECK_CI_OPENPGP_PUBLIC_KEY != '' && secrets.PWNED_CHECK_CI_OPENPGP_SECRET_KEY != '' && secrets.PWNED_CHECK_CI_OPENPGP_FINGERPRINT != '' && secrets.PWNED_CHECK_CI_OPENPGP_PASSPHRASE != '' && secrets.PWNED_CHECK_CI_ALPINE_PRIVATE_KEY != '' && secrets.PWNED_CHECK_CI_ALPINE_PUBLIC_KEY != '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
